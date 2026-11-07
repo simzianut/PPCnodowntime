@@ -21,6 +21,8 @@ Version: v0.1, 2026-11-07 (sim types, forecasts table, observation layout, λ un
 | `AMPWHERE_ENABLED` | M1 | `0` | Must be explicitly enabled by a human, see decision 0003 |
 | `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
 | `VITE_API_URL` | M5 | `http://localhost:8000` | |
+| `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
+| `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 
 ## Make targets and entry points
 `make` targets (spec 00 §4) call one entry point per module. A module provides it by adding the file; until then the target prints "not implemented yet".
@@ -55,6 +57,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
 | `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, context_multiplier{ContextType: float}` |
 | `config/live.yaml` | M1 | `poll_s, min_request_gap_s, request_timeout_s, backoff{initial_s, factor, max_s, max_retries}, max_consecutive_failures, status_map{raw_word: LiveStatus}` |
+| `config/traffic.yaml` | M1 | `tomtom{flow_url, zoom, poll_s}, mapbox{directions_url, route_len_m, request_gap_s}, index_clip: [0, 1]` |
 | `config/dataset.yaml` | M1 | Dundee item IDs and filenames, Dundee coordinates, date range, `split_date`, `min_session_s`, `max_session_s`, `max_lanes`, `download_delay_s` |
 | `config/sim.yaml` | M4 | `slot_s, lambda_grid, default_lambda, naive_quiet_hours_per_day, min_awake_per_location, recommendation_ttl_slots, eval_days` |
 
@@ -74,6 +77,8 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `donor_chargers.parquet` | `donor_charger_id (<cp>#<lane>), site, power_class, sessions_per_day, util_quantile`, plus `base_cp_id, lane, n_sessions_train, active_days_train, first_ts, last_ts, util_basis {train,test}` (decision 0027) |
 | `donor_occupancy.parquet` | `donor_charger_id, hour_of_week int 0..167 (local, Mon 00h = 0), occupancy_share float` |
 | `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
+| `data/processed/traffic_typical.parquet` | `location_id str, hour_of_week int 0..167 (local, Mon 00h = 0), typical_index float 0..1, source str` (decision 0028) |
+| `data/raw/live/ampwhere_snapshot_latest.json.gz` (gitignored, decision 0029) | the latest raw AmpWhere snapshot, overwritten at every resync; read by the T4 importer |
 | `data/raw/live/statuses-YYYYMMDD.jsonl` (gitignored, decision 0016) | one JSON object per status: `ts ISO UTC, source, source_location_id, source_cp_id?, connector?, raw_status, status LiveStatus, cp_id? (null until matched), name?, lat?, lon?, operator?` |
 
 ### Python interfaces (M2 ↔ M4)

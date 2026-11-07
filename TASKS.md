@@ -20,8 +20,12 @@ Add notes as indented sub-bullets.
   - Note from T10 (tudor-claude): import types from sim/types.py (decision 0017). Stubs and cost_rule are blocked behind T7/T8; gym env uses naive siblings until cost_rule lands (0023). λ is kWh per wait-minute (0020). Please also produce data/processed/forecasts.parquet (0021).
   - Starting with day-one stubs (RandomPolicy, ConstantForecaster), fallback types, and cost_rule policy on fixtures so M4 is never blocked.
 
+- [T20] M1 real traffic: TomTom live traffic index + Mapbox typical hour-of-week traffic per location → traffic_typical.parquet (decision 0028) | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
+  - Needs TOMTOM_API_KEY and MAPBOX_TOKEN in a local .env (vlad). Can start on stations_open.csv / fixture locations before T4.
+
 ## To do
 - [T4] M3 station importer: load data/seed/stations_open.csv (or the local merged file), dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: - | branch: - | depends: T2
+  - Note from vlad-claude (decision 0029): use data/raw/live/ampwhere_snapshot_latest.json.gz as the primary PPC Blue list when present (provider_id 5: 445 locations, 1,364 CPs), with source_refs (ampwhere, uid, charger id); treat "DC <=22 kW" as AC_22. Fall back to stations_open.csv.
   - Note from T10/T19 (tudor-claude): fixtures/api uses provisional location IDs `L1` + 4-digit row number of stations_open.csv (`L10001`…, decision 0024). Once T4 assigns real IDs, tell M4 to regenerate fixtures/api.
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
   - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).

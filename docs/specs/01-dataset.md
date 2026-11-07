@@ -93,7 +93,7 @@ Decision: [0012](../decisions/0012-mock-signals.md). In replay, every signal is 
 | Signal | Generation |
 |---|---|
 | `ppcblue_route_intent` | For each session: with probability `p_app = 0.6`, emit an event at `arrival − U(10, 40) min` with `eta = arrival + N(0, 3 min)`, for that `location_id`. False positives: 10% extra events with no matching arrival. |
-| `maps_traffic_index` | Per location and slot: a time-of-day traffic curve (urban or highway shape) × weather factor × noise. A value from 0 to 1. Represents general traffic, not EVs. |
+| `maps_traffic_index` | Per location and slot: the real typical traffic of that location at that local hour of the week (`traffic_typical.parquet`, from Mapbox, decision [0028](../decisions/0028-real-traffic-tomtom-mapbox.md)) × weather factor × noise. A value from 0 to 1. Represents general traffic, not EVs. In live mode, TomTom gives the real current value. |
 | `maps_ev_count` | Per location and slot: `Poisson(ev_tag_rate × (sessions arriving at this location in the next 30 min + background_ev × traffic_index))`. `ev_tag_rate = 0.25`: most users don't set a vehicle type. |
 | `maps_ice_count` | Per location and slot: `Poisson(ice_base × traffic_index)`. Consumers apply weight `w_ice = 0.05`. |
 
