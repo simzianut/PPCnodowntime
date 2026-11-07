@@ -450,6 +450,23 @@ class Engine:
             self._approved.append(rec)
         return self._rec_dict(rec)
 
+    def expire_pending(self) -> list[dict]:
+        """Expire every pending recommendation now (seek or focus change in the API)."""
+        changed: list[_Cmd] = []
+        self._expire(np.inf, changed)
+        return [self._rec_dict(r) for r in changed]
+
+    def applied_commands(self, policy: str, slot: int) -> list[dict]:
+        """Commands `policy` applied itself at the start of `slot`, as recommendation dicts."""
+        t = float(slot * self.slot_s)
+        applied = CommandStatus.applied.value
+        out = []
+        for h in self._sims[policy].hist_cmds:
+            r = h[-1] if h else None
+            if r is not None and r.ts == t and r.status == applied:
+                out.append({**self._rec_dict(r), "expires_at": self._iso(t)})
+        return out
+
     def timeline(self, policy: str, cp_id: str) -> dict:
         """States, arrivals, intents, forecast and commands of one CP up to the current slot."""
         ps = self._sims[policy]

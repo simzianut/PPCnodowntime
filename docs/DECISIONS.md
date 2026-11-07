@@ -54,3 +54,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0044](decisions/0044-ppo-agent-training-and-architecture.md) | 2026-11-07 | edy-antigravity | PPO decision agent architecture, vectorized action masking, and artifact generation
 - [0045](decisions/0045-svg-base-map.md) | 2026-11-07 | tudor + tudor-claude | SVG base map of Romania (Natural Earth, Web Mercator) with a swappable station icon and a layer for hand-drawn lines
 - [0046](decisions/0046-interactive-svg-map.md) | 2026-11-07 | tudor + tudor-claude | Map view is an interactive inline SVG (pan, zoom, clusters, spiderfy) replacing MapLibre
+- [0047](decisions/0047-engine-backed-api-and-station-loader.md) | 2026-11-07 | tudor + tudor-claude | One station loader (real list when local, else open seed); API real mode runs replays on sim.Engine in memory; frontend tolerates missing eval

@@ -97,6 +97,8 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 - Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
 - Send ticks over the same WebSocket.
 
+**Engine mode (T23, default):** with `API_FIXTURES` unset, `api/engine_mode.py` runs each replay on `sim.Engine` in memory, with no DB. Stations come from `sim.stations_seed.load_stations()`: the real list when `data/processed/` has it, else the open seed. Sessions are real processed data or synthetic sessions on those stations. Live mode returns 400 until T12. Details in [0047](../decisions/0047-engine-backed-api-and-station-loader.md).
+
 **Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations. Regenerate with `python -m api.fixtures_gen`; details in [0036](../decisions/0036-api-fixture-mode.md).
 
 ## 7. Config: `config/sim.yaml`

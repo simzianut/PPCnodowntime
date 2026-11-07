@@ -1,4 +1,4 @@
-import type { Autonomy, CpTimeline, EvalData, Location, Recommendation, Run, RunRequest, StationRunSummary } from './types'
+import type { Autonomy, CpTimeline, EvalData, Location, PolicyName, Recommendation, Run, RunRequest, StationRunSummary } from './types'
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -14,6 +14,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   stations: () => request<Location[]>('/api/stations'),
   evaluation: () => request<EvalData>('/api/eval'),
+  policies: () => request<Array<{ name: PolicyName; lambdas: number[]; available: boolean }>>('/api/policies'),
   autonomy: () => request<{ mode: Autonomy }>('/api/settings/autonomy'),
   setAutonomy: (mode: Autonomy) => request<{ mode: Autonomy }>('/api/settings/autonomy', { method: 'PUT', body: JSON.stringify({ mode }) }),
   startRun: (payload: RunRequest) => request<{ run_id: string }>('/api/runs', { method: 'POST', body: JSON.stringify(payload) }),

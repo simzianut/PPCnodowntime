@@ -9,9 +9,15 @@ function initialStates(locations: Location[]) {
   return Object.fromEntries(locations.flatMap((location) => location.charge_points.map((cp) => [cp.cp_id, cp.state ?? 'IDLE']))) as Record<string, State>
 }
 
+const emptyEval: EvalData = { generated_at: '', test_days: [], results: [] }
+
+function defaultFocus(policies: PolicyName[]): PolicyName {
+  return policies.includes('rl_ppo') ? 'rl_ppo' : policies[policies.length - 1]
+}
+
 export function useDashboard() {
   const [locations, setLocations] = useState<Location[]>([])
-  const [evaluation, setEvaluation] = useState<EvalData>(demoEval)
+  const [evaluation, setEvaluation] = useState<EvalData>(emptyEval)
   const [run, setRun] = useState<Run | null>(null)
   const [cpState, setCpState] = useState<Record<string, State>>({})
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
@@ -27,6 +33,7 @@ export function useDashboard() {
   const runRef = useRef<Run | null>(null)
   const autonomyRef = useRef(autonomy)
   const pendingStatesRef = useRef<Record<string, State>>({})
+  const policiesRef = useRef<PolicyName[]>(POLICIES)
 
   useEffect(() => { runRef.current = run }, [run])
   useEffect(() => { autonomyRef.current = autonomy }, [autonomy])
@@ -56,7 +63,7 @@ export function useDashboard() {
       setRecommendations((current) => {
         const byId = new Map(current.map((item) => [item.id, item]))
         for (const item of incoming) byId.set(item.id, item)
-        return [...byId.values()]
+        return [...byId.values()].filter((item) => item.status === 'pending')
       })
     }
     setRun((current) => current ? { ...current, sim_time: tick.sim_time ?? current.sim_time, slot: tick.slot ?? current.slot, kpis: { ...current.kpis, ...tick.kpis }, focus_policy: tick.focus_policy ?? current.focus_policy, status: tick.status ?? (tick.type === 'done' ? 'done' : current.status), paused_reason: tick.paused_reason !== undefined ? tick.paused_reason : current.paused_reason } : current)
@@ -72,7 +79,9 @@ export function useDashboard() {
   }, [])
 
   const startRun = useCallback(async (mode: 'replay' | 'live', date: string | null, speed = runRef.current?.speed ?? 60) => {
-    const payload = { mode, date, policies: POLICIES, focus_policy: runRef.current?.focus_policy ?? 'rl_ppo', lambda: 0.1, speed }
+    const policies = policiesRef.current
+    const focus = runRef.current?.focus_policy
+    const payload = { mode, date, policies, focus_policy: focus && policies.includes(focus) ? focus : defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
     setTrend([])
     setSelectedLocation(null)
@@ -105,15 +114,17 @@ export function useDashboard() {
     let cancelled = false
     async function initialize() {
       try {
-        const [stations, evalData, autonomyData] = await Promise.all([api.stations(), api.evaluation(), api.autonomy()])
+        const [stations, evalData, autonomyData, policyList] = await Promise.all([api.stations(), api.evaluation().catch(() => null), api.autonomy(), api.policies().catch(() => null)])
         if (cancelled) return
         setLocations(stations)
         setCpState(initialStates(stations))
-        setEvaluation(evalData)
+        setEvaluation(evalData ?? emptyEval)
         setAutonomy(autonomyData.mode)
         setConnectionMode('api')
         autonomyRef.current = autonomyData.mode
-        const payload = { mode: 'replay' as const, date: evalData.test_days[0] ?? null, policies: POLICIES, focus_policy: 'rl_ppo' as const, lambda: 0.1, speed: 60 }
+        const available = POLICIES.filter((name) => policyList?.find((item) => item.name === name)?.available ?? true)
+        policiesRef.current = available.length ? available : POLICIES
+        const payload = { mode: 'replay' as const, date: evalData?.test_days[0] ?? null, policies: policiesRef.current, focus_policy: defaultFocus(policiesRef.current), lambda: 0.1, speed: 60 }
         const created = await api.startRun(payload)
         const current = await api.getRun(created.run_id)
         if (cancelled) return

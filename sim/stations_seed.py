@@ -1,12 +1,11 @@
-"""Minimal reader of data/seed/stations_open.csv with provisional IDs (decision 0024).
-
-Replaced by stations.store once T4/T5 exist.
-"""
+"""Station loading for the sim: importer output, PPC export or the open seed (decision 0024)."""
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from sim.config import ROOT
@@ -36,6 +35,27 @@ CP_COLUMNS = [
 
 _AC_CONNECTORS = {"Type2"}
 _DC_CONNECTORS = {"CCS2", "CHAdeMO"}
+_CONNECTOR_ALIASES = {"TYPE2": "Type2", "CCS2": "CCS2", "CCS": "CCS2", "CHADEMO": "CHAdeMO"}
+
+log = logging.getLogger("sim.stations")
+
+
+def normalize_connectors(value: object) -> list[str]:
+    """Sorted unique connector types in the seed spelling (Type2, CCS2, CHAdeMO)."""
+    if isinstance(value, str):
+        items = value.replace("+", ";").split(";")
+    elif isinstance(value, list | tuple | np.ndarray):
+        items = [str(v) for v in value]
+    else:
+        return []
+    out = set()
+    for raw in items:
+        c = raw.strip()
+        if not c or c.lower() == "unknown":
+            continue
+        key = c.upper().replace(" ", "").replace("_", "").replace("-", "")
+        out.add(_CONNECTOR_ALIASES.get(key, c))
+    return sorted(out)
 
 
 def provisional_location_id(row_number: int) -> str:
@@ -97,9 +117,7 @@ def load_seed_stations(path: Path = SEED_CSV) -> tuple[pd.DataFrame, pd.DataFram
         )
         n = int(r["n_charge_points"]) if pd.notna(r["n_charge_points"]) else 2
         max_kw = float(r["max_kw"]) if pd.notna(r["max_kw"]) else None
-        conns = [c for c in str(r["connectors"]).split(";") if c and c != "unknown"]
-        if not isinstance(r["connectors"], str):
-            conns = []
+        conns = normalize_connectors(r["connectors"])
         for k, ct in enumerate(_cp_types(n, r["current_types"]), start=1):
             usable = (_AC_CONNECTORS if ct == "AC" else _DC_CONNECTORS) & set(conns)
             pc = _power_class(ct, max_kw if ct == "DC" else None)
@@ -116,3 +134,57 @@ def load_seed_stations(path: Path = SEED_CSV) -> tuple[pd.DataFrame, pd.DataFram
                 }
             )
     return pd.DataFrame(locs, columns=LOCATION_COLUMNS), pd.DataFrame(cps, columns=CP_COLUMNS)
+
+
+def _with_location_attrs(cps: pd.DataFrame, locs: pd.DataFrame) -> pd.DataFrame:
+    attrs = locs[["location_id", "county_code", "context_type"]]
+    cps = cps.drop(columns=["county_code", "context_type"], errors="ignore")
+    cps = cps.merge(attrs, on="location_id", how="left")
+    cps["connectors"] = [normalize_connectors(c) for c in cps["connectors"]]
+    cps["max_kw"] = cps["max_kw"].astype("float64")
+    return cps[CP_COLUMNS].reset_index(drop=True)
+
+
+def _clean_locations(locs: pd.DataFrame) -> pd.DataFrame:
+    locs = locs.copy()
+    if "primary_source" not in locs:
+        locs["primary_source"] = "ampwhere"
+    if "confidence" not in locs:
+        locs["confidence"] = "high"
+    locs["primary_source"] = locs["primary_source"].fillna("ampwhere")
+    locs["confidence"] = locs["confidence"].fillna("high")
+    locs["name"] = locs["name"].astype(str).str.strip()
+    for col in ("partner", "address"):
+        locs[col] = locs[col].astype(object).where(locs[col].notna(), None)
+    locs["lat"] = locs["lat"].astype("float64")
+    locs["lon"] = locs["lon"].astype("float64")
+    return locs[LOCATION_COLUMNS].reset_index(drop=True)
+
+
+def load_stations(base: Path | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(locations, charge_points): importer parquet, else PPC CSV export, else the seed."""
+    if base is None:
+        from sim.data import data_dir
+
+        base = data_dir()
+    p = Path(base) / "processed"
+    loc_pq, cp_pq = p / "locations.parquet", p / "charge_points.parquet"
+    loc_csv, cp_csv = p / "ppc_locations.csv", p / "ppc_charge_points.csv"
+    if loc_pq.exists() and cp_pq.exists():
+        source = str(loc_pq.parent)
+        locs = _clean_locations(pd.read_parquet(loc_pq))
+        cps = _with_location_attrs(pd.read_parquet(cp_pq), locs)
+    elif loc_csv.exists() and cp_csv.exists():
+        source = str(loc_csv.parent) + " (ppc_*.csv)"
+        locs = _clean_locations(
+            pd.read_csv(loc_csv, encoding="utf-8-sig", dtype={"location_id": str})
+        )
+        raw_cps = pd.read_csv(
+            cp_csv, encoding="utf-8-sig", dtype={"cp_id": str, "location_id": str}
+        )
+        cps = _with_location_attrs(raw_cps, locs)
+    else:
+        source = "seed " + str(SEED_CSV)
+        locs, cps = load_seed_stations()
+    log.info("stations from %s: %d locations, %d charge points", source, len(locs), len(cps))
+    return locs, cps

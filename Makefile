@@ -34,7 +34,7 @@ train:
 	$(call run_pkg,model,--extra rl)
 
 api:
-	@if [ -f api/main.py ]; then uv run uvicorn api.main:app --reload --port 8000; \
+	@if [ -f api/main.py ]; then uv run --extra rl uvicorn api.main:app --reload --port 8000; \
 	else echo "api: api/main.py not implemented yet"; fi
 
 web:
