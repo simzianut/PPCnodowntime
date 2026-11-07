@@ -11,8 +11,6 @@ Add notes as indented sub-bullets.
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
   - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
-- [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
-  - Decision 0051. Contract: CONTRACTS "Training runs".
 - [T26] M2 forecaster comparison: F0 seasonal hour-of-week baseline, F1 LightGBM (existing, wrapped for reproducible runs + 2024–25 test split + inactive days excluded), F2 GRU with 12-bucket survival head; shared metrics (AUC, PR-AUC, Brier, log loss, reliability); feature ablation + sensitivity suite (steps 1–4 on v3, step 3 on signals_evtag01, step 4 on signals_papp03) | owner: vlad-claude | branch: vlad-claude/T26-forecasters | depends: T25
   - Decision 0052. Writes forecasts.parquet per run (CONTRACTS schema) so T11 can evaluate the cost rule with any forecaster.
 - [T27] M2 RL agents: MaskablePPO (sb3-contrib) and Double DQN with action masking on ChargePointEnv, hindsight oracle bound policy, env-level evaluation on held-out days for model selection | owner: vlad-claude | branch: vlad-claude/T27-rl-agents | depends: T25
@@ -36,6 +34,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
+  - model.experiments CLI (run/suite/promote), runs/<name>-<sha8>-s<seed>/ with manifest, model/repro.py, docker/train.Dockerfile (CUDA 12.4.1, torch 2.6.0+cu124, GPU-free verify stage), docker-compose.train.yml with GPU_ID; decisions 0051, 0058. Image NOT built yet (laptop RAM): first build on the GPU server. Test: `uv run --extra rl --extra train pytest model/tests/test_experiments.py`; on the server `make train-image-verify`, then `make train-docker CONFIG=config/train/smoke.yaml GPU_ID=0`.
 - [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
   - LiveSignalSampler samples route intents, maps EV and ICE counts with CP charging confirmation; generates model/reports/live_validation_report.json; decision 0056. Test: uv run pytest model/tests/test_live_signals.py.
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
