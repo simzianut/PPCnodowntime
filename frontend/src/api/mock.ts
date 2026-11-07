@@ -67,7 +67,7 @@ const withRon = <T extends Omit<Kpis, 'overhead_ron' | 'saved_ron'>>(kpis: T) =>
 })
 
 const metric = (policy: PolicyName, scale: number): EvalResult => {
-  const factor = policy === 'always_on' ? 0 : policy === 'naive_quiet_hours' ? 0.72 : policy === 'cost_rule' ? 0.88 : 1
+  const factor = policy === 'rl_ppo' ? 1 : 0
   return withRon({
     policy,
     lambda: scale === 0 ? null : scale,
@@ -126,14 +126,14 @@ function makeKpis(slot: number): Run['kpis'] {
   const progress = (slot > 0 ? ((slot - 1) % 288) + 1 : 0) / 288
   return Object.fromEntries(POLICIES.map((policy) => [policy, withRon({
     overhead_kwh: Math.round((slot * (policy === 'always_on' ? 0.18 : 0.11)) * 10) / 10,
-    saved_kwh: Math.round(slot * (policy === 'rl_ppo' ? 0.14 : policy === 'cost_rule' ? 0.11 : policy === 'naive_quiet_hours' ? 0.08 : 0) * 10) / 10,
-    saved_pct: Math.round(progress * (policy === 'rl_ppo' ? 16.8 : policy === 'cost_rule' ? 13.1 : policy === 'naive_quiet_hours' ? 9.4 : 0) * 10) / 10,
-    wait_min_total: Math.round(slot * (policy === 'rl_ppo' ? 0.7 : policy === 'cost_rule' ? 0.45 : policy === 'naive_quiet_hours' ? 0.31 : 0)),
-    wait_min_mean: Math.round(progress * (policy === 'rl_ppo' ? 2.8 : 1.7) * 10) / 10,
-    wait_min_p95: Math.round(progress * (policy === 'rl_ppo' ? 11 : 8)),
+    saved_kwh: Math.round(slot * (policy === 'rl_ppo' ? 0.14 : 0) * 10) / 10,
+    saved_pct: Math.round(progress * (policy === 'rl_ppo' ? 16.8 : 0) * 10) / 10,
+    wait_min_total: Math.round(slot * (policy === 'rl_ppo' ? 0.7 : 0)),
+    wait_min_mean: Math.round(progress * (policy === 'rl_ppo' ? 2.8 : 0) * 10) / 10,
+    wait_min_p95: Math.round(progress * (policy === 'rl_ppo' ? 11 : 0)),
     sessions: Math.round(progress * 264),
-    waited_sessions: Math.round(progress * (policy === 'rl_ppo' ? 39 : 24)),
-    sleep_share: Math.round(progress * (policy === 'rl_ppo' ? 0.27 : 0.2) * 100) / 100,
+    waited_sessions: Math.round(progress * (policy === 'rl_ppo' ? 39 : 0)),
+    sleep_share: Math.round(progress * (policy === 'rl_ppo' ? 0.27 : 0) * 100) / 100,
   })]))
 }
 

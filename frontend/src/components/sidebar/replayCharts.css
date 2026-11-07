@@ -1,0 +1,3 @@
+.day-card .day-summary { margin: 4px 0 0; font-size: 10px; color: var(--muted); line-height: 1.35; }
+.day-card .day-summary strong { color: var(--text); font-weight: 700; }
+.day-chart { height: 104px; margin: 4px -2px 0; }

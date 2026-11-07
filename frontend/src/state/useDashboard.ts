@@ -12,7 +12,7 @@ function initialStates(locations: Location[]) {
 const emptyEval: EvalData = { generated_at: '', test_days: [], results: [] }
 
 function defaultFocus(policies: PolicyName[]): PolicyName {
-  return policies.includes('rl_ppo') ? 'rl_ppo' : policies[policies.length - 1]
+  return policies.includes('rl_ppo') ? 'rl_ppo' : 'always_on'
 }
 
 export function useDashboard() {
@@ -80,8 +80,7 @@ export function useDashboard() {
 
   const startRun = useCallback(async (mode: 'replay' | 'live', date: string | null, speed = runRef.current?.speed ?? 60) => {
     const policies = policiesRef.current
-    const focus = runRef.current?.focus_policy
-    const payload = { mode, date, policies, focus_policy: focus && policies.includes(focus) ? focus : defaultFocus(policies), lambda: 0.1, speed }
+    const payload = { mode, date, policies, focus_policy: defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
     setTrend([])
     setSelectedLocation(null)
@@ -123,7 +122,7 @@ export function useDashboard() {
         setConnectionMode('api')
         autonomyRef.current = autonomyData.mode
         const available = POLICIES.filter((name) => policyList?.find((item) => item.name === name)?.available ?? true)
-        policiesRef.current = available.length ? available : POLICIES
+        policiesRef.current = available.includes('rl_ppo') ? available : ['always_on']
         const payload = { mode: 'replay' as const, date: evalData?.test_days[0] ?? null, policies: policiesRef.current, focus_policy: defaultFocus(policiesRef.current), lambda: 0.1, speed: 60 }
         const created = await api.startRun(payload)
         const current = await api.getRun(created.run_id)

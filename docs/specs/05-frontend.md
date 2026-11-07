@@ -13,19 +13,19 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 
 ```
 ┌───────────────────────────────────────────────────────────────┬──────────────────────┐
-│ Header: PPCnodowntime · mode [Replay|Live] · Autonomy [ACT|RECOMMEND] · policy shown ▾│
+│ Header: PPCnodowntime · mode [Replay|Live] · Autonomy [ACT|RECOMMEND]                 │
 ├───────────────────────────────────────────────────────────────┼──────────────────────┤
 │                                                               │ KPI panel            │
-│                     Romania map                               │  per policy:         │
-│        (CP dots coloured by state of the shown policy)        │  energy saved kWh/%  │
+│                     Romania map                               │  Always on, RL agent:│
+│        (CP dots coloured by state of the RL agent)            │  energy saved kWh/%  │
 │                                                               │  added wait tot/p95  │
-│                                                               │  line chart over day │
-│                                                               │  energy-vs-wait curve│
+│                                                               │  energy saved chart  │
+│                                                               │  added wait chart    │
 │                                                               ├──────────────────────┤
 │                                                               │ Recommendations feed │
 │                                                               │ (RECOMMEND mode)     │
 ├───────────────────────────────────────────────────────────────┴──────────────────────┤
-│ Replay bar: date ▾ · ▶/❚❚ · speed 1×…288× · timeline scrubber · sim clock             │
+│ Replay bar: clock · ⟲ · −1h ▶/❚❚ +1h · scrubber w/ hour ticks · speed chips · date · Live │
 └───────────────────────────────────────────────────────────────────────────────────────┘
 Header: PPC logo left, SmartHack logo right. A 32% left sidebar contains overview statistics, policy analysis, recommendations, autonomy, and replay controls; the 68% right side is the interactive map. Selecting a station replaces the overview in the sidebar, keeps replay controls visible, and centers the map on that station.
 ```
@@ -46,14 +46,16 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 - Locations with `confidence = low` get a dashed outline.
 
 ### 3.2 Policy comparison KPIs
-- One card per policy (always-on, naive, cost rule, RL agent) showing energy saved (kWh and %) and added wait (total and p95 minutes). The values update with every tick.
-- A line chart of cumulative energy saved over the simulated day, one line per policy.
-- An energy-vs-wait curve read from `GET /api/eval`: one curve per λ-swept policy, with the baselines as single points.
-- "Shown policy" selector: picks which policy's states colour the map. It sets `focus_policy` on the run.
+Two policies only: Always on (baseline) and RL agent (`rl_ppo`). Runs request just these two; naive and cost rule stay in the backend and `GET /api/eval` but are not shown ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md)). Code: `frontend/src/components/sidebar/`.
+- One card per policy showing energy saved (kWh and %) and added wait (total and p95 minutes). The values update with every tick.
+- Two charts side by side, one line per policy:
+  - "Energy saved through the day": cumulative kWh over the simulated day.
+  - "Added wait through the day": cumulative `wait_min_total` per 5-min slot, built client-side from tick KPIs.
+- No energy-vs-wait trade-off curve and no map policy selector: `focus_policy` is always `rl_ppo`.
 
 ### 3.3 Replay controls + autonomy switch
-- Date picker, limited to the test days from `/api/eval`; play/pause; speed; a scrubber that sends `seek`.
-- Live mode toggle: starts a `mode: live` run. The scrubber is hidden in live mode.
+- Replay bar ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md)): big sim clock, big play/pause, restart, ±1 h skip, a scrubber with hour ticks that sends `seek`, speed chips, and a compact date pill limited to the test days from `/api/eval`. Keyboard: Space plays/pauses, ←/→ skip.
+- Live mode toggle (low-key, in the bar): starts a `mode: live` run. The scrubber is hidden in live mode.
 - **Autonomy switch** (`PUT /api/settings/autonomy`):
   - **ACT:** commands apply immediately, shown as a toast-style activity log.
   - **RECOMMEND:** pending recommendations appear in the feed, each with the CP, `from → to` states, the reason and the time left before it expires, plus Approve and Reject buttons.
