@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
@@ -111,6 +112,7 @@ def rl_client(small_data, tmp_path, monkeypatch):
 
     make_artifacts(tmp_path / "artifacts", ("maskppo",))
     monkeypatch.setattr(rl_select, "ROOT", tmp_path)
+    monkeypatch.setenv("RL_AGENT", "maskppo")
     mgr = EngineManager(data=small_data, eval_path=tmp_path / "eval_results.json")
     with TestClient(create_app(fixtures=False, manager=mgr)) as c:
         yield c
@@ -123,7 +125,7 @@ def test_policies_lists_all_seven(rl_client):
     ]  # fmt: skip
     assert infos["rl_maskppo"]["available"] and infos["oracle"]["available"]
     assert not infos["rl_ddqn"]["available"]
-    assert infos["rl_ppo"]["available"]  # auto -> maskppo artifact
+    assert infos["rl_ppo"]["available"]  # RL_AGENT=maskppo
 
 
 def test_oracle_replay_and_live(rl_client):
@@ -135,3 +137,21 @@ def test_oracle_replay_and_live(rl_client):
     assert r.status_code == 400 and "oracle" in r.json()["detail"]
     r = rl_client.post("/api/runs", json=body(policies=["always_on", "rl_ddqn"]))
     assert r.status_code == 400
+
+
+def test_replay_days_restricted_to_forecast_coverage(small_data, tmp_path):
+    import dataclasses
+
+    days = small_data.days("test")
+    d0 = days[0]
+    ts = pd.date_range(pd.Timestamp(d0, tz="Europe/Bucharest"), periods=288, freq="5min")
+    fc = pd.DataFrame({"ts": ts.tz_convert("UTC"), "cp_id": small_data.cps["cp_id"].iloc[0]})
+    for c in ("p_arrival_15", "p_arrival_30", "p_arrival_60", "expected_arrivals_60"):
+        fc[c] = 0.1
+    data = dataclasses.replace(small_data, forecasts=fc)
+    mgr = EngineManager(data=data, eval_path=tmp_path / "e.json")
+    with TestClient(create_app(fixtures=False, manager=mgr)) as c:
+        assert c.post("/api/runs", json=body(date=d0.isoformat())).status_code == 201
+        r = c.post("/api/runs", json=body(date=days[1].isoformat()))
+        assert r.status_code == 400 and d0.isoformat() in r.json()["detail"]
+        assert "covered" in r.json()["detail"]

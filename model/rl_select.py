@@ -10,8 +10,9 @@ from pathlib import Path
 from sim.config import ROOT, sim_config
 
 log = logging.getLogger("model.rl_select")
-AGENTS = ("ppo", "maskppo", "ddqn", "auto")
+AGENTS = ("gru", "ppo", "maskppo", "ddqn", "auto")
 ART_FILES = {
+    "gru": "f2_gru.pt",
     "ppo": "ppo_policy.zip",
     "maskppo": "maskppo_policy.zip",
     "ddqn": "ddqn_policy.zip",
@@ -30,12 +31,12 @@ def _art(art_dir: Path | str | None) -> Path:
 
 
 def resolve_rl_agent(art_dir: Path | str | None = None, env: str | None = None) -> str:
-    """RL_AGENT -> 'ppo' | 'maskppo' | 'ddqn'; auto = maskppo if its artifact exists else ppo."""
+    """RL_AGENT -> 'gru' | 'ppo' | 'maskppo' | 'ddqn'; auto = gru if f2_gru.pt exists else ppo."""
     v = (env if env is not None else os.environ.get("RL_AGENT", "auto")).strip().lower() or "auto"
     if v not in AGENTS:
         raise ValueError(f"RL_AGENT must be one of {list(AGENTS)}, got {v!r}")
     if v == "auto":
-        return "maskppo" if (_art(art_dir) / ART_FILES["maskppo"]).exists() else "ppo"
+        return "gru" if (_art(art_dir) / ART_FILES["gru"]).exists() else "ppo"
     return v
 
 
@@ -56,7 +57,9 @@ def check(name: str, art_dir: Path | str | None = None) -> None:
     if not path.exists():
         raise PolicyUnavailable(f"artifacts/{path.name} is missing")
     try:
-        if agent == "ppo":
+        if agent == "gru":
+            import model.cost_rule  # noqa: F401
+        elif agent == "ppo":
             import model.rl_agent  # noqa: F401
         else:
             import model.rl_policies  # noqa: F401
@@ -67,6 +70,8 @@ def check(name: str, art_dir: Path | str | None = None) -> None:
 def lambdas(name: str, art_dir: Path | str | None = None) -> list[float]:
     """Lambda list for a policy: meta lambda_wait when present, else default_lambda."""
     agent = agent_for(name, art_dir)
+    if agent == "gru":
+        return [float(x) for x in sim_config().lambda_grid]
     meta = _art(art_dir) / META_FILES[agent]
     try:
         return [float(json.loads(meta.read_text())["lambda_wait"])]
@@ -80,6 +85,8 @@ def load_policy(name: str, art_dir: Path | str | None = None, forecaster=None,
     check(name, art_dir)
     agent = agent_for(name, art_dir)
     path = _art(art_dir) / ART_FILES[agent]
+    if agent == "gru":
+        return _gru_policy(name, sim_config().default_lambda if lam is None else lam)
     key = (str(path), path.stat().st_mtime)
     if agent == "ppo":
         from model.rl_agent import RLPolicy
@@ -99,5 +106,19 @@ def load_policy(name: str, art_dir: Path | str | None = None, forecaster=None,
     else:
         pol = cls.load(path)
         _models[key] = pol.model
+    pol.name = name
+    return pol
+
+
+def _gru_policy(name: str, lam: float):
+    """The agent of decision 0069: a cost rule fed by the engine's (F2 GRU) forecasts."""
+    from model.cost_rule import CostRulePolicy
+    from sim.config import CONFIG_DIR
+
+    pol = CostRulePolicy(
+        lambda_wait=lam,
+        power_profiles_path=CONFIG_DIR / "power_profiles.yaml",
+        sim_config_path=CONFIG_DIR / "sim.yaml",
+    )
     pol.name = name
     return pol

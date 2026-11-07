@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 import numpy as np
 import pandas as pd
@@ -83,3 +83,22 @@ class PrecomputedForecaster:
             m = rows >= 0
             out[rows[m]] = self._values[s:e][m]
         return _frame(ids, out)
+
+
+def covered_days(forecasts: pd.DataFrame | None) -> list[date]:
+    """Local (Europe/Bucharest) days whose every 5-minute slot is in the forecasts."""
+    if forecasts is None or forecasts.empty:
+        return []
+    ts = forecasts["ts"]
+    if ts.dt.tz is None:
+        ts = ts.dt.tz_localize("UTC")
+    have = np.unique(ts.drop_duplicates().to_numpy(dtype="datetime64[ns]").view("int64"))
+    lo, hi = pd.Timestamp(have[0], tz="UTC").tz_convert(TZ), pd.Timestamp(have[-1], tz="UTC")
+    out = []
+    for d in pd.date_range(lo.normalize().tz_localize(None), hi.tz_convert(TZ).tz_localize(None)):
+        a = pd.Timestamp(d).tz_localize(TZ)
+        b = pd.Timestamp(d + pd.Timedelta(days=1)).tz_localize(TZ)
+        slots = pd.date_range(a, b, freq="300s", inclusive="left").tz_convert("UTC")
+        if np.isin(slots.as_unit("ns").asi8, have).all():
+            out.append(d.date())
+    return out
