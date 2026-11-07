@@ -15,7 +15,7 @@
 .nm .nm-charging-ring { fill: none; stroke: var(--nm-charge); stroke-width: 1.6px; }
 .nm .nm-selected { fill: #fff; stroke: var(--nm-ink); stroke-width: 2.2px; }
 .nm .nm-low { fill: none; stroke: #41454a; stroke-width: 1.2px; stroke-dasharray: 3 2.5; }
-.nm .nm-leg { stroke: var(--nm-ink); stroke-opacity: .35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.nm .nm-colocated { fill: #fff; fill-opacity: .75; stroke: #0f172a; stroke-opacity: .18; stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
 .nm .map-marker:focus-visible .nm-hit { stroke: var(--nm-ink); stroke-width: 2px; }
 
 .nm-pulses { pointer-events: none; }

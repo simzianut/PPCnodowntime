@@ -13,7 +13,7 @@
 ## Decision
 - **Quiet base:** flat dots. No state rings, no cluster numbers.
 - **Colours (4, legend shows only these):** idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey.
-- **Clustering:** screen radius ~44 px (was 34). Cluster colour = arithmetic mean over member stations of asleep / (asleep + idle) CPs, interpolated straight red → green in RGB so it never passes through yellow. Charging and offline CPs are ignored; a cluster where everything is charging is yellow.
+- **Clustering:** screen radius 44 px at country zoom (was 34), shrinking to 14 px from about 8× zoom so stations separate when zoomed in. Only locations that still overlap at max zoom (within 12 px) fan out: a tight ring on a faint white disc, without legs. The selected station stays in its cluster, so selecting never reshuffles markers. Opening a cluster centres it in the with-agent half. Cluster colour = arithmetic mean over member stations of asleep / (asleep + idle) CPs, interpolated straight red → green in RGB so it never passes through yellow. Charging and offline CPs are ignored; a cluster where everything is charging is yellow.
 - **Live actions:** ripple + label on each transition: green "−W" when CPs go to sleep, red when they wake, yellow when a charge starts. An action ticker shows the last 5 actions, plus sleep/wake counters.
 - **Swipe slider:** left half is the always-on counterfactual (every non-charging CP idle/red, kW burned); right half is the shown policy (kW burned, % less idle power). The divider is draggable and keyboard-movable and does not pan the map.
 - **Props:** `NetworkMap` also takes `run`.

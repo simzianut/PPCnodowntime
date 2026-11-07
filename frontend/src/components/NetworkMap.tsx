@@ -18,6 +18,14 @@ interface NetworkMapProps {
 
 const BASE_MAP_URL = '/map/romania.svg'
 const CLUSTER_RADIUS_PX = 44
+const CLUSTER_RADIUS_MIN_PX = 14
+const COLOCATED_PX = 12
+
+/** Screen radius for clustering: wide at country zoom, tight once zoomed in. */
+function clusterRadiusPx(k: number) {
+  const t = Math.min(1, Math.max(0, (Math.log2(k) - 0.5) / 2.5))
+  return CLUSTER_RADIUS_PX + (CLUSTER_RADIUS_MIN_PX - CLUSTER_RADIUS_PX) * t
+}
 const SELECT_MIN_K = 6
 const SPIDER_K = 12
 const DRAG_THRESHOLD_PX = 4
@@ -206,6 +214,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   const svgRef = useRef<SVGSVGElement>(null)
   const frame = base?.frame ?? null
   const { view, viewRef, setView, animateTo } = useAnimatedView()
+  const splitRef = useRef(split)
+  splitRef.current = split
   const { pulses, actions, counts } = useAgentActions(locations, cpState, run)
   const uid = useId().replace(/:/g, '')
 
@@ -243,13 +253,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   }, [frame, size.w, size.h, points.length, home, setView, viewRef, vp])
 
   const clusterK = clusterZoom(view.k)
-  const radius = CLUSTER_RADIUS_PX * px
-  const clusters = useMemo(() => {
-    const free = points.filter((p) => p.id !== selectedLocationId)
-    const out = clusterPoints(free, clusterK, radius)
-    const selected = selectedLocationId ? pointById.get(selectedLocationId) : undefined
-    return selected ? [...out, { ids: [selected.id], x: selected.x, y: selected.y }] : out
-  }, [points, pointById, clusterK, radius, selectedLocationId])
+  const radius = clusterRadiusPx(clusterK) * px
+  const clusters = useMemo(() => clusterPoints(points, clusterK, radius), [points, clusterK, radius])
   const clusterOf = useMemo(() => {
     const index = new Map<string, Cluster>()
     for (const cluster of clusters) for (const id of cluster.ids) index.set(id, cluster)
@@ -258,8 +263,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
 
   const stuckAtMax = useCallback((cluster: Cluster) => {
     const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is Point => !!p)
-    return clusterPoints(members, MAX_K, radius).some((c) => c.ids.length > 1)
-  }, [pointById, radius])
+    return clusterPoints(members, MAX_K, COLOCATED_PX * px).some((c) => c.ids.length > 1)
+  }, [pointById, px])
 
   const totals = useMemo(() => {
     let burnedW = 0
@@ -385,7 +390,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     const k = stuckAtMax(cluster)
       ? Math.min(MAX_K, Math.max(SPIDER_K, current * 2))
       : Math.min(MAX_K, Math.max(fitPoints(frame, vp, members, 0.35).k, current * 2))
-    animateTo(centerOn(frame, vp, cluster.x, cluster.y, k))
+    animateTo(centerInAgentHalf(cluster.x, cluster.y, k))
+  }
+
+  /** View that puts (x, y) in the middle of the with-agent half, clear of the divider handle. */
+  function centerInAgentHalf(x: number, y: number, k: number) {
+    const v = vpRef.current
+    const cx = v.x0 + (v.w * (1 + splitRef.current)) / 2
+    return clampView({ k, tx: cx - x * k, ty: v.y0 + v.h / 2 - y * k }, frame!, v)
   }
 
   function selectLocation(id: string) {
@@ -393,8 +405,6 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     onSelect(byId.get(id) ?? null)
   }
 
-  const splitRef = useRef(split)
-  splitRef.current = split
   useEffect(() => {
     if (!frame || !selectedLocationId) return
     const point = pointById.get(selectedLocationId)
@@ -485,13 +495,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
 
   function renderCluster(cluster: Cluster, x: number, y: number, side: Side) {
     if (view.k >= SPIDER_K && stuckAtMax(cluster)) {
-      const ring = 18 + 3 * cluster.ids.length
+      const ring = Math.max(9, (cluster.ids.length * 14) / (2 * Math.PI))
       return <g key={`spider-${cluster.ids[0]}`}>
+        <circle className="nm-colocated" cx={x} cy={y} r={(ring + 10) * px} />
         {cluster.ids.map((id, i) => {
           const a = (i / cluster.ids.length) * 2 * Math.PI - Math.PI / 2
           const sx = x + Math.cos(a) * ring * px
           const sy = y + Math.sin(a) * ring * px
-          return <g key={id}><line className="nm-leg" x1={x} y1={y} x2={sx} y2={sy} />{renderStation(id, sx, sy, side)}</g>
+          return renderStation(id, sx, sy, side)
         })}
       </g>
     }
@@ -499,13 +510,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     const { tally, color } = summarize(members, cpState, side)
     const r = Math.min(12, 6.5 + Math.log2(cluster.ids.length) * 1.3)
     const interactive = side === 'with'
+    const selected = !!selectedLocationId && cluster.ids.includes(selectedLocationId)
     const label = `${cluster.ids.length} locations: ${tallyText(tally)}. Zoom in.`
-    return <g key={cluster.ids[0]} className="map-marker nm-cluster" transform={`translate(${x} ${y}) scale(${px})`}
+    return <g key={cluster.ids[0]} className={`map-marker nm-cluster${selected ? ' is-selected' : ''}`} transform={`translate(${x} ${y}) scale(${px})`}
       role={interactive ? 'button' : undefined} tabIndex={interactive ? 0 : -1} aria-label={interactive ? label : undefined}
       onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
       {interactive && <title>{label}</title>}
       <circle className="nm-hit" r={Math.max(14, r + 4)} />
-      <g className="nm-body">{markerBody(color, tally, r)}</g>
+      <g className="nm-body">{selected && <circle className="nm-selected" r={r + 5} />}{markerBody(color, tally, r)}</g>
     </g>
   }
 
