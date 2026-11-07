@@ -70,6 +70,11 @@ class PolicyName(StrEnum):
     naive_quiet_hours = "naive_quiet_hours"
     cost_rule = "cost_rule"
     rl_ppo = "rl_ppo"
+    # Uppercase aliases, used by model/ (T13).
+    ALWAYS_ON = "always_on"
+    NAIVE_QUIET_HOURS = "naive_quiet_hours"
+    COST_RULE = "cost_rule"
+    RL_PPO = "rl_ppo"
 
 
 class Signal(StrEnum):
