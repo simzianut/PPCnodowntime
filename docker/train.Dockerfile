@@ -9,7 +9,7 @@ RUN apt-get update \
 ENV UV_PYTHON_INSTALL_DIR=/opt/python \
     UV_PYTHON_PREFERENCE=only-managed \
     UV_LINK_MODE=copy \
-    UV_COMPILE_BYTECODE=1 \
+    UV_CONCURRENT_INSTALLS=4 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
