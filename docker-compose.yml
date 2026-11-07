@@ -40,15 +40,14 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # Writes to data/processed are masked by a tmpfs, so the host data stays untouched.
-  # A failed seed must not block the API: the API falls back to in-memory state.
+  # Rewrites data/processed and data/raw/stations/location_id_map.csv (idempotent), so data/ is
+  # writable here. A failed seed must not block the API, which has its own fallbacks.
   ppc-seed:
     <<: *api
+    user: "0:0"
     command: ["sh", "-c", "python -m stations || echo 'seed failed (non-fatal)'"]
     volumes:
-      - ./data:/app/data:ro
-    tmpfs:
-      - /app/data/processed
+      - ./data:/app/data
     depends_on:
       ppc-migrate:
         condition: service_completed_successfully

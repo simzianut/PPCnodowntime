@@ -14,13 +14,17 @@ ENV UV_LINK_MODE=copy \
     PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    DATA_DIR=/app/data
+    DATA_DIR=/app/data \n    MPLCONFIGDIR=/tmp/mpl
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-# The lock pins the cu124 torch wheel on Linux; export without torch/nvidia/triton, add CPU torch below.
-RUN set -e; ulimit -n "$(ulimit -Hn)" 2>/dev/null || true;     uv export --frozen --no-dev --extra rl --extra train --no-hashes --no-emit-project         --no-emit-package torch -o /tmp/req.txt;     grep -viE '^(nvidia-|triton|torch==)' /tmp/req.txt > /tmp/req.filtered.txt;     uv venv /opt/venv --python /usr/local/bin/python3.12;     uv pip install -r /tmp/req.filtered.txt
-RUN uv pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu \
-    && rm -rf /root/.cache
+RUN uv venv /opt/venv --python /usr/local/bin/python3.12
+# The lock pins the cu124 torch wheel on Linux: CPU torch first, then the rest without torch/nvidia/triton.
+RUN uv pip install --python /opt/venv/bin/python torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+RUN set -e; ulimit -n "$(ulimit -Hn)" 2>/dev/null || true; \
+    uv export --frozen --no-dev --extra rl --extra train --no-hashes --no-emit-project \
+        --no-emit-package torch -o /tmp/req.txt; \
+    grep -viE '^(nvidia-|triton|torch==)' /tmp/req.txt > /tmp/req.filtered.txt; \
+    uv pip install -r /tmp/req.filtered.txt
 COPY . .
 RUN useradd --system --uid 1000 --home-dir /app app
 USER app
