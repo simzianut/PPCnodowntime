@@ -124,7 +124,7 @@ Observation: `sim.obs.build_obs(state: SimState, cp_ids: list[str]) -> np.ndarra
 | 8 | `maps_traffic_index`, latest | as is |
 | 9–10 | hour of day sin, cos (local time, minute precision) | |
 | 11–17 | weekday one-hot, Monday first | |
-| 18 | `is_holiday` (county of the CP) | 0/1 |
+| 18 | `is_holiday`: 1 if any county in `state.context` is a holiday (RO public holidays are national) | 0/1 |
 | 19–24 | state one-hot: CHARGING, IDLE, WAKING, STANDBY, DEEP_SLEEP, OFFLINE | |
 | 25 | seconds in state | `min(s / 3600, 1)` |
 | 26 | siblings IDLE / siblings total (0 if no siblings) | |
