@@ -2,7 +2,7 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
-Version: v0, 2026-11-07. Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+Version: v0.1, 2026-11-07 (sim types, forecasts table, observation layout, λ unit, run pause; decisions 0017–0025). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
 
 ## Services and ports
 | Service | Port | Owner | Notes |
@@ -69,12 +69,14 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `sessions.parquet` | `session_id str, cp_id str, location_id str, arrival_ts ts[UTC], departure_ts ts[UTC], energy_kwh float, donor_charger_id str, split {train,test}` |
 | `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)` |
 | `context.parquet` | `ts_hour ts[UTC], county_code str, temp_c float, precip_mm float, wind_kmh float, is_holiday bool` |
+| `forecasts.parquet` (M2 writes, M4 reads; decision 0021) | `ts ts[UTC] (slot start), cp_id str, p_arrival_15 float, p_arrival_30 float, p_arrival_60 float, expected_arrivals_60 float` |
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
 | `donor_chargers.parquet` | `donor_charger_id, site, power_class, sessions_per_day, util_quantile` |
 | `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
 | `data/raw/live/statuses-YYYYMMDD.jsonl` (gitignored, decision 0016) | one JSON object per status: `ts ISO UTC, source, source_location_id, source_cp_id?, connector?, raw_status, status LiveStatus, cp_id? (null until matched), name?, lat?, lon?, operator?` |
 
 ### Python interfaces (M2 ↔ M4)
+Module: `sim/types.py` (M4 owns, decision 0017). `model/` imports these types and the enums from there.
 ```python
 @dataclass
 class CpView:            # one charge point, as a policy sees it
@@ -85,7 +87,7 @@ class CpView:            # one charge point, as a policy sees it
 class SimState:
     t: datetime                       # slot start, tz-aware Europe/Bucharest
     cps: list[CpView]
-    signals: pd.DataFrame             # signals with ts <= t (the signals.parquet schema)
+    signals: pd.DataFrame             # signals with t - 60 min < ts <= t (signals.parquet schema; decision 0021)
     context: dict[str, dict]          # county_code -> weather/holiday at t
     forecast: pd.DataFrame | None     # ForecastOutput, filled by engine if a forecaster is set
 
@@ -101,7 +103,32 @@ class Forecaster(Protocol):
     def predict(self, state: SimState) -> pd.DataFrame: ...
     # ForecastOutput columns: cp_id, p_arrival_15, p_arrival_30, p_arrival_60, expected_arrivals_60
 ```
-`sim.gym_env.ChargePointEnv(split, lambda_wait, sibling_policy, seed)` is a Gymnasium environment. Its observation and action spaces are defined in spec 02 §4.
+Policies and forecasters receive their history (training sessions, models) in their constructor. `SimState` holds only what is visible at `t`. For training and evaluation the engine uses `sim.forecast.PrecomputedForecaster`, a lookup into `forecasts.parquet`; online `predict()` is for live mode (decision 0021).
+
+**λ** (`lambda_wait`, `lambda`, `lambda_grid`) is in **kWh per minute of added wait** (decision 0020).
+
+`sim.gym_env.ChargePointEnv(split, lambda_wait, sibling_policy=None, seed=0, days=None, data=None)` is a Gymnasium environment (decision 0023):
+- `split`: `train` | `test`. `days`: optional list of dates that restricts episode sampling (for validation hold-outs). `data`: optional `sim.data.SimData`; default loads `data/processed/`.
+- `sibling_policy=None` means `naive_quiet_hours` until `cost_rule` exists, then `cost_rule`.
+- Action `Discrete(3)` = `[IDLE, STANDBY, DEEP_SLEEP]`. Invalid actions keep the current state. `env.action_masks() -> np.ndarray[bool]` for MaskablePPO.
+- Reward per slot: `−(overhead_kwh + λ · wait_min_caused) / (idle_w × slot_s / 3.6e6)`.
+
+Observation: `sim.obs.build_obs(state: SimState, cp_ids: list[str]) -> np.ndarray[float32]` of shape `(len(cp_ids), 31)`, used by both the env and `rl_ppo` (decision 0017). Order:
+| Index | Feature | Scaling |
+|---|---|---|
+| 0–2 | `p_arrival_15`, `p_arrival_30`, `p_arrival_60` | as is |
+| 3 | `expected_arrivals_60` | `log1p` |
+| 4–6 | route intents at the location with `eta` in `(t, t+15]`, `(t+15, t+30]`, `(t+30, t+60]` min | `min(n, 5) / 5` |
+| 7 | weighted EV flow: `maps_ev_count + w_ice × maps_ice_count`, last 15 min | `log1p` |
+| 8 | `maps_traffic_index`, latest | as is |
+| 9–10 | hour of day sin, cos (local time, minute precision) | |
+| 11–17 | weekday one-hot, Monday first | |
+| 18 | `is_holiday` (county of the CP) | 0/1 |
+| 19–24 | state one-hot: CHARGING, IDLE, WAKING, STANDBY, DEEP_SLEEP, OFFLINE | |
+| 25 | seconds in state | `min(s / 3600, 1)` |
+| 26 | siblings IDLE / siblings total (0 if no siblings) | |
+| 27 | siblings total | `min(n / 10, 1)` |
+| 28–30 | `power_class` one-hot: AC_22, DC_50, DC_HPC | |
 
 ### `artifacts/eval_results.json` (M4 writes, M5 reads)
 ```json
@@ -152,7 +179,9 @@ Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": Polic
 Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown policy, date not a test day).
 
 ### GET /api/runs/{run_id}
-Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
+Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
+
+In RECOMMEND mode only `focus_policy`'s commands become recommendations; other policies act. A replay pauses itself with `paused_reason: "recommendations"` when new pending recommendations appear; `play` resumes it. Recommendations expire after `recommendation_ttl_slots` of sim time. Approved commands apply at the start of the next slot (decision 0025).
 
 ### POST /api/runs/{run_id}/control
 Request: `{"action": "play"|"pause"|"speed"|"seek"|"focus", "value": number|string|null}`. Response 200: same body as GET run.
@@ -168,6 +197,7 @@ The server sends one message per engine step:
  "recommendations": [/* Recommendation, only new or changed ones */]}
 ```
 The first message after connecting is `{"type": "snapshot", ...}`: the same as a tick, but `changes` lists every CP. The last message is `{"type": "done", "kpis": {...}}`.
+Whenever the run's status, speed or focus changes, the server sends `{"type": "status", "run_id", "status", "paused_reason", "speed", "focus_policy", "slot", "sim_time"}`. After a `seek` or `focus`, it sends a new `snapshot`.
 
 ### GET /api/runs/{run_id}/cp/{cp_id}/timeline
 Response 200:

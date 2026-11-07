@@ -5,7 +5,7 @@ Owner folders: `sim/` (engine, Gymnasium environment, baselines, evaluator), `ap
 - **Replay:** a test day played back at any speed, with all policies side by side.
 - **Live mode:** the agent acting on the real statuses collected today.
 
-Decision: [0011](../decisions/0011-shared-slot-engine.md).
+Decisions: [0011](../decisions/0011-shared-slot-engine.md), [0017](../decisions/0017-shared-sim-types.md) (types in `sim/types.py`, observation builder `sim/obs.py`), [0018](../decisions/0018-engine-transition-rules.md) (transitions), [0019](../decisions/0019-arrival-handling-and-wait.md) (arrivals), [0020](../decisions/0020-lambda-unit-and-reward.md) (λ unit), [0021](../decisions/0021-precomputed-forecasts.md) (forecast table), [0022](../decisions/0022-naive-baseline-window.md) (naive window), [0023](../decisions/0023-gym-env-defaults.md) (gym env), [0024](../decisions/0024-synthetic-sim-data.md) (synthetic data), [0025](../decisions/0025-recommend-in-replay.md) (RECOMMEND in replay), [0026](../decisions/0026-engine-run-defaults.md) (run defaults).
 
 ## 1. Engine (`sim/engine.py`, must-have)
 
@@ -16,17 +16,17 @@ Decision: [0011](../decisions/0011-shared-slot-engine.md).
   - one or more `Policy` objects from M2
   - an autonomy mode
 - **Time:** 5-minute slots in `Europe/Bucharest`. Each slot runs in this order:
-  1. **Observe:** build a `SimState`: the time, each CP's state and time in state, signals visible up to `t`, and the forecaster's output.
-  2. **Decide:** each policy's `decide(SimState)` returns `Command`s. In RECOMMEND mode, commands become pending recommendations. They are applied only once approved, through the API; replay auto-expires them after the TTL.
-  3. **Apply:** apply the commands, following the transition rules in spec 03 §4.
+  1. **Observe:** build a `SimState`: the time, each CP's state and time in state, signals with `ts` in `(t − 60 min, t]`, and the forecaster's output (from the precomputed `forecasts.parquet` in training and replay, decision 0021).
+  2. **Decide:** each policy's `decide(SimState)` returns `Command`s. In RECOMMEND mode, `focus_policy`'s commands become pending recommendations; other policies act. They are applied at the next slot once approved, through the API, and expire after the TTL in sim time. A replay pauses itself when new recommendations appear (decision 0025).
+  3. **Apply:** apply the commands, following the transition rules in spec 03 §4 and decision 0018 (`sim/transitions.py`).
   4. **Events:** process the slot's arrivals and departures in time order, at second precision:
-     - **Arrival at a CP:** if the CP is IDLE, it starts CHARGING. Otherwise, if a **compatible sibling** at the same location is IDLE and free, the driver moves to it and waits 0. Compatible means same `current_type` and a shared connector.
-     - Otherwise the driver waits for the sleeping CP. Wait = remaining wake time (from STANDBY, DEEP_SLEEP or partway through WAKING). The CP goes to WAKING, then CHARGING when ready. The departure time moves later by the wait.
-     - If every compatible CP is busy charging, it's the same queueing as always-on, so it counts as **not** added wait.
+     - **Arrival at a CP:** if the CP is IDLE, it starts CHARGING. Otherwise, if a **compatible sibling** at the same location is IDLE, the driver moves to it and waits 0 (lowest CP index first). Compatible means same `current_type` and a shared connector; when connectors are unknown, same `current_type` and `power_class`.
+     - Otherwise the driver uses the compatible CP (own or sibling) that is asleep or WAKING and ready soonest. Wait = remaining wake time (from STANDBY, DEEP_SLEEP or partway through WAKING), attributed to that CP. The CP goes to WAKING, then CHARGING when ready. The departure time moves later by the wait.
+     - If every compatible CP is busy charging, the driver queues for the first to free up. It's the same queueing as always-on, so it counts as **not** added wait (decision 0019).
   5. **Account:** add overhead energy per CP, `power(state) × seconds in state`, inside the slot, plus `wake_extra_wh` per wake.
 - **Policies run side by side:** every policy gets its own copy of the CP states, driven by the **same** sessions and signals. Results are directly comparable.
 - **Determinism:** seeded. The same inputs produce the same results.
-- **Speed target:** one day, all CPs (~1,500), 4 policies in under 20 s headless. Use vectorised per-CP arrays where possible.
+- **Speed target:** one day, all real CPs (~500, decision 0026), 4 policies in under 20 s headless. Use vectorised per-CP arrays where possible.
 
 ## 2. Metrics (`sim/metrics.py`)
 
@@ -47,16 +47,17 @@ Drivers are never lost (decision 0006).
 - `always_on`: never sends a command, so every CP is IDLE when not charging.
 - `naive_quiet_hours`:
   - From the **training period**, compute each CP's arrival rate by hour of the week.
-  - Sleep the CP during its `naive_quiet_hours_per_day` quietest hours each day (default 3, in `config/sim.yaml`). Use the deepest state available, wake at the end of the window, and never wake early.
+  - Sleep the CP during the one contiguous window of `naive_quiet_hours_per_day` hours (default 3, in `config/sim.yaml`) with the lowest summed rate for that weekday; ties go to the window centred nearest 03:00 (decision 0022). Use the deepest state available, wake at the end of the window, and never wake early.
   - This is the "Ampwhere usage → switch off when least used" baseline from the original brief.
 
 ## 4. Gymnasium environment (`sim/gym_env.py`, must-have, needed early by M2)
 
 `ChargePointEnv`:
 - Episode = one CP × one day, sampled from a split.
-- The CP's siblings follow a policy you pass in (default `cost_rule`).
+- The CP's siblings follow a policy you pass in (default `naive_quiet_hours` until `cost_rule` exists, decision 0023). `days=` restricts sampling to given dates.
+- Data comes from `sim.data.SimData`: `data/processed/` when present, else the seeded generator in `sim/synthetic.py` (decision 0024).
 - Observation and action spaces are exactly those in spec 02 §4, with action masking.
-- Reward is as in spec 02 §4. Pass `lambda_wait` in, so the training loop can sweep it.
+- Reward is as in spec 02 §4, with λ in kWh per wait-minute (decision 0020). Pass `lambda_wait` in, so the training loop can sweep it.
 
 Ship a version on fixtures in the **first few hours**, so M2 can start PPO training.
 
@@ -88,14 +89,14 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 **Replay runner:**
 - An asyncio task advances the engine `speed` slots per second (1–288).
 - After each step it sends one `tick` message: sim time, the KPIs of every policy, and **only the CPs whose state changed** under `focus_policy`.
-- `seek` re-runs the engine from midnight up to the target slot, without sending anything.
+- `seek` re-runs the engine from midnight up to the target slot, without sending anything. Past operator decisions are not replayed; their recommendations count as expired.
 
 **Live mode:**
 - Every 5 minutes, read the latest `live_status` into CP states. AVAILABLE becomes IDLE unless the agent has put the CP to sleep.
 - Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
 - Send ticks over the same WebSocket.
 
-**Fixture mode:** `API_FIXTURES=1` serves every route from `fixtures/`, so M5 can integrate before the engine is ready.
+**Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations.
 
 ## 7. Config: `config/sim.yaml`
 

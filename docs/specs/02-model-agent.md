@@ -56,8 +56,8 @@ Each must be under 20 MB.
 For each CP that is not CHARGING, at each slot:
 
 ```
-E_save(s)  = (P_idle − P_s) × slot_seconds                     # energy saved by sleeping in state s
-C_wait(s)  = p_arrival_H(s) × wake_time(s) / 60 × λ            # expected wait cost, H = smallest horizon ≥ wake time + slot
+E_save(s)  = (P_idle − P_s) × slot_seconds / 3.6e6             # kWh saved by sleeping in state s
+C_wait(s)  = p_arrival_H(s) × wake_time(s) / 60 × λ            # λ in kWh per wait-minute (decision 0020)
 choose s ∈ {IDLE, STANDBY, DEEP_SLEEP} maximising E_save(s) − C_wait(s)
 ```
 
@@ -71,8 +71,8 @@ choose s ∈ {IDLE, STANDBY, DEEP_SLEEP} maximising E_save(s) − C_wait(s)
 - **Structure:** one shared per-charge-point policy, Stable-Baselines3 PPO with an MLP of [64, 64]. The same network decides for every CP independently.
 - **Environment:** `sim.gym_env.ChargePointEnv` (owned by M4, see spec 04).
   - One episode = one CP over one day (288 slots), sampled at random from the training period.
-  - The CP's siblings at the same location follow `cost_rule` during training. This is a documented approximation; at inference every CP uses `rl_ppo`.
-- **Observation (float vector):**
+  - The CP's siblings at the same location follow `cost_rule` during training (`naive_quiet_hours` until `cost_rule` exists, decision 0023). This is a documented approximation; at inference every CP uses `rl_ppo`.
+- **Observation (float vector)**, built by `sim.obs.build_obs` (layout in CONTRACTS, decision 0017):
   - the forecaster outputs `p15`, `p30`, `p60`, `n60`
   - the route-intent counts by eta bucket
   - weighted EV flow, `traffic_index`
@@ -81,7 +81,7 @@ choose s ∈ {IDLE, STANDBY, DEEP_SLEEP} maximising E_save(s) − C_wait(s)
   - siblings awake / siblings total, `power_class` one-hot
 - **Actions:** `Discrete(3)` = {IDLE, STANDBY, DEEP_SLEEP}.
   - Invalid actions (DEEP_SLEEP on AC; anything while CHARGING) are masked by the environment and treated as "keep the current state".
-- **Reward per slot:** `− overhead_kwh − λ × wait_min_caused`. `wait_min_caused` counts the driver wait this CP caused in this slot. Both terms are normalised by the always-on overhead per slot.
+- **Reward per slot:** `− overhead_kwh − λ × wait_min_caused`. `wait_min_caused` counts the driver wait this CP caused in this slot. Both terms are normalised by the always-on overhead per slot (decision 0020).
 - **Training:**
   - 8 parallel environments, about 2 M steps, or as many as fit in a 2-hour budget.
   - Train for λ ∈ the grid in `config/sim.yaml`. If time is short, train a single λ.

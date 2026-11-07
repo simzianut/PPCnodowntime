@@ -140,6 +140,7 @@ States: `CHARGING`, `IDLE`, `WAKING`, `STANDBY`, `DEEP_SLEEP`, `OFFLINE`.
  any ──fault──► OFFLINE ──recovered──► IDLE
 ```
 
+- Going to sleep is instant, including IDLE → DEEP_SLEEP directly. DEEP_SLEEP → STANDBY goes through WAKING (deep-sleep wake time), then STANDBY. A WAKING CP ignores sleep commands until ready. Commands equal to the current state are dropped. See [0018](../decisions/0018-engine-transition-rules.md).
 - **WAKING** is a transition state. It lasts `wake_s` of the state it is leaving and draws `idle_w`.
 - A driver who plugs into a CP that is WAKING, STANDBY or DEEP_SLEEP waits until the CP is ready. That wait is the "added wait".
 - CHARGING cannot be interrupted. Commands to a CHARGING CP are rejected with `reason = busy`.
