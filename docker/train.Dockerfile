@@ -4,7 +4,8 @@ ARG CUDA_IMAGE=nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 FROM ${CUDA_IMAGE} AS runtime
 COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /bin/
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 ca-certificates \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       libgomp1 ca-certificates tzdata \
     && rm -rf /var/lib/apt/lists/*
 # Low open-file limits on shared hosts (decision 0063): no stdlib precompile, few parallel jobs.
 ENV UV_PYTHON_INSTALL_DIR=/opt/python \
