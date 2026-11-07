@@ -43,18 +43,35 @@ def data_dir() -> Path:
 
 
 def load_processed(base: Path | None = None) -> SimData:
-    """Load M1/M2 outputs from data/processed and stations via load_stations."""
+    """Load M1/M2 outputs from data/processed, stations via load_stations, and signals safely."""
     from sim.stations_seed import load_stations
 
     base = base or data_dir()
     p = base / "processed"
     locations, cps = load_stations(base)
     forecasts = p / "forecasts.parquet"
+    sig_path = p / "signals.parquet"
+    sig_start = os.environ.get("SIM_SIGNALS_START", "2023-10-01")
+    sig_end = os.environ.get("SIM_SIGNALS_END", "2023-12-31 23:59:59")
+    import pyarrow.parquet as pq
+
+    if sig_path.exists() and pq.read_metadata(sig_path).num_rows > 5_000_000:
+        sig_tbl = pq.read_table(
+            sig_path,
+            filters=[
+                ("ts", ">=", pd.Timestamp(sig_start, tz="UTC")),
+                ("ts", "<=", pd.Timestamp(sig_end, tz="UTC")),
+            ],
+        )
+        signals = sig_tbl.to_pandas()
+    else:
+        signals = pd.read_parquet(sig_path)
+
     return SimData(
         locations=locations,
         cps=cps,
         sessions=pd.read_parquet(p / "sessions.parquet"),
-        signals=pd.read_parquet(p / "signals.parquet"),
+        signals=signals,
         context=pd.read_parquet(p / "context.parquet"),
         forecasts=pd.read_parquet(forecasts) if forecasts.exists() else None,
     )

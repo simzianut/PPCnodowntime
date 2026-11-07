@@ -31,6 +31,11 @@ def train_ppo(
     lam = float(cfg.default_lambda if lambda_wait is None else lambda_wait)
     data = default_data(seed=seed)
     all_train_days = sorted(data.days("train"))
+    if not data.signals.empty and "ts" in data.signals.columns:
+        sig_dates = set(data.signals["ts"].dt.tz_convert("Europe/Bucharest").dt.date)
+        matching = [d for d in all_train_days if d in sig_dates]
+        if matching:
+            all_train_days = matching
     if len(all_train_days) > 3:
         train_days = all_train_days[:-2]
         val_days = all_train_days[-2:]
