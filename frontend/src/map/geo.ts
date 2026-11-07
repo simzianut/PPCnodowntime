@@ -7,11 +7,19 @@ export interface MapFrame {
   height: number
 }
 
-/** Map-unit translation and zoom applied to the base map: outer = map * k + t. */
+/** Translation and zoom applied to the base map: outer = map * k + t. */
 export interface View {
   k: number
   tx: number
   ty: number
+}
+
+/** The part of the outer (viewBox) space that is on screen. */
+export interface Viewport {
+  x0: number
+  y0: number
+  w: number
+  h: number
 }
 
 export interface Point {
@@ -26,8 +34,7 @@ export interface Cluster {
   y: number
 }
 
-export const MIN_K = 1
-export const MAX_K = 40
+export const MAX_K = 32
 
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 180 / 2))
 const rad = (deg: number) => (deg * Math.PI) / 180
@@ -47,34 +54,55 @@ export function project(frame: MapFrame, lon: number, lat: number): { x: number;
   return { x: rad(lon - frame.lonMin) * scale, y: (mercY(frame.latMax) - mercY(lat)) * scale }
 }
 
-export function clampView(view: View, frame: MapFrame): View {
-  const k = Math.min(MAX_K, Math.max(MIN_K, view.k))
-  const minTx = frame.width - frame.width * k
-  const minTy = frame.height - frame.height * k
-  return { k, tx: Math.min(0, Math.max(minTx, view.tx)), ty: Math.min(0, Math.max(minTy, view.ty)) }
+/** Visible outer rect for preserveAspectRatio "xMidYMid slice" in a w×h px element. */
+export function sliceViewport(frame: MapFrame, widthPx: number, heightPx: number): Viewport {
+  if (!widthPx || !heightPx) return { x0: 0, y0: 0, w: frame.width, h: frame.height }
+  const fit = Math.max(widthPx / frame.width, heightPx / frame.height)
+  const w = widthPx / fit
+  const h = heightPx / fit
+  return { x0: (frame.width - w) / 2, y0: (frame.height - h) / 2, w, h }
+}
+
+/** Smallest zoom: the whole map fits in the viewport. */
+export function minK(frame: MapFrame, vp: Viewport): number {
+  return Math.min(1, vp.w / frame.width, vp.h / frame.height)
+}
+
+function clampAxis(t: number, size: number, start: number, span: number): number {
+  if (size <= span) return start + (span - size) / 2
+  return Math.min(start, Math.max(start + span - size, t))
+}
+
+export function clampView(view: View, frame: MapFrame, vp: Viewport): View {
+  const k = Math.min(MAX_K, Math.max(minK(frame, vp), view.k))
+  return {
+    k,
+    tx: clampAxis(view.tx, frame.width * k, vp.x0, vp.w),
+    ty: clampAxis(view.ty, frame.height * k, vp.y0, vp.h),
+  }
 }
 
 /** Zoom to k2 keeping the outer point (px, py) fixed. */
-export function zoomAt(view: View, k2: number, px: number, py: number, frame: MapFrame): View {
-  const k = Math.min(MAX_K, Math.max(MIN_K, k2))
+export function zoomAt(view: View, k2: number, px: number, py: number, frame: MapFrame, vp: Viewport): View {
+  const k = Math.min(MAX_K, Math.max(minK(frame, vp), k2))
   const ratio = k / view.k
-  return clampView({ k, tx: px - (px - view.tx) * ratio, ty: py - (py - view.ty) * ratio }, frame)
+  return clampView({ k, tx: px - (px - view.tx) * ratio, ty: py - (py - view.ty) * ratio }, frame, vp)
 }
 
-export function centerOn(frame: MapFrame, x: number, y: number, k: number): View {
-  return clampView({ k, tx: frame.width / 2 - x * k, ty: frame.height / 2 - y * k }, frame)
+export function centerOn(frame: MapFrame, vp: Viewport, x: number, y: number, k: number): View {
+  return clampView({ k, tx: vp.x0 + vp.w / 2 - x * k, ty: vp.y0 + vp.h / 2 - y * k }, frame, vp)
 }
 
-export function fitPoints(frame: MapFrame, points: Array<{ x: number; y: number }>, padding = 0.15): View {
-  if (!points.length) return { k: 1, tx: 0, ty: 0 }
+export function fitPoints(frame: MapFrame, vp: Viewport, points: Array<{ x: number; y: number }>, padding = 0.15): View {
+  if (!points.length) return clampView({ k: 1, tx: 0, ty: 0 }, frame, vp)
   const xs = points.map((p) => p.x)
   const ys = points.map((p) => p.y)
   const w = Math.max(...xs) - Math.min(...xs)
   const h = Math.max(...ys) - Math.min(...ys)
-  const k = Math.min(frame.width / (w * (1 + 2 * padding) || 1), frame.height / (h * (1 + 2 * padding) || 1))
+  const k = Math.min(vp.w / (w * (1 + 2 * padding) || 1e-9), vp.h / (h * (1 + 2 * padding) || 1e-9))
   const cx = (Math.max(...xs) + Math.min(...xs)) / 2
   const cy = (Math.max(...ys) + Math.min(...ys)) / 2
-  return centerOn(frame, cx, cy, Math.min(MAX_K, k))
+  return centerOn(frame, vp, cx, cy, Math.min(MAX_K, k))
 }
 
 /** Greedy distance clustering at zoom k; `radius` is in outer units, independent of panning. */
@@ -111,4 +139,9 @@ export function clusterPoints(points: Point[], k: number, radius: number): Clust
     }
   }
   return out
+}
+
+/** Zoom used for clustering: quarter-octave steps, never above MAX_K. */
+export function clusterZoom(k: number): number {
+  return Math.min(MAX_K, 2 ** (Math.round(Math.log2(k) * 4) / 4))
 }

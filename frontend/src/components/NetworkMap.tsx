@@ -2,8 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { STATE_COLORS, type Location, type State } from '../api/types'
 import {
-  MAX_K, centerOn, clampView, clusterPoints, fitPoints, parseFrame, project, zoomAt,
-  type Cluster, type MapFrame, type View,
+  MAX_K, centerOn, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
+  type Cluster, type MapFrame, type Point, type View, type Viewport,
 } from '../map/geo'
 
 interface NetworkMapProps {
@@ -14,21 +14,29 @@ interface NetworkMapProps {
 }
 
 const BASE_MAP_URL = '/map/romania.svg'
-const HOME: View = { k: 1, tx: 0, ty: 0 }
 const CLUSTER_RADIUS_PX = 34
 const SELECT_MIN_K = 6
 const SPIDER_K = 12
 const DRAG_THRESHOLD_PX = 4
+const DESELECT_DELAY_MS = 260
 const states = Object.keys(STATE_COLORS) as State[]
 
 interface BaseMap { frame: MapFrame; markup: string }
 
+/** Scope the file's stylesheet to the map so rules like `svg { … }` don't leak into the app. */
+function scopeCss(css: string) {
+  return css.replace(/(^|})(\s*)([^{}]+)\{/g, (_m, close: string, ws: string, selectors: string) =>
+    `${close}${ws}${selectors.split(',').map((s) => `.base-map ${s.trim().replace(/^svg\b/, '')}`.trim()).join(', ')} {`)
+}
+
 async function loadBaseMap(): Promise<BaseMap> {
-  const text = await (await fetch(BASE_MAP_URL)).text()
-  const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement
+  const response = await fetch(BASE_MAP_URL)
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const svg = new DOMParser().parseFromString(await response.text(), 'image/svg+xml').documentElement
   const frame = parseFrame(svg)
   svg.querySelector('#stations')?.replaceChildren()
   svg.querySelector(':scope > title')?.remove()
+  svg.querySelectorAll('style').forEach((style) => { style.textContent = scopeCss(style.textContent ?? '') })
   return { frame, markup: svg.innerHTML }
 }
 
@@ -58,8 +66,8 @@ function StateRing({ counts, total }: { counts: Map<State, number>; total: numbe
   })}</>
 }
 
-function useAnimatedView(frame: MapFrame | null) {
-  const [view, setViewState] = useState<View>(HOME)
+function useAnimatedView() {
+  const [view, setViewState] = useState<View>({ k: 1, tx: 0, ty: 0 })
   const viewRef = useRef(view)
   const animRef = useRef(0)
   const setView = useCallback((next: View) => {
@@ -67,11 +75,9 @@ function useAnimatedView(frame: MapFrame | null) {
     viewRef.current = next
     setViewState(next)
   }, [])
-  const animateTo = useCallback((target: View, duration = 380) => {
-    if (!frame) return
+  const animateTo = useCallback((to: View, duration = 380) => {
     cancelAnimationFrame(animRef.current)
     const from = viewRef.current
-    const to = clampView(target, frame)
     const start = performance.now()
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / duration)
@@ -84,7 +90,7 @@ function useAnimatedView(frame: MapFrame | null) {
       if (t < 1) animRef.current = requestAnimationFrame(step)
     }
     animRef.current = requestAnimationFrame(step)
-  }, [frame])
+  }, [])
   useEffect(() => () => cancelAnimationFrame(animRef.current), [])
   return { view, viewRef, setView, animateTo }
 }
@@ -97,7 +103,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
   const canvasRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const frame = base?.frame ?? null
-  const { view, viewRef, setView, animateTo } = useAnimatedView(frame)
+  const { view, viewRef, setView, animateTo } = useAnimatedView()
 
   useEffect(() => {
     let live = true
@@ -113,15 +119,40 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
     return () => observer.disconnect()
   }, [])
 
-  // Screen pixels per outer (viewBox) unit, for preserveAspectRatio "slice".
-  const fitScale = frame && size.w ? Math.max(size.w / frame.width, size.h / frame.height) : 1
-  const px = 1 / fitScale
+  const vp: Viewport = useMemo(() => frame ? sliceViewport(frame, size.w, size.h) : { x0: 0, y0: 0, w: 1, h: 1 }, [frame, size.w, size.h])
+  const vpRef = useRef(vp)
+  vpRef.current = vp
+  // Outer (viewBox) units per screen pixel.
+  const px = frame && size.w ? vp.w / size.w : 1
 
-  const points = useMemo(() => frame ? locations.map((location) => ({ id: location.location_id, ...project(frame, location.lon, location.lat) })) : [], [frame, locations])
+  const points = useMemo<Point[]>(() => frame ? locations.map((location) => ({ id: location.location_id, ...project(frame, location.lon, location.lat) })) : [], [frame, locations])
   const pointById = useMemo(() => new Map(points.map((p) => [p.id, p])), [points])
   const byId = useMemo(() => new Map(locations.map((location) => [location.location_id, location])), [locations])
-  const clusterK = 2 ** (Math.round(Math.log2(view.k) * 4) / 4)
-  const clusters = useMemo(() => clusterPoints(points, clusterK, CLUSTER_RADIUS_PX * px), [points, clusterK, px])
+
+  const home = useCallback(() => frame ? fitPoints(frame, vpRef.current, points.length ? points : [{ x: 0, y: 0 }, { x: frame.width, y: frame.height }], 0.04) : viewRef.current, [frame, points, viewRef])
+  const homedFor = useRef('')
+  useEffect(() => {
+    if (!frame || !size.w) return
+    const key = `${points.length}:${Math.round(size.w)}x${Math.round(size.h)}`
+    if (homedFor.current === '' || homedFor.current.startsWith('0:')) setView(home())
+    else if (homedFor.current !== key) setView(clampView(viewRef.current, frame, vp))
+    homedFor.current = key
+  }, [frame, size.w, size.h, points.length, home, setView, viewRef, vp])
+
+  const clusterK = clusterZoom(view.k)
+  const radius = CLUSTER_RADIUS_PX * px
+  const clusters = useMemo(() => {
+    const free = points.filter((p) => p.id !== selectedLocationId)
+    const out = clusterPoints(free, clusterK, radius)
+    const selected = selectedLocationId ? pointById.get(selectedLocationId) : undefined
+    return selected ? [...out, { ids: [selected.id], x: selected.x, y: selected.y }] : out
+  }, [points, pointById, clusterK, radius, selectedLocationId])
+
+  /** A cluster that would still hold several locations at MAX_K. */
+  const stuckAtMax = useCallback((cluster: Cluster) => {
+    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is Point => !!p)
+    return clusterPoints(members, MAX_K, radius).some((c) => c.ids.length > 1)
+  }, [pointById, radius])
 
   const toOuter = useCallback((clientX: number, clientY: number) => {
     const matrix = svgRef.current?.getScreenCTM()
@@ -138,14 +169,47 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
       const speed = event.ctrlKey ? 0.012 : 0.0018
       const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 16 : 1) * speed)
       const p = toOuter(event.clientX, event.clientY)
-      setView(zoomAt(viewRef.current, viewRef.current.k * factor, p.x, p.y, frame))
+      setView(zoomAt(viewRef.current, viewRef.current.k * factor, p.x, p.y, frame, vpRef.current))
+    }
+    // Safari reports trackpad pinch as gesture events instead of ctrl+wheel.
+    let gestureK = 1
+    const onGestureStart = (event: Event) => { event.preventDefault(); gestureK = viewRef.current.k }
+    const onGestureChange = (event: Event) => {
+      event.preventDefault()
+      const g = event as Event & { scale: number; clientX: number; clientY: number }
+      const p = toOuter(g.clientX, g.clientY)
+      setView(zoomAt(viewRef.current, gestureK * g.scale, p.x, p.y, frame, vpRef.current))
     }
     svg.addEventListener('wheel', onWheel, { passive: false })
-    return () => svg.removeEventListener('wheel', onWheel)
+    svg.addEventListener('gesturestart', onGestureStart)
+    svg.addEventListener('gesturechange', onGestureChange)
+    return () => {
+      svg.removeEventListener('wheel', onWheel)
+      svg.removeEventListener('gesturestart', onGestureStart)
+      svg.removeEventListener('gesturechange', onGestureChange)
+    }
   }, [frame, setView, toOuter, viewRef])
 
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef<{ moved: boolean; startX: number; startY: number; suppressClick: boolean }>({ moved: false, startX: 0, startY: 0, suppressClick: false })
+  const gesture = useRef({ moved: false, startX: 0, startY: 0, suppressClick: false })
+
+  const endPointer = useCallback((pointerId: number) => {
+    if (!pointers.current.delete(pointerId)) return
+    if (pointers.current.size === 0) {
+      if (gesture.current.moved) gesture.current.suppressClick = true
+      setPanning(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onUp = (event: PointerEvent) => endPointer(event.pointerId)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [endPointer])
 
   function onPointerDown(event: React.PointerEvent<SVGSVGElement>) {
     if (event.button !== 0 && event.pointerType === 'mouse') return
@@ -155,13 +219,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
 
   function onPointerMove(event: React.PointerEvent<SVGSVGElement>) {
     if (!frame || !pointers.current.has(event.pointerId)) return
+    if (event.pointerType === 'mouse' && event.buttons === 0) { endPointer(event.pointerId); return }
     const g = gesture.current
-    if (!g.moved && Math.hypot(event.clientX - g.startX, event.clientY - g.startY) < DRAG_THRESHOLD_PX && pointers.current.size === 1) return
+    if (!g.moved && pointers.current.size === 1 && Math.hypot(event.clientX - g.startX, event.clientY - g.startY) < DRAG_THRESHOLD_PX) return
     if (!g.moved) {
       g.moved = true
       setPanning(true)
-      svgRef.current?.setPointerCapture(event.pointerId)
     }
+    if (!svgRef.current?.hasPointerCapture(event.pointerId)) svgRef.current?.setPointerCapture(event.pointerId)
     const prev = new Map(pointers.current)
     const now = toOuter(event.clientX, event.clientY)
     pointers.current.set(event.pointerId, now)
@@ -173,19 +238,11 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
       const d1 = Math.hypot(na.x - nb.x, na.y - nb.y)
       const mid = { x: (na.x + nb.x) / 2, y: (na.y + nb.y) / 2 }
       const prevMid = { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }
-      const zoomed = zoomAt(current, current.k * (d1 / d0), mid.x, mid.y, frame)
-      setView(clampView({ ...zoomed, tx: zoomed.tx + mid.x - prevMid.x, ty: zoomed.ty + mid.y - prevMid.y }, frame))
+      const zoomed = zoomAt(current, current.k * (d1 / d0), mid.x, mid.y, frame, vp)
+      setView(clampView({ ...zoomed, tx: zoomed.tx + mid.x - prevMid.x, ty: zoomed.ty + mid.y - prevMid.y }, frame, vp))
     } else {
       const last = prev.get(event.pointerId)!
-      setView(clampView({ k: current.k, tx: current.tx + now.x - last.x, ty: current.ty + now.y - last.y }, frame))
-    }
-  }
-
-  function onPointerEnd(event: React.PointerEvent<SVGSVGElement>) {
-    pointers.current.delete(event.pointerId)
-    if (pointers.current.size === 0) {
-      if (gesture.current.moved) gesture.current.suppressClick = true
-      setPanning(false)
+      setView(clampView({ k: current.k, tx: current.tx + now.x - last.x, ty: current.ty + now.y - last.y }, frame, vp))
     }
   }
 
@@ -198,16 +255,17 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
   function zoomBy(factor: number) {
     if (!frame) return
     const v = viewRef.current
-    animateTo(zoomAt(v, v.k * factor, frame.width / 2, frame.height / 2, frame), 260)
+    animateTo(zoomAt(v, v.k * factor, vp.x0 + vp.w / 2, vp.y0 + vp.h / 2, frame, vp), 260)
   }
 
   function openCluster(cluster: Cluster) {
     if (!frame || consumeDrag()) return
-    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is (typeof points)[number] => !!p)
-    const k = isInseparable(cluster)
-      ? Math.max(SPIDER_K, viewRef.current.k)
-      : Math.min(MAX_K, Math.max(fitPoints(frame, members, 0.35).k, viewRef.current.k * 2))
-    animateTo(centerOn(frame, cluster.x, cluster.y, k))
+    const current = viewRef.current.k
+    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is Point => !!p)
+    const k = stuckAtMax(cluster)
+      ? Math.min(MAX_K, Math.max(SPIDER_K, current * 2))
+      : Math.min(MAX_K, Math.max(fitPoints(frame, vp, members, 0.35).k, current * 2))
+    animateTo(centerOn(frame, vp, cluster.x, cluster.y, k))
   }
 
   function selectLocation(id: string) {
@@ -218,8 +276,24 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
   useEffect(() => {
     if (!frame || !selectedLocationId) return
     const point = pointById.get(selectedLocationId)
-    if (point) animateTo(centerOn(frame, point.x, point.y, Math.max(viewRef.current.k, SELECT_MIN_K)), 600)
+    if (point) animateTo(centerOn(frame, vpRef.current, point.x, point.y, Math.max(viewRef.current.k, SELECT_MIN_K)), 600)
   }, [selectedLocationId, frame, pointById, animateTo, viewRef])
+
+  const deselectTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(deselectTimer.current), [])
+
+  function onBackgroundClick(event: React.MouseEvent<SVGSVGElement>) {
+    if ((event.target as Element).closest('.map-marker') || consumeDrag()) return
+    window.clearTimeout(deselectTimer.current)
+    if (event.detail <= 1) deselectTimer.current = window.setTimeout(() => onSelect(null), DESELECT_DELAY_MS)
+  }
+
+  function onDoubleClick(event: React.MouseEvent<SVGSVGElement>) {
+    window.clearTimeout(deselectTimer.current)
+    if (!frame || (event.target as Element).closest('.map-marker')) return
+    const p = toOuter(event.clientX, event.clientY)
+    animateTo(zoomAt(viewRef.current, viewRef.current.k * 2, p.x, p.y, frame, vp), 260)
+  }
 
   function onKeyDown(event: React.KeyboardEvent<SVGSVGElement>) {
     if (!frame || event.target !== event.currentTarget) return
@@ -228,18 +302,11 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
     const pan: Record<string, [number, number]> = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }
     if (event.key === '+' || event.key === '=') zoomBy(1.6)
     else if (event.key === '-' || event.key === '_') zoomBy(1 / 1.6)
-    else if (event.key === '0') animateTo(HOME)
-    else if (pan[event.key]) setView(clampView({ k: v.k, tx: v.tx + pan[event.key][0], ty: v.ty + pan[event.key][1] }, frame))
+    else if (event.key === '0') animateTo(home())
+    else if (event.key === 'Escape') onSelect(null)
+    else if (pan[event.key]) setView(clampView({ k: v.k, tx: v.tx + pan[event.key][0], ty: v.ty + pan[event.key][1] }, frame, vp))
     else return
     event.preventDefault()
-  }
-
-  function isInseparable(cluster: Cluster) {
-    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is (typeof points)[number] => !!p)
-    const xs = members.map((p) => p.x)
-    const ys = members.map((p) => p.y)
-    const spread = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
-    return spread * MAX_K < CLUSTER_RADIUS_PX * px
   }
 
   function renderStation(id: string, x: number, y: number) {
@@ -264,12 +331,45 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
     </g>
   }
 
+  function renderCluster(cluster: Cluster, x: number, y: number) {
+    if (view.k >= SPIDER_K && stuckAtMax(cluster)) {
+      const ring = 20 + 4 * cluster.ids.length
+      return <g key={`spider-${cluster.ids[0]}`}>
+        {cluster.ids.map((id, i) => {
+          const a = (i / cluster.ids.length) * 2 * Math.PI - Math.PI / 2
+          const sx = x + Math.cos(a) * ring * px
+          const sy = y + Math.sin(a) * ring * px
+          return <g key={id}><line className="spider-leg" x1={x} y1={y} x2={sx} y2={sy} />{renderStation(id, sx, sy)}</g>
+        })}
+      </g>
+    }
+    const members = cluster.ids.map((id) => byId.get(id)).filter((item): item is Location => !!item)
+    const cps = members.reduce((sum, location) => sum + location.charge_points.length, 0)
+    const asleep = members.reduce((sum, location) => {
+      const counts = stateCounts(location, cpState)
+      return sum + (counts.get('STANDBY') ?? 0) + (counts.get('DEEP_SLEEP') ?? 0)
+    }, 0)
+    const r = Math.min(24, 13 + Math.log2(cluster.ids.length) * 2.4)
+    const label = `${cluster.ids.length} locations, ${cps} charge points, ${asleep} asleep. Zoom in.`
+    return <g key={cluster.ids[0]} className="map-marker map-cluster" transform={`translate(${x} ${y}) scale(${px})`} role="button" tabIndex={0} aria-label={label}
+      onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
+      <title>{label}</title>
+      <circle className="cluster-hit" r={r + 4} />
+      <circle className="cluster-body" r={r} />
+      <text className="cluster-count" dy="0.35em">{cluster.ids.length}</text>
+      {asleep > 0 && <g className="cluster-asleep" transform={`translate(${r * 0.72} ${-r * 0.72})`}>
+        <circle r={8.5} fill={STATE_COLORS.DEEP_SLEEP} />
+        <text dy="0.35em">{asleep}</text>
+      </g>}
+    </g>
+  }
+
   const baseMarkup = useMemo(() => ({ __html: base?.markup ?? '' }), [base])
   const totalCp = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
 
   return (
     <section className="map-card" aria-label="Romania charging network map">
-      <div className="map-canvas svg-map" ref={canvasRef} style={{ '--s': view.k * fitScale } as React.CSSProperties}>
+      <div className="map-canvas svg-map" ref={canvasRef} style={{ '--s': view.k / px } as React.CSSProperties}>
         {loadError && <div className="map-error">Base map failed to load: {loadError}</div>}
         {frame && <svg
           ref={svgRef}
@@ -278,17 +378,12 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
           preserveAspectRatio="xMidYMid slice"
           tabIndex={0}
           role="application"
-          aria-label={`Map of ${locations.length} locations. Drag to pan, scroll or pinch to zoom, plus and minus keys to zoom.`}
+          aria-label={`Map of ${locations.length} locations. Drag to pan, scroll or pinch to zoom, plus and minus keys to zoom, Escape to deselect.`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={onPointerEnd}
-          onPointerCancel={onPointerEnd}
-          onDoubleClick={(event) => {
-            if ((event.target as Element).closest('.map-marker')) return
-            const p = toOuter(event.clientX, event.clientY)
-            animateTo(zoomAt(viewRef.current, viewRef.current.k * 2, p.x, p.y, frame), 260)
-          }}
-          onClick={(event) => { if (!(event.target as Element).closest('.map-marker')) { if (!consumeDrag()) onSelect(null) } }}
+          onLostPointerCapture={(event) => endPointer(event.pointerId)}
+          onDoubleClick={onDoubleClick}
+          onClick={onBackgroundClick}
           onKeyDown={onKeyDown}
         >
           <g transform={`translate(${view.tx} ${view.ty}) scale(${view.k})`}>
@@ -298,49 +393,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
             {clusters.map((cluster) => {
               const x = cluster.x * view.k + view.tx
               const y = cluster.y * view.k + view.ty
-              if (cluster.ids.length > 1 && view.k >= SPIDER_K && isInseparable(cluster)) {
-                const ring = 20 + 4 * cluster.ids.length
-                return <g key={`spider-${cluster.ids[0]}`}>
-                  {cluster.ids.map((id, i) => {
-                    const a = (i / cluster.ids.length) * 2 * Math.PI - Math.PI / 2
-                    const sx = x + Math.cos(a) * ring * px
-                    const sy = y + Math.sin(a) * ring * px
-                    return <g key={id}>
-                      <line className="spider-leg" x1={x} y1={y} x2={sx} y2={sy} />
-                      {renderStation(id, sx, sy)}
-                    </g>
-                  })}
-                </g>
-              }
-              if (cluster.ids.length > 1) {
-                const members = cluster.ids.map((id) => byId.get(id)).filter((item): item is Location => !!item)
-                const cps = members.reduce((sum, location) => sum + location.charge_points.length, 0)
-                const asleep = members.reduce((sum, location) => {
-                  const counts = stateCounts(location, cpState)
-                  return sum + (counts.get('STANDBY') ?? 0) + (counts.get('DEEP_SLEEP') ?? 0)
-                }, 0)
-                const r = Math.min(24, 13 + Math.log2(cluster.ids.length) * 2.4)
-                const label = `${cluster.ids.length} locations, ${cps} charge points, ${asleep} asleep. Zoom in.`
-                return <g key={cluster.ids[0]} className="map-marker map-cluster" transform={`translate(${x} ${y}) scale(${px})`} role="button" tabIndex={0} aria-label={label}
-                  onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
-                  <title>{label}</title>
-                  <circle className="cluster-hit" r={r + 4} />
-                  <circle className="cluster-body" r={r} />
-                  <text className="cluster-count" dy="0.35em">{cluster.ids.length}</text>
-                  {asleep > 0 && <g className="cluster-asleep" transform={`translate(${r * 0.72} ${-r * 0.72})`}>
-                    <circle r={8.5} fill={STATE_COLORS.DEEP_SLEEP} />
-                    <text dy="0.35em">{asleep}</text>
-                  </g>}
-                </g>
-              }
-              return renderStation(cluster.ids[0], x, y)
+              return cluster.ids.length > 1 ? renderCluster(cluster, x, y) : renderStation(cluster.ids[0], x, y)
             })}
           </g>
         </svg>}
         <div className="map-controls">
           <button aria-label="Zoom in" onClick={() => zoomBy(1.6)}><Plus size={16} /></button>
           <button aria-label="Zoom out" onClick={() => zoomBy(1 / 1.6)}><Minus size={16} /></button>
-          <button aria-label="Reset map view" onClick={() => animateTo(HOME)}><RotateCcw size={15} /></button>
+          <button aria-label="Reset map view" onClick={() => animateTo(home())}><RotateCcw size={15} /></button>
         </div>
         <div className="map-zoom-badge" aria-hidden="true">{locations.length} locations · {totalCp} CPs · {view.k.toFixed(1)}×</div>
       </div>

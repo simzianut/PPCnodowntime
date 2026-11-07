@@ -273,3 +273,4 @@ h1, h2, h3, p { margin: 0; }
 .map-zoom-badge { position: absolute; right: 12px; bottom: 13px; z-index: 2; background: #ffffffe0; border: 1px solid #e6e8eb; border-radius: 6px; padding: 4px 7px; color: #5d6670; font: 500 9px 'DM Mono', monospace; pointer-events: none; }
 .map-error { position: absolute; inset: 0; display: grid; place-items: center; color: #b42318; font-size: 12px; }
 .map-markers .spider-leg { stroke: #111; stroke-opacity: .45; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+@media(max-width:600px) { .map-zoom-badge { display: none; } }
