@@ -159,6 +159,8 @@ The curve is built from the rows that share a `policy` and differ in `lambda`. B
 
 ## API (M4 owns, base `http://localhost:8000`)
 
+Request validation errors return **400** `{"detail": ...}` on every route (not FastAPI's default 422).
+
 ### Shared payloads
 ```ts
 type Location = { location_id: string; name: string; partner: string|null; address: string|null;
@@ -192,6 +194,7 @@ Body / response: `{"mode": "ACT" | "RECOMMEND"}`
 ### POST /api/runs
 Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
 Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown policy, date not a test day).
+Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
 
 ### GET /api/runs/{run_id}
 Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
@@ -210,7 +213,7 @@ The server sends one message per engine step:
  "changes": [{"cp_id": "L00012-1", "state": "STANDBY"}],
  "events": [{"type": "arrival", "cp_id": "L00012-2", "ts": "ISO", "wait_min": 3.0, "moved_from": null, "queued": false},
             {"type": "departure", "cp_id": "L00012-1", "ts": "ISO"}],
- "recommendations": [/* Recommendation, only new or changed ones */]}
+ "recommendations": [/* Recommendation, only new or changed ones. In ACT mode the focus policy's applied commands also appear here with status "applied", for the activity log. */]}
 ```
 The first message after connecting is `{"type": "snapshot", ...}`: the same as a tick, but `changes` lists every CP. The last message is `{"type": "done", "kpis": {...}}`.
 Whenever the run's status, speed or focus changes, the server sends `{"type": "status", "run_id", "status", "paused_reason", "speed", "focus_policy", "slot", "sim_time"}`. After a `seek` or `focus`, it sends a new `snapshot`.
