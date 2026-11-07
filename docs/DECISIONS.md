@@ -58,3 +58,7 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0048](decisions/0048-stations-db-store-and-engineering-power-profiles.md) | 2026-11-07 | vlad + vlad-antigravity | Stations DB schema, store API, and engineering-grounded power profiles (supersedes 0005 power numbers)
 - [0049](decisions/0049-t5-data-in-sim-ron-kpis-run-history.md) | 2026-11-07 | tudor + tudor-claude | Sim uses T5 per-capacity watts and the net B2B tariff (RON KPIs); API keeps autonomy and focus-policy run history in the DB via stations.store
 - [0050](decisions/0050-retrain-models-on-romanian-dataset.md) | 2026-11-07 | edy-antigravity | Retrain demand forecaster and PPO agent on real Romanian dataset with memory-safe signal streaming
+- [0051](decisions/0051-docker-gpu-reproducible-training.md) | 2026-11-07 | vlad + vlad-claude | Training runs in Docker on a chosen GPU (GPU_ID), reproducible by default, written to runs/ and promoted explicitly
+- [0052](decisions/0052-forecaster-comparison-and-ablation.md) | 2026-11-07 | vlad + vlad-claude | Compare F0 seasonal, F1 LightGBM, F2 GRU-survival forecasters; feature ablation and signal sensitivity suite
+- [0053](decisions/0053-rl-maskableppo-ddqn-oracle.md) | 2026-11-07 | vlad + vlad-claude | RL agents MaskablePPO and Double DQN with masking, plus a hindsight oracle bound
+- [0054](decisions/0054-tikz-research-figures.md) | 2026-11-07 | vlad + vlad-claude | Research-paper figures in TikZ, built in Docker to PDF and SVG

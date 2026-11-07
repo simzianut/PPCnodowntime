@@ -23,6 +23,8 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 | `VITE_API_URL` | M5 | `http://localhost:8000` | |
 | `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
+| `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
+| `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 
 ## Make targets and entry points
 `make` targets (spec 00 §4) call one entry point per module. A module provides it by adding the file; until then the target prints "not implemented yet".
@@ -36,6 +38,28 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 | `make test` | `pytest` (tests in `<package>/tests/` and `tests/`), then `npm test` in `frontend/` if it exists | all |
 
 Migrations: plain SQL files `db/migrations/NNNN_slug.sql`, applied by `make db` in filename order, each once. Applied files are recorded in table `schema_migrations(filename text primary key, applied_at timestamptz)`. Never edit an applied migration; add a new one.
+
+## Training runs (M2, decision 0051)
+- **Entry point:** `python -m model.experiments <command>`
+  - `run <config.yaml> [--seed N] [--set key.path=value ...] [--overwrite]`: one training run.
+  - `suite <suite.yaml>`: several runs (e.g. ablation, seeds), plus one summary table.
+  - `promote <runs/run_id>`: copies that run's model into `artifacts/` under the existing artifact names. Never automatic.
+- **Docker:** `docker/train.Dockerfile`, `docker-compose.train.yml`.
+  - Example: `GPU_ID=1 docker compose -f docker-compose.train.yml run --rm train run config/train/f2_gru.yaml --seed 0`
+  - Make: `make train-docker CONFIG=config/train/f2_gru.yaml SEED=0 GPU_ID=1`
+  - Mounts: `./data` → `/app/data` (read-only), `./runs` → `/app/runs`, `./artifacts` → `/app/artifacts`.
+- **Configs:** `config/train/*.yaml` (one per model) and `config/train/suites/*.yaml`. Each has `name`, `kind` (`forecaster` | `rl` | `bound`), `model`, `seed`, `device` (`auto` | `cpu` | `cuda`), `data` (file names under `DATA_DIR/processed`, incl. `signals`), and model-specific `params`.
+- **Run directory** `runs/<run_id>/`, where `run_id` = `<name>-<first 8 hex of sha256(resolved config)>-s<seed>`:
+  | File | Content |
+  |---|---|
+  | `config.yaml` | Fully resolved config |
+  | `manifest.json` | `run_id, config_sha256, seed, deterministic, git_sha, git_dirty, data{path: {sha256, bytes}}, packages{name: version}, python, torch, cuda, cudnn, gpu_name, driver, host, started_at, finished_at, duration_s, status` |
+  | `metrics.json` | Model metrics (forecasters: per horizon and power_class; RL: validation episodes) |
+  | `model/` | Weights in the model's native format |
+  | `forecasts.parquet` | Forecasters only. Same schema as `data/processed/forecasts.parquet` |
+  | `train.log` | Full log |
+  | `checkpoints/` | RL only: best and last |
+- The same config, seed, data and image must give the same `metrics.json` on the same GPU model.
 
 ## Shared enums
 ```

@@ -8,6 +8,14 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
+  - Decision 0051. Contract: CONTRACTS "Training runs".
+- [T26] M2 forecaster comparison: F0 seasonal hour-of-week baseline, F1 LightGBM (existing, wrapped for reproducible runs + 2024–25 test split + inactive days excluded), F2 GRU with 12-bucket survival head; shared metrics (AUC, PR-AUC, Brier, log loss, reliability); feature ablation + sensitivity suite (steps 1–4 on v3, step 3 on signals_evtag01, step 4 on signals_papp03) | owner: vlad-claude | branch: vlad-claude/T26-forecasters | depends: T25
+  - Decision 0052. Writes forecasts.parquet per run (CONTRACTS schema) so T11 can evaluate the cost rule with any forecaster.
+- [T27] M2 RL agents: MaskablePPO (sb3-contrib) and Double DQN with action masking on ChargePointEnv, hindsight oracle bound policy, env-level evaluation on held-out days for model selection | owner: vlad-claude | branch: vlad-claude/T27-rl-agents | depends: T25
+  - Decision 0053. Edy's plain PPO (model/train_rl.py) stays untouched for comparison. Wake cost comes from config/power_profiles.yaml wake_extra_wh (M3 will set it).
+- [T28] Research-paper figures in TikZ → PDF + SVG: system overview, forecaster architectures, RL loop (MaskablePPO + DDQN), reproducible training pipeline, experiment design; docker/tex.Dockerfile + `make figures` | owner: vlad-claude | branch: vlad-claude/T28-figures | depends: -
+  - Decision 0054.
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
