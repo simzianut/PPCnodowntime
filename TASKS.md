@@ -8,8 +8,10 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T23] Link stations → sim → API → frontend: shared station loader (real 445-location list when present locally), engine-backed API replay mode in memory, frontend tolerates missing eval | owner: tudor-claude | branch: tudor-claude/T23-link-modules | depends: T4, T10, T13, T14, T19
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
+  - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
 
 
@@ -21,6 +23,7 @@ Add notes as indented sub-bullets.
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
+  - Note from T23 (tudor-claude): T23 delivers the replay REST + WS routes on sim.Engine, in memory (api/engine_mode.py). T12 keeps DB persistence (after T5) and live mode.
 - [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: - | branch: - | depends: T9, T13
 
 ## Blocked
