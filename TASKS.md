@@ -10,12 +10,13 @@ Add notes as indented sub-bullets.
 ## In progress
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
 - [T34] M5 de-slop the frontend: remove generic AI-dashboard tropes, 3 competing visual versions (branches tudor-claude/T34-deslop-a|b|c, ports 5174–5176) for Tudor to pick | owner: tudor-claude | branch: tudor-claude/T34-deslop-* | depends: T33
+  - Tudor picked A (control room); PR #9, stacked on #8 → #7 (decision 0068). B and C stay as branches for reference. Merge order: #7, #8, #9.
 - [T33] M5 left sidebar simplified: only Always on + RL agent, no map-view dropdown, wait time charted on its own (no energy-vs-wait trade-off), easier replay controls | owner: tudor-claude | branch: tudor-claude/T33-sidebar-simplify | depends: T30
   - PR #8 open (stacked on #7, decision 0065). Test: `cd frontend && npm test && npm run build`, `make api` + `make web`.
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
-  - Tudor picked D (live actions) + B's swipe slider; PR #7 open (decisions 0063, 0064). Test: `cd frontend && npm test`, `make api` + `make web`.
+  - Tudor picked D (live actions) + B's swipe slider; PR #7 open (decisions 0064, 0067). Test: `cd frontend && npm test`, `make api` + `make web`.
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
-  - Folded into T30 (PR #7); PR #5 closed. Decision renumbered to 0063.
+  - Folded into T30 (PR #7); PR #5 closed. Decision renumbered to 0067 (0063 taken).
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
