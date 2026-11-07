@@ -9,7 +9,9 @@ Add notes as indented sub-bullets.
 
 ## In progress
 - [T10] M4 sim engine core on fixtures: slots, state transitions, sibling handover, wait + energy accounting, metrics, always_on + naive baselines; ChargePointEnv gym wrapper ASAP for M2 (spec 04 §1–4) | owner: tudor-claude | branch: tudor-claude/T10-sim-engine | depends: T2
+  - PR #1 open (tudor-claude): engine, metrics, baselines, gym env, synthetic data. Test: `uv run pytest sim tests`. Decisions 0034, 0035, 0037.
 - [T19] M4 API fixture mode (split from T12): API_FIXTURES=1 serves every route from fixtures/api/, incl. a playable recorded day over WS (spec 04 §6) | owner: tudor-claude | branch: tudor-claude/T19-api-fixtures | depends: T2
+  - PR #2 open, stacked on #1 (tudor-claude): API fixture mode. Test: `API_FIXTURES=1 make api`, `uv run pytest api`. Decision 0036.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
