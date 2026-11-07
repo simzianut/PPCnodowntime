@@ -20,6 +20,7 @@ Add notes as indented sub-bullets.
 ## To do
 - [T4] M3 station importer: load data/seed/stations_open.csv (or the local merged file), dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: - | branch: - | depends: T2
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
+  - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
 - [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: - | branch: - | depends: T4, T6
 - [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: - | branch: - | depends: T7
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13

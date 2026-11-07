@@ -54,6 +54,8 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 |---|---|---|
 | `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
 | `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, context_multiplier{ContextType: float}` |
+| `config/live.yaml` | M1 | `poll_s, min_request_gap_s, request_timeout_s, backoff{initial_s, factor, max_s, max_retries}, max_consecutive_failures, status_map{raw_word: LiveStatus}` |
+| `config/dataset.yaml` | M1 | Dundee item IDs and filenames, Dundee coordinates, date range, `split_date`, `min_session_s`, `max_session_s`, `max_lanes`, `download_delay_s` |
 | `config/sim.yaml` | M4 | `slot_s, lambda_grid, default_lambda, naive_quiet_hours_per_day, min_awake_per_location, recommendation_ttl_slots, eval_days` |
 
 ## Data schemas / shared types
@@ -70,6 +72,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
 | `donor_chargers.parquet` | `donor_charger_id, site, power_class, sessions_per_day, util_quantile` |
 | `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
+| `data/raw/live/statuses-YYYYMMDD.jsonl` (gitignored, decision 0016) | one JSON object per status: `ts ISO UTC, source, source_location_id, source_cp_id?, connector?, raw_status, status LiveStatus, cp_id? (null until matched), name?, lat?, lon?, operator?` |
 
 ### Python interfaces (M2 ↔ M4)
 ```python
