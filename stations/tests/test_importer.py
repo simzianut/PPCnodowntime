@@ -120,3 +120,117 @@ def test_match_open_within_50m():
     refs, unm = imp.match_open(rows, locs, CFG)
     assert refs == [("osm", "node/1", "L00001", None), ("ocm", "OCM-5", "L00001", None)]
     assert [u["name"] for u in unm] == ["far"]
+
+
+def test_deduplicate_seed_rows_distance_and_priority():
+    rows = [
+        {
+            "name": "Enel X Penny Otopeni",
+            "lat": "44.5500",
+            "lon": "26.0700",
+            "sources": "osm",
+            "source_ids": "node/10",
+            "max_kw": "",
+            "connectors": "TYPE2",
+            "confidence": "high",
+        },
+        {
+            "name": "PPC Blue Penny Otopeni",
+            "lat": "44.5501",
+            "lon": "26.0700",
+            "sources": "ocm",
+            "source_ids": "OCM-99",
+            "max_kw": "50",
+            "connectors": "",
+            "confidence": "high",
+        },
+        {
+            "name": "PPC Blue Penny Otopeni Nord",
+            "lat": "44.5509",
+            "lon": "26.0700",
+            "sources": "press",
+            "source_ids": "press/1",
+            "max_kw": "60",
+            "connectors": "CCS2",
+            "confidence": "medium",
+        },
+        {
+            "name": "Completely Different Site",
+            "lat": "44.5510",
+            "lon": "26.0700",
+            "sources": "osm",
+            "source_ids": "node/20",
+            "max_kw": "22",
+            "connectors": "TYPE2",
+            "confidence": "low",
+        },
+    ]
+    deduped = imp.deduplicate_seed_rows(rows)
+    assert len(deduped) == 2
+    primary = deduped[0]
+    assert primary["name"] == "PPC Blue Penny Otopeni"
+    assert primary["max_kw"] == "50"
+    assert primary["connectors"] == "TYPE2"
+    assert primary["sources"] == "ocm;osm;press"
+    assert primary["source_ids"] == "OCM-99;node/10;press/1"
+
+
+def test_open_seed_and_merged_fallback_acceptance(tmp_path):
+    import json
+    import shutil
+
+    # Cache empty OSM files so run() does not make live network calls
+    osm_dir = tmp_path / "raw" / "osm"
+    osm_dir.mkdir(parents=True, exist_ok=True)
+    (osm_dir / "ro_motorways.json").write_text(json.dumps({"elements": []}), encoding="utf-8")
+    (osm_dir / "ro_places.json").write_text(
+        json.dumps({"elements": [{"lon": 26.1025, "lat": 44.4268}]}), encoding="utf-8"
+    )
+
+    rep_open = imp.run(tmp_path, CFG)
+    assert rep_open["mode"] == "seed"
+    assert rep_open["locations"] == 116
+
+    # Check Spec 03 §9: every location has county + context_type, and no two < 50 m apart
+    import pandas as pd
+
+    dl = pd.read_parquet(tmp_path / "processed" / "locations.parquet")
+    assert len(dl) == 116
+    assert dl["county_code"].notna().all() and (dl["county_code"] != "").all()
+    assert set(dl["context_type"]) <= {"urban", "retail", "highway", "airport", "other"}
+    pts = [imp.proj(float(r.lon), float(r.lat)) for r in dl.itertuples()]
+    for i in range(len(pts)):
+        for j in range(i + 1, len(pts)):
+            assert pts[i].distance(pts[j]) >= 50.0
+
+    # Now add local ppc_stations_merged.csv and verify run() loads it
+    merged_dir = tmp_path / "raw" / "stations"
+    merged_dir.mkdir(parents=True, exist_ok=True)
+    merged_csv = merged_dir / "ppc_stations_merged.csv"
+    shutil.copy(imp.ROOT / "data" / "seed" / "stations_open.csv", merged_csv)
+    with open(merged_csv, "a", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(
+            [
+                "Extra Merged Site",
+                "Penny",
+                "Strada Noua 1",
+                "Brasov",
+                "Brasov",
+                "45.6500",
+                "25.6000",
+                "2",
+                "CCS2",
+                "150",
+                "DC",
+                "hermes",
+                "hermes/1",
+                "high",
+                "local",
+                "operational",
+                "",
+            ]
+        )
+    rep_merged = imp.run(tmp_path, CFG)
+    assert rep_merged["mode"] == "merged"
+    assert rep_merged["locations"] == 117

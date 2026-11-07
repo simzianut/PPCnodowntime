@@ -1,5 +1,5 @@
-# M3 owns. Placeholders from decision 0005 / spec 03 §5. Change only via a decision file.
-AC_22:  {idle_w: 10,  standby_w: 3,  deep_sleep_w: null, standby_wake_s: 10, deep_sleep_wake_s: null}
-DC_50:  {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
-DC_HPC: {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
+# M3 owns. Grounded in engineering/engineering_plan.md (decision 0048 / spec 03 §5).
+AC_22:  {idle_w: 25,  standby_w: 9,  deep_sleep_w: null, standby_wake_s: 10, deep_sleep_wake_s: null}
+DC_50:  {idle_w: 105, standby_w: 35, deep_sleep_w: 20,   standby_wake_s: 10, deep_sleep_wake_s: 180}
+DC_HPC: {idle_w: 165, standby_w: 50, deep_sleep_w: 25.5, standby_wake_s: 10, deep_sleep_wake_s: 180}
 wake_extra_wh: 0

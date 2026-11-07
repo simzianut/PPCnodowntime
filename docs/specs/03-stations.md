@@ -2,7 +2,7 @@
 
 Owner folder: `stations/`, `db/migrations/`, `config/power_profiles.yaml`. Builds the database of PPC locations and charge points across Romania, and defines the charge-point state model: the states, their power draw, the transitions, and the command log.
 
-Decisions: [0014](../decisions/0014-station-list-from-open-sources.md) (supersedes 0004), [0005](../decisions/0005-charge-point-states-and-power.md), [0009](../decisions/0009-global-autonomy-switch.md).
+Decisions: [0014](../decisions/0014-station-list-from-open-sources.md) (supersedes 0004), [0005](../decisions/0005-charge-point-states-and-power.md), [0009](../decisions/0009-global-autonomy-switch.md), [0048](../decisions/0048-stations-db-store-and-engineering-power-profiles.md) (supersedes 0005 power numbers).
 
 ## 1. Sources: what T3 collected (2026-11-07)
 
@@ -120,14 +120,16 @@ commands(
   id bigserial pk, ts timestamptz, run_id uuid null, cp_id text, policy text,
   from_state text, target_state text, reason text,
   status text check in ('applied','pending','approved','rejected','expired'),
-  decided_by text null, decided_at timestamptz null)
+  expires_at timestamptz null, decided_by text null, decided_at timestamptz null)
 
 settings(key text pk, value jsonb)            -- 'autonomy_mode' → "ACT" | "RECOMMEND"
 
-live_status(ts timestamptz, cp_id text null, source text, raw_status text, status text)  -- written by M1
+live_status(id bigserial pk, ts timestamptz, cp_id text null, source text,
+  source_location_id text null, source_cp_id text null, connector text null,
+  raw_status text, status text)  -- written by M1 (decision 0016, 0048)
 ```
 
-Simulation runs keep their state in memory (M4) and only write `commands` and `state_events` that carry a `run_id`. In live mode, `cp_state` holds the current truth. This module's Python API is the only code that writes these tables: `stations.store`.
+Simulation runs keep their state in memory (M4) and only write `commands` and `state_events` that carry a `run_id`. In live mode, `cp_state` holds the current truth (seeded as `IDLE` on import). This module's Python API is the only code that writes these tables: `stations.store`.
 
 ## 4. State model
 
@@ -148,31 +150,31 @@ States: `CHARGING`, `IDLE`, `WAKING`, `STANDBY`, `DEEP_SLEEP`, `OFFLINE`.
 - Going to sleep is instant, including IDLE → DEEP_SLEEP directly. DEEP_SLEEP → STANDBY goes through WAKING (deep-sleep wake time), then STANDBY. A WAKING CP ignores sleep commands until ready. Commands equal to the current state are dropped. See [0018](../decisions/0018-engine-transition-rules.md).
 - **WAKING** is a transition state. It lasts `wake_s` of the state it is leaving and draws `idle_w`.
 - A driver who plugs into a CP that is WAKING, STANDBY or DEEP_SLEEP waits until the CP is ready. That wait is the "added wait".
-- CHARGING cannot be interrupted. Commands to a CHARGING CP are rejected with `reason = busy`.
+- CHARGING cannot be interrupted. Commands to a CHARGING CP are recorded in `commands` as `status = rejected` with `reason = busy` (decision [0048](../decisions/0048-stations-db-store-and-engineering-power-profiles.md)).
 - AC charge points have no DEEP_SLEEP. A DEEP_SLEEP command for an AC CP is applied as STANDBY.
 
 ## 5. Power profiles: `config/power_profiles.yaml`
 
-Placeholders (decision 0005). The team will replace them with datasheet or PPC numbers, recording each change in a decision file.
+Grounded in the electrical engineering analysis in `engineering/engineering_plan.md` ([decision 0048](../decisions/0048-stations-db-store-and-engineering-power-profiles.md), superseding 0005 placeholders):
 
 ```yaml
-AC_22:  {idle_w: 10,  standby_w: 3,  deep_sleep_w: null, standby_wake_s: 10, deep_sleep_wake_s: null}
-DC_50:  {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
-DC_HPC: {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
+AC_22:  {idle_w: 25,  standby_w: 9,  deep_sleep_w: null, standby_wake_s: 10, deep_sleep_wake_s: null}
+DC_50:  {idle_w: 105, standby_w: 35, deep_sleep_w: 20,   standby_wake_s: 10, deep_sleep_wake_s: 180}
+DC_HPC: {idle_w: 165, standby_w: 50, deep_sleep_w: 25.5, standby_wake_s: 10, deep_sleep_wake_s: 180}
 wake_extra_wh: 0      # one-off energy per wake, placeholder
 ```
 
-During CHARGING, only energy delivered to the car is counted, and it is not overhead. OFFLINE draws 0.
+`stations.store.get_power_profile(power_class, max_kw=None)` also supports the exact 13-capacity engineering table ($11\text{--}300\text{ kW}$), hardware contactor pre-charge latency (`precharge_wake_s`: $0.5\text{ s}$ AC, $5\text{--}8\text{ s}$ DC), and `stations.store.get_energy_tariffs()` ($1.15\text{ RON/kWh}$ Net B2B, $1.39\text{ RON/kWh}$ Gross Retail). During CHARGING, only energy delivered to the car is counted, and it is not overhead. OFFLINE draws 0.
 
 ## 6. Autonomy
 
 `settings.autonomy_mode` is a single global switch (decision 0009):
 - **ACT:** a policy command becomes a `commands` row with `status = applied` and the state changes.
-- **RECOMMEND:** the command becomes `status = pending`. An operator approves it (applied) or rejects it, through the API. Pending commands expire after `recommendation_ttl_slots` (from `config/sim.yaml`, default 3).
+- **RECOMMEND:** the command becomes `status = pending` with `expires_at = ts + recommendation_ttl_slots * slot_s`. An operator approves it (`status = approved`, applied at the start of the next slot per [decision 0025](../decisions/0025-recommend-in-replay.md)) or rejects it (`status = rejected`), through the API. Pending commands expire after `recommendation_ttl_slots` (from `config/sim.yaml`, default 3).
 
 ## 7. Python API (`stations.store`)
 
-`list_locations(bbox=None, county=None)`, `get_location(id)`, `get_power_profile(power_class)`, `apply_command(cmd, mode)`, `decide_recommendation(id, approve, who)`, `get_autonomy()` / `set_autonomy(mode)`, `record_state_event(...)`. M4 calls these. It never writes SQL against these tables directly.
+`list_locations(bbox=None, county=None)`, `get_location(id)`, `get_power_profile(power_class, max_kw=None)`, `get_energy_tariffs()`, `apply_command(cmd, mode)`, `decide_recommendation(id, approve, who)`, `list_recommendations(run_id=None, status='pending')`, `get_autonomy()` / `set_autonomy(mode)`, `record_state_event(...)`, `get_cp_states()`. Read queries (`list_locations`, `get_location`) fall back to `data/processed/*.parquet` (or `data/seed/stations_open.csv`) when Postgres is unavailable. M4 calls these. It never writes SQL against these tables directly.
 
 ## 8. Must-have vs stretch
 
