@@ -30,3 +30,17 @@ county_ev:
   # Counties sharing one rate = sum(ev) / sum(population) * 1000.
   pool_groups:
     B_IF: [B, IF]
+
+# Donor -> RO charge point mapping (spec 01 §4, T7).
+mapping:
+  seed: 20251107
+  max_scale: 3.0                     # cap on target_rate / donor_rate
+  min_donor_sessions_per_day: 0.0    # donors at or below this rate are never chosen
+  session_id_width: 8
+  declone_jitter_min: 20             # per-CP-per-day shift U(-j, +j) min against cloned timelines
+
+# RO context features: Open-Meteo per county centroid (spec 01 §6, T7).
+context:
+  request_gap_s: 1.0     # pause between uncached requests
+  retry_wait_s: 65       # wait after HTTP 429 (Open-Meteo per-minute limit)
+  max_retries: 6

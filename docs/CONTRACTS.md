@@ -2,7 +2,7 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
-Version: v0.1, 2026-11-07 (sim types, forecasts table, observation layout, λ unit, run pause; decisions 0017–0025). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+Version: v0.2, 2026-11-07 (station run summary; decision 0040). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
 
 ## Services and ports
 | Service | Port | Owner | Notes |
@@ -55,7 +55,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | File | Owner | Keys |
 |---|---|---|
 | `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
-| `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, context_multiplier{ContextType: float}` |
+| `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, rain_boost, traffic_noise_sd, seed, context_multiplier{ContextType: float}` (0039) |
 | `config/live.yaml` | M1 | `poll_s, min_request_gap_s, request_timeout_s, backoff{initial_s, factor, max_s, max_retries}, max_consecutive_failures, status_map{raw_word: LiveStatus}, ampwhere{snapshot_url, delta_url, resync_s, ppc_provider_id, user_agent}` |
 | `config/traffic.yaml` | M1 | `tomtom{flow_url, zoom, poll_s}, mapbox{directions_url, route_len_m, request_gap_s}, index_clip: [0, 1]` |
 | `config/dataset.yaml` | M1 | Dundee item IDs and filenames, Dundee coordinates, date range, `split_date`, `min_session_s`, `max_session_s`, `max_lanes`, `download_delay_s` |
@@ -78,7 +78,9 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | File | Columns |
 |---|---|
 | `sessions.parquet` | `session_id str, cp_id str, location_id str, arrival_ts ts[UTC], departure_ts ts[UTC], energy_kwh float, donor_charger_id str, split {train,test}` |
-| `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)` |
+| `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)`. Resolution (decision 0039): intents are events; `maps_traffic_index` and `maps_ice_count` are hourly (use the latest value at or before t); `maps_ev_count` is 5-min, non-zero rows only (a missing row means 0) |
+| `cp_donor_map.parquet` | `cp_id, power_class, demand, demand_quantile, donor_charger_id, donor_fallback bool, second_donor_id, target_rate, donor_rate, ratio, capped bool, active_from ts[UTC], active_to ts[UTC]` (decision 0038) |
+| `cp_active_days.parquet` | `cp_id, date (local), active bool`. On inactive days the donor did not exist: treat them as unknown and exclude them from training and evaluation (decision 0038) |
 | `context.parquet` | `ts_hour ts[UTC], county_code str, temp_c float, precip_mm float, wind_kmh float, is_holiday bool` |
 | `forecasts.parquet` (M2 writes, M4 reads; decision 0021) | `ts ts[UTC] (slot start), cp_id str, p_arrival_15 float, p_arrival_30 float, p_arrival_60 float, expected_arrivals_60 float` |
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
@@ -171,6 +173,8 @@ type ChargePoint = { cp_id: string; power_class: PowerClass; max_kw: number|null
 type Kpis = { overhead_kwh: number; saved_kwh: number; saved_pct: number;
   wait_min_total: number; wait_min_mean: number; wait_min_p95: number;
   sessions: number; waited_sessions: number; sleep_share: number };
+type StationRunSummary = { location_id: string; current_kw: number|null;
+  expected_wait_min: number|null; anomaly_score: number|null };
 // saved_pct is a percentage (0–100) of always_on's overhead in the same run; sleep_share is a fraction (0–1) of all CP time.
 type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyName;
   from_state: State; target_state: TargetState; reason: string; status: CommandStatus; expires_at: string };
@@ -200,6 +204,10 @@ Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the
 Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
 
 In RECOMMEND mode only `focus_policy`'s commands become recommendations; other policies act. A replay pauses itself with `paused_reason: "recommendations"` when new pending recommendations appear; `play` resumes it. Recommendations expire after `recommendation_ttl_slots` of sim time. Approved commands apply at the start of the next slot (decision 0025).
+
+### GET /api/runs/{run_id}/locations/{location_id}/summary
+Response 200: `StationRunSummary`. Errors: 404 (run or location not found).
+`current_kw` is measured charging output, never charger `max_kw`; it is null without a metered value. `expected_wait_min` is in minutes. `anomaly_score` is a unitless model score with no client-side thresholds. Either model-backed field is null until its producer supplies a value.
 
 ### POST /api/runs/{run_id}/control
 Request: `{"action": "play"|"pause"|"speed"|"seek"|"focus", "value": number|string|null}`. Response 200: same body as GET run.

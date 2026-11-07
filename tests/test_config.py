@@ -28,6 +28,9 @@ def test_signals_keys():
         "w_ice",
         "background_ev",
         "ice_base",
+        "rain_boost",
+        "traffic_noise_sd",
+        "seed",
         "context_multiplier",
     }
     assert set(cfg["context_multiplier"]) == {"urban", "retail", "highway", "airport", "other"}

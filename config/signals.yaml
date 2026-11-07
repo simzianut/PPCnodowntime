@@ -5,11 +5,14 @@ eta_sd_min: 3
 false_positive_rate: 0.1
 ev_tag_rate: 0.25
 w_ice: 0.05
-background_ev: null
-ice_base: null
+background_ev: 0.5   # placeholder (T8)
+ice_base: 40   # placeholder (T8); vehicles per 5-min slot at traffic_index 1
 context_multiplier:
   urban: 1.0
   retail: 1.2
   highway: 0.6
   airport: 0.8
   other: 0.8
+rain_boost: 0.3
+traffic_noise_sd: 0.1
+seed: 42
