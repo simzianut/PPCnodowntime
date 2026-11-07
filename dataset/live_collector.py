@@ -49,9 +49,13 @@ def poll_once(adapter: Adapter, sinks: list, fails: int = 0) -> int:
     locs = len({(s.source, s.source_location_id) for s in statuses})
     ms = int((time.monotonic() - t0) * 1000)
     per = " ".join(f"{k}={counts.get(k, 0)}" for k in STATUSES)
+    kind = getattr(adapter, "last_kind", None)
+    kind = f"kind={kind} " if kind else ""
+    summ = adapter.summary() if hasattr(adapter, "summary") else ""
+    summ = f"{summ} " if summ else ""
     log.info(
-        "%s poll ok adapter=%s n=%d locs=%d %s ms=%d fails=%d",
-        _now(), adapter.name, len(statuses), locs, per, ms, fails,
+        "%s poll ok adapter=%s %sn=%d locs=%d %s %sms=%d fails=%d",
+        _now(), adapter.name, kind, len(statuses), locs, per, summ, ms, fails,
     )  # fmt: skip
     return len(statuses)
 
