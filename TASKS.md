@@ -8,6 +8,8 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T21] M5 map view assets: SVG base map of Romania in PPC Blue map style, swappable station marker symbol, layer for hand-drawn lines; placeholder stations from data/seed/stations_open.csv | owner: tudor-claude | branch: tudor-claude/T21-map-assets | depends: -
+  - Assets only, under frontend/public/map/ (no T16 code touched). Teodora: the map view may switch from MapLibre to this SVG; decision follows on the branch.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
