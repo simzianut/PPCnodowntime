@@ -1,0 +1,26 @@
+# data that must never be committed (spec 00 §3)
+data/raw/
+data/interim/
+data/processed/
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# frontend
+node_modules/
+frontend/dist/
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/

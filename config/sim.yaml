@@ -1,0 +1,8 @@
+# M4 owns. Values from spec 04 §7.
+slot_s: 300
+lambda_grid: [0.01, 0.03, 0.1, 0.3, 1.0]
+default_lambda: 0.1
+naive_quiet_hours_per_day: 3
+min_awake_per_location: 1
+recommendation_ttl_slots: 3
+eval_days: all

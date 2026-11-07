@@ -1,0 +1,15 @@
+# M1 owns. Placeholders from spec 01 §5. null = not set yet (T8 fills it, decision 0013).
+p_app: 0.6
+intent_lead_min: [10, 40]
+eta_sd_min: 3
+false_positive_rate: 0.1
+ev_tag_rate: 0.25
+w_ice: 0.05
+background_ev: null
+ice_base: null
+context_multiplier:
+  urban: 1.0
+  retail: 1.2
+  highway: 0.6
+  airport: 0.8
+  other: 0.8

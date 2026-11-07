@@ -17,6 +17,7 @@ PPCnodowntime/
 │   ├── power_profiles.yaml # power draw + wake times per power class (M3 owns)
 │   ├── signals.yaml        # mocked-signal parameters (M1 owns)
 │   └── sim.yaml            # slot size, λ grid, naive-baseline params (M4 owns)
+├── tests/                  # cross-module tests; module tests live in <package>/tests/
 ├── dataset/                # M1: Python package
 ├── model/                  # M2: Python package (forecaster, policies, RL training)
 ├── stations/               # M3: Python package (importers, DB models, state store)
@@ -32,7 +33,8 @@ PPCnodowntime/
 │   └── seed/               # small, licence-clean seed data (committed)
 ├── db/migrations/          # SQL migrations (M3 owns)
 ├── docker-compose.yml      # postgres+postgis
-├── pyproject.toml          # one Python project, packages above
+├── pyproject.toml          # one Python project, packages above (uv.lock committed)
+├── .python-version         # 3.12
 ├── Makefile                # the commands in §4
 └── .env.example
 ```
@@ -89,7 +91,10 @@ make train         # M2: train forecaster + PPO, write artifacts/
 make api           # M4: uvicorn api.main:app on :8000
 make web           # M5: vite dev server on :5173
 make test          # pytest + frontend tests
+make lint          # ruff check + format check
 ```
+
+Each target calls the module's entry point (`python -m <package>`) and prints "not implemented yet" until it exists. `make train` installs the `rl` extra (Stable-Baselines3). Migrations are plain SQL, applied once each by `make db`. See `docs/CONTRACTS.md` and [decision 0013](../decisions/0013-repo-scaffold.md).
 
 Ports and environment variables are defined in `docs/CONTRACTS.md`.
 

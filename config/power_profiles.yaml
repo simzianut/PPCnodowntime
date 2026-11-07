@@ -1,0 +1,5 @@
+# M3 owns. Placeholders from decision 0005 / spec 03 §5. Change only via a decision file.
+AC_22:  {idle_w: 10,  standby_w: 3,  deep_sleep_w: null, standby_wake_s: 10, deep_sleep_wake_s: null}
+DC_50:  {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
+DC_HPC: {idle_w: 150, standby_w: 30, deep_sleep_w: 5,    standby_wake_s: 10, deep_sleep_wake_s: 180}
+wake_extra_wh: 0
