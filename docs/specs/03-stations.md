@@ -73,14 +73,14 @@ Stations at Kaufland (Renovatio) and Lidl (self-operated) are excluded: they are
 
 ## 2. Import pipeline (`make seed`)
 
-Decisions: [0029](../decisions/0029-ampwhere-ppc-station-list.md), [0031](../decisions/0031-station-import-units-classes-context.md). Built by `python -m stations` (`stations/importer.py`, settings in `config/stations.yaml`).
+Decisions: [0029](../decisions/0029-ampwhere-ppc-station-list.md), [0033](../decisions/0033-station-import-units-classes-context.md). Built by `python -m stations` (`stations/importer.py`, settings in `config/stations.yaml`).
 
 0. **Primary source:** if `data/raw/live/ampwhere_snapshot_latest.json.gz` exists (written by the live collector, local only), use its PPC Blue locations (`provider_id` 5). Open-data rows within 50 m only add osm/ocm `source_refs`; unmatched ones are not added. Other operators go to `data/processed/other_chargers.parquet` as a context layer. Steps 1–2 below apply only when the snapshot is absent.
 
 1. Load `data/seed/stations_open.csv`. If `data/raw/stations/ppc_stations_merged.csv` exists, load that instead. Both are already deduplicated within 50 m. Map each row to a common `RawStation` shape.
 2. Deduplicate again, to cover any extra local source: same site if the sites are less than 50 m apart, or less than 150 m apart with name similarity ≥ 0.6.
 3. Assign the county by point-in-polygon on `data/seed/ro_counties.geojson` (geoBoundaries ADM1, CC BY 4.0).
-4. Assign `context_type`, first match wins (0031):
+4. Assign `context_type`, first match wins (0033):
    - `airport` if the name matches an airport
    - `retail` if the name or address matches a store keyword
    - `highway` if within 500 m of a motorway (OSM `highway=motorway`), or a fuel brand more than 3 km from any city or town
@@ -88,7 +88,7 @@ Decisions: [0029](../decisions/0029-ampwhere-ppc-station-list.md), [0031](../dec
 5. Expand to charge points:
    - AmpWhere: one CP per physical unit, i.e. connectors grouped by EVSE id prefix (`RO*PPC*<unit>*<n>`). This gives 671 CPs and 1,364 connectors.
    - Open data: use the source's connector and point counts where they exist. Otherwise default to 2 CPs, with `cp_count_estimated = true`.
-   - Each CP gets a `power_class` from its maximum connector power (0031): `AC_22` up to 22 kW, `DC_50` below 100 kW, `DC_HPC` at 100 kW and above. Type2 sockets tagged "DC 22 kW" count as AC.
+   - Each CP gets a `power_class` from its maximum connector power (0033): `AC_22` up to 22 kW, `DC_50` below 100 kW, `DC_HPC` at 100 kW and above. Type2 sockets tagged "DC 22 kW" count as AC.
    - IDs stay stable across reruns through `data/raw/stations/location_id_map.csv` (local).
 6. Write `data/processed/locations.parquet`, `charge_points.parquet`, `source_refs.parquet` and `other_chargers.parquet`. Also upsert into the DB tables when `DATABASE_URL` is set and T5's tables exist. Then write `data/processed/reports/stations_coverage.json`: counts by source, county, power class and context type.
 

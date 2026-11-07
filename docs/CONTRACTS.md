@@ -66,7 +66,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 ### DB tables (M3 owns; full DDL in spec 03 §3)
 `locations`, `charge_points`, `source_refs`, `cp_state`, `state_events`, `commands`, `settings`, `live_status` (written by M1).
 
-### Station files (M3, T4, under `data/processed/`, decision 0031; mirror the DB tables until T5 lands)
+### Station files (M3, T4, under `data/processed/`, decision 0033; mirror the DB tables until T5 lands)
 | File | Columns |
 |---|---|
 | `locations.parquet` | `location_id str, name, operator, partner?, address?, county_code, lat float, lon float, context_type ContextType, primary_source, confidence Confidence, cp_count_estimated bool` |

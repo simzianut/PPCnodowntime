@@ -1,4 +1,4 @@
-# 0031: Station import: one CP per physical unit, HPC at 100 kW and above, simplified context rules, other operators as a context layer
+# 0033: Station import: one CP per physical unit, HPC at 100 kW and above, simplified context rules, other operators as a context layer
 
 - Date: 2026-11-07
 - Who: vlad + vlad-claude
