@@ -5,6 +5,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 ## 1. Stack
 - React 18 + TypeScript + Vite, dev server on `:5173`.
 - MapLibre GL JS with the OpenFreeMap "positron" style (no key needed).
+  - Alternative under review: a static SVG base map, `frontend/public/map/romania.svg`, with a swappable station icon and a layer for hand-drawn lines ([decision 0041](../decisions/0041-svg-base-map.md)).
 - Recharts for the charts. Plain CSS variables for theming; light and dark themes.
 - API base from `VITE_API_URL` (default `http://localhost:8000`).
 - Develop against `API_FIXTURES=1` on the backend, or against an MSW mock built from `fixtures/`.
