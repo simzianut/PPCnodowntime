@@ -52,7 +52,7 @@ Policies compared:
 
 Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent and one for the cost rule, each traced by sweeping λ, the weight on waiting time. The two baselines appear as single points.
 
-> Update: the app no longer shows this curve. It shows hourly idle energy before (Always on) vs after (RL agent) as a bar chart, and added wait only as the RL agent's average wait per charge; the λ curve stays in `GET /api/eval`. See [decision 0065](decisions/0065-sidebar-two-policies-separate-wait.md).
+> Update: the app no longer shows this curve. It shows idle energy at night and by day, before (Always on) vs after (RL agent) as a bar chart, and added wait only as the RL agent's average wait per charge; the λ curve stays in `GET /api/eval`. See [decision 0065](decisions/0065-sidebar-two-policies-separate-wait.md).
 
 ## 5. Scope
 

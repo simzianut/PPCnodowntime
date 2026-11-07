@@ -3,7 +3,6 @@ import { POLICIES, type PolicyName, type Run } from '../api/types'
 
 export type KpiRow = { slot: number } & Partial<Record<PolicyName, number>>
 export interface KpiHistory { runId: string | null; rows: KpiRow[] }
-export type HourBar = { hour: number } & Partial<Record<PolicyName, number>>
 
 export const emptyKpiHistory: KpiHistory = { runId: null, rows: [] }
 const SLOTS_PER_HOUR = 12
@@ -19,23 +18,26 @@ export function nextKpiHistory(prev: KpiHistory, run: Run | null | undefined): K
   return { runId: run.run_id, rows: [...rows, point] }
 }
 
-/** Idle energy used in each hour of the day, from the cumulative rows; hours not played yet are left out. */
-export function hourlyEnergy(rows: KpiRow[]): HourBar[] {
-  const at = (slot: number) => {
-    let found: KpiRow | undefined
-    for (const row of rows) if (row.slot <= slot) found = row
-    return found
+export type PeriodBar = { period: 'Night' | 'Day' } & Partial<Record<PolicyName, number>>
+const DAY_START = 6 * SLOTS_PER_HOUR
+const DAY_END = 22 * SLOTS_PER_HOUR
+
+/** Idle energy used at night (22:00–06:00) and by day (06:00–22:00), from the cumulative rows. */
+export function dayNightEnergy(rows: KpiRow[]): PeriodBar[] {
+  const at = (slot: number, policy: PolicyName) => {
+    let value = 0
+    for (const row of rows) if (row.slot <= slot) value = row[policy] ?? 0
+    return value
   }
-  const lastSlot = rows[rows.length - 1]?.slot ?? 0
-  const bars: HourBar[] = []
-  for (let hour = 0; hour < 24 && hour * SLOTS_PER_HOUR < lastSlot; hour++) {
-    const start = at(hour * SLOTS_PER_HOUR)
-    const end = at((hour + 1) * SLOTS_PER_HOUR)
-    const bar: HourBar = { hour }
-    for (const policy of POLICIES) bar[policy] = Math.max(0, (end?.[policy] ?? 0) - (start?.[policy] ?? 0))
-    bars.push(bar)
+  const night: PeriodBar = { period: 'Night' }
+  const day: PeriodBar = { period: 'Day' }
+  for (const policy of POLICIES) {
+    const atDayStart = at(DAY_START, policy)
+    const atDayEnd = at(DAY_END, policy)
+    day[policy] = atDayEnd - atDayStart
+    night[policy] = atDayStart + at(Infinity, policy) - atDayEnd
   }
-  return bars
+  return [night, day]
 }
 
 export function useKpiHistory(run: Run | null | undefined): KpiHistory {

@@ -20,7 +20,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 │        (CP dots coloured by state of the RL agent)            │  energy saved kWh/%  │
 │                                                               │  avg wait per charge │
 │                                                               │  energy before/after │
-│                                                               │  bars per hour       │
+│                                                               │  bars, night / day    │
 │                                                               ├──────────────────────┤
 │                                                               │ Recommendations feed │
 │                                                               │ (RECOMMEND mode)     │
@@ -48,7 +48,7 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 ### 3.2 Policy comparison KPIs
 Two policies only: Always on (baseline) and RL agent (`rl_ppo`). Runs request just these two; naive and cost rule stay in the backend and `GET /api/eval` but are not shown ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md)). Code: `frontend/src/components/sidebar/`.
 - One card per policy showing energy saved (kWh and %), updated every tick. The RL agent card also shows added wait as one number, "Avg wait per charge" = `Kpis.wait_min_mean` (wait_min_total / sessions, zero waits included), e.g. "0.4 min". Always on is 0 by definition. No wait chart.
-- One bar chart, "Energy before vs after the agent": idle energy used per hour of the replayed day, two bars per hour. Before = Always on `overhead_kwh` (grey), after = RL agent `overhead_kwh` (purple), as hourly deltas of the cumulative KPI built client-side from ticks. The header gives totals, e.g. "41 kWh before → 11 kWh with RL agent (−73%)".
+- One bar chart, "Energy before vs after the agent": idle energy used at night (22:00–06:00) and by day (06:00–22:00), a before and an after bar for each. Before = Always on `overhead_kwh` (grey), after = RL agent `overhead_kwh` (purple), as night/day deltas of the cumulative KPI built client-side from ticks. The header gives totals, e.g. "41 kWh before → 11 kWh with RL agent (−73%)".
 - No energy-vs-wait trade-off curve and no map policy selector: `focus_policy` is always `rl_ppo`.
 
 ### 3.3 Replay controls + autonomy switch
