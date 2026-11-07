@@ -55,7 +55,7 @@ Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent
 ## 5. Scope
 
 ### In scope (must-have)
-- A national network of PPC charge points with real coordinates, built from several sources. Stations are not padded with synthetic ones. See [0004](decisions/0004-station-list-layered-sources.md).
+- A national network of PPC charge points with real coordinates, built from free online sources: 155 locations in 34 counties, about a third of the network. Stations are not padded with synthetic ones. See [0014](decisions/0014-station-list-from-open-sources.md).
 - A usage history built from real Dundee (UK) charging sessions, mapped onto Romanian charge points. See [0002](decisions/0002-dundee-donor-sessions.md).
 - Mocked PPC Blue and Waze/Google signals, derived from those mapped sessions.
 - A demand forecaster, a PPO agent, a cost-rule fallback and two baselines.
@@ -71,7 +71,6 @@ Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent
 ### Stretch
 - An LLM layer that explains the agent's decisions in plain language.
 - Real power-draw numbers from charger datasheets or from PPC.
-- PPC's official station feed (required under AFIR Art. 20) replacing our merged sources.
 
 ### Non-goals
 - Changing the PPC Blue app or its user experience.
@@ -92,7 +91,7 @@ Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent
 
 | Need | Source |
 |---|---|
-| Station list | PPC AFIR feed, if PPC provides it, then Geolocet (paid), AmpWhere scrape, OpenStreetMap, press releases. Merged in that priority order. |
+| Station list | OpenStreetMap, the OpenChargeMap export, the archived Hermes Flow network page, and press releases. 155 locations (spec 03 §1). |
 | Usage history | Dundee City Council session data, 2021–2025 |
 | EV density per county | DRPCIV vehicle registrations (data.gov.ro), end of 2025 |
 | Weather | Open-Meteo historical and forecast APIs |
@@ -107,9 +106,8 @@ Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent
 | Less than 24h to build | Each module has must-have and stretch tiers. Shared fixtures let modules work in parallel. The cost-rule fallback is ready if RL fails. |
 | PPO doesn't converge in time | Cost rule using the same forecaster. Both are always shown. |
 | AmpWhere's terms forbid scraping | A team decision with the risk recorded ([0003](decisions/0003-live-status-collection.md)). Raw scraped data is never committed. The collector is pluggable so PPC's official feed can replace it. |
-| PPC Blue site is behind a bot wall | We do not bypass it. We ask PPC for a feed instead. |
+| PPC Blue site is behind a bot wall, and PPC won't provide a feed | We do not bypass it. We use free sources (155 of 450+ locations) and scale results up. |
 | Dundee data licence not stated | Raw files are not redistributed. The licence is recorded as a known gap. |
-| Geolocet licence is internal use only | The file stays out of git. Only derived positions are used in the demo. |
 | Power numbers are placeholders | Kept in one config file. The pitch states them as assumptions. |
 | UK behaviour ≠ Romanian behaviour | Demand is scaled by county EV density and shifted onto the Romanian calendar. The live data is used to check the mapping. |
 

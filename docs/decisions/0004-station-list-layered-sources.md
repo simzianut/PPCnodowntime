@@ -2,7 +2,7 @@
 
 - Date: 2026-11-07
 - Who: tudor
-- Status: accepted
+- Status: superseded by 0014
 - Supersedes: —
 - Affects: spec 03, PRD
 
