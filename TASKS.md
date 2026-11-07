@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
 - [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
   - Decision 0051. Contract: CONTRACTS "Training runs".
 - [T26] M2 forecaster comparison: F0 seasonal hour-of-week baseline, F1 LightGBM (existing, wrapped for reproducible runs + 2024–25 test split + inactive days excluded), F2 GRU with 12-bucket survival head; shared metrics (AUC, PR-AUC, Brier, log loss, reliability); feature ablation + sensitivity suite (steps 1–4 on v3, step 3 on signals_evtag01, step 4 on signals_papp03) | owner: vlad-claude | branch: vlad-claude/T26-forecasters | depends: T25
