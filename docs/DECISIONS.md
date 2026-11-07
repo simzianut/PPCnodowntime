@@ -56,3 +56,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0046](decisions/0046-interactive-svg-map.md) | 2026-11-07 | tudor + tudor-claude | Map view is an interactive inline SVG (pan, zoom, clusters, spiderfy) replacing MapLibre
 - [0047](decisions/0047-engine-backed-api-and-station-loader.md) | 2026-11-07 | tudor + tudor-claude | One station loader (real list when local, else open seed); API real mode runs replays on sim.Engine in memory; frontend tolerates missing eval
 - [0048](decisions/0048-stations-db-store-and-engineering-power-profiles.md) | 2026-11-07 | vlad + vlad-antigravity | Stations DB schema, store API, and engineering-grounded power profiles (supersedes 0005 power numbers)
+- [0050](decisions/0050-retrain-models-on-romanian-dataset.md) | 2026-11-07 | edy-antigravity | Retrain demand forecaster and PPO agent on real Romanian dataset with memory-safe signal streaming
