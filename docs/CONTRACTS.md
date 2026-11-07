@@ -24,6 +24,7 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 | `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 | `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
+| `RL_AGENT` | M4 API, evaluator | `auto` | Which trained agent serves `rl_ppo`: `ppo` (edy's PPO), `maskppo`, `ddqn`, or `auto` = maskppo if `artifacts/maskppo_policy.zip` exists, else ppo (decision 0061) |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 
 ## Make targets and entry points
@@ -70,7 +71,8 @@ ContextType  = urban | retail | highway | airport | other
 Confidence   = high | medium | low
 Autonomy     = ACT | RECOMMEND
 CommandStatus= applied | pending | approved | rejected | expired
-PolicyName   = always_on | naive_quiet_hours | cost_rule | rl_ppo
+PolicyName   = always_on | naive_quiet_hours | cost_rule | rl_ppo | rl_maskppo | rl_ddqn | oracle
+               # rl_ppo is served by the agent RL_AGENT picks (decision 0061); oracle is replay-only (uses true future arrivals)
 LiveStatus   = CHARGING | AVAILABLE | OFFLINE | UNKNOWN
 Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traffic_index
 ```
@@ -221,6 +223,7 @@ Response 200: `Location`. Errors: 404.
 
 ### GET /api/policies
 Response 200: `[{"name": "rl_ppo", "lambdas": [0.1], "available": true}, ...]`
+Every PolicyName is listed. A policy whose artifact is missing has `available: false` (rl_maskppo needs `artifacts/maskppo_policy.zip`, rl_ddqn needs `artifacts/ddqn_policy.zip`). `oracle` is available in replay only; a live run that requests it gets 400 (decision 0061).
 
 ### GET /api/settings/autonomy · PUT /api/settings/autonomy
 Body / response: `{"mode": "ACT" | "RECOMMEND"}`. Stored through `stations.store` (the `settings` table when the DB is up).

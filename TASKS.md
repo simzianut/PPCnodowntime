@@ -8,6 +8,8 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T31] Wire the new RL agents into the app: PolicyNames rl_maskppo, rl_ddqn, oracle (replay only) in sim/evaluate.py and the API real mode; RL_AGENT switch picks which agent serves rl_ppo | owner: vlad-claude | branch: vlad-claude/T31-rl-wiring | depends: T27
+  - Decision 0061. Touches sim/types.py, sim/evaluate.py, api/engine_mode.py (owners' tasks T10/T11/T23/T24 are Done). Note for teodora (T16–T18): the API can now list rl_maskppo, rl_ddqn and oracle in GET /api/policies; frontend/src/api/types.ts PolicyName + POLICY_LABELS need them to show in the UI.
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
   - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
