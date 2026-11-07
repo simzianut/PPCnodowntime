@@ -63,3 +63,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0053](decisions/0053-rl-maskableppo-ddqn-oracle.md) | 2026-11-07 | vlad + vlad-claude | RL agents MaskablePPO and Double DQN with masking, plus a hindsight oracle bound
 - [0054](decisions/0054-tikz-research-figures.md) | 2026-11-07 | vlad + vlad-claude | Research-paper figures in TikZ, built in Docker to PDF and SVG
 - [0055](decisions/0055-cluster-energy-saved-blobs.md) | 2026-11-07 | tudor + tudor-claude | Map clusters are colour blobs showing average energy saved (red → green), replacing numbered bubbles
+- [0056](decisions/0056-map-live-actions-with-swipe.md) | 2026-11-07 | tudor + tudor-claude | Map is a quiet 4-colour base with live agent actions (ripples, ticker) and a without/with-agent swipe slider; replaces state rings and energy blobs

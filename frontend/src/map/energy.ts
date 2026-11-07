@@ -7,13 +7,6 @@ export const PROFILES: Record<PowerClass, { idle_w: number; standby_w: number; d
   DC_HPC: { idle_w: 165, standby_w: 50, deep_sleep_w: 25.5 },
 }
 
-function savedW(cp: ChargePoint, state: State) {
-  const p = PROFILES[cp.power_class] ?? PROFILES.DC_50
-  if (state === 'STANDBY') return p.idle_w - p.standby_w
-  if (state === 'DEEP_SLEEP') return p.idle_w - (p.deep_sleep_w ?? p.standby_w)
-  return 0
-}
-
 /** Current draw in watts of a non-charging CP in this state (CHARGING/OFFLINE count as 0 overhead). */
 export function overheadW(cp: ChargePoint, state: State): number {
   const p = PROFILES[cp.power_class] ?? PROFILES.DC_50
@@ -23,24 +16,41 @@ export function overheadW(cp: ChargePoint, state: State): number {
   return 0
 }
 
-/** Share (0–1) of a location's possible idle-overhead saving realised by its CPs' current states. */
-export function stationSavedLevel(cps: ChargePoint[], cpState: Record<string, State>): number {
-  let saved = 0
-  let max = 0
-  for (const cp of cps) {
-    saved += savedW(cp, cpState[cp.cp_id] ?? cp.state ?? 'IDLE')
-    max += savedW(cp, 'DEEP_SLEEP')
+export const MAP_COLORS = { idle: '#EF4444', asleep: '#16A34A', charging: '#EAB308', offline: '#9CA3AF' } as const
+export type StateGroup = keyof typeof MAP_COLORS
+
+/** Map colour group: WAKING counts as idle, STANDBY and DEEP_SLEEP as asleep. */
+export function stateGroup(state: State): StateGroup {
+  if (state === 'CHARGING') return 'charging'
+  if (state === 'OFFLINE') return 'offline'
+  return state === 'STANDBY' || state === 'DEEP_SLEEP' ? 'asleep' : 'idle'
+}
+
+/** asleep / (asleep + idle) over one station's CP states; null when it has neither. */
+export function stationLevel(states: State[]): number | null {
+  let asleep = 0
+  let idle = 0
+  for (const state of states) {
+    const group = stateGroup(state)
+    if (group === 'asleep') asleep++
+    else if (group === 'idle') idle++
   }
-  return max > 0 ? saved / max : 0
+  return asleep + idle ? asleep / (asleep + idle) : null
 }
 
-/** Arithmetic mean of the member stations' levels. */
-export function meanLevel(levels: number[]): number {
-  return levels.length ? levels.reduce((sum, level) => sum + level, 0) / levels.length : 0
-}
+const hex = (color: string) => [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
+const IDLE_RGB = hex(MAP_COLORS.idle)
+const ASLEEP_RGB = hex(MAP_COLORS.asleep)
 
-/** Red (0) → yellow (0.5) → green (1). */
-export function savedColor(level: number): string {
+/** Straight RGB blend from idle red (0) to asleep green (1), so it never passes through yellow. */
+export function levelColor(level: number): string {
   const t = Math.min(1, Math.max(0, level))
-  return `hsl(${Math.round(t * 125)} 82% ${Math.round(50 - 8 * t)}%)`
+  return `rgb(${IDLE_RGB.map((a, i) => Math.round(a + (ASLEEP_RGB[i] - a) * t)).join(', ')})`
+}
+
+/** Colour of a station or cluster from each member station's CP states (decision 0056). */
+export function markerColor(stations: State[][]): string {
+  const levels = stations.map(stationLevel).filter((level): level is number => level !== null)
+  if (levels.length) return levelColor(levels.reduce((sum, level) => sum + level, 0) / levels.length)
+  return stations.some((states) => states.includes('CHARGING')) ? MAP_COLORS.charging : MAP_COLORS.offline
 }

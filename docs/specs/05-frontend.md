@@ -35,10 +35,12 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 ## 3. Features (all must-have)
 
 ### 3.1 Romania map with charge-point states
-- Each **location** is one marker. Its colour shows the state of its CPs, split by share when the CPs are in mixed states.
-- State colours and legend: CHARGING `#22C55E`, IDLE `#06B6D4`, STANDBY `#F59E0B`, WAKING `#F97316`, DEEP_SLEEP `#6366F1`, OFFLINE `#EF4444`.
-- Markers expose status shares on hover and a black ring when selected. The map remains interactive while the sidebar changes between overview and station details.
-- Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within 34 px on screen. A cluster is a soft glowing colour blob with no number, sized by location count; its colour runs red → yellow → green with the average share of possible energy saving its stations realise in their current CP states (`frontend/src/map/energy.ts`, [decision 0055](../decisions/0055-cluster-energy-saved-blobs.md)). Clicking it zooms in. Locations at the same spot fan out at high zoom.
+- Each **location** is one flat dot on a quiet base: no state rings, no cluster numbers ([decision 0056](../decisions/0056-map-live-actions-with-swipe.md)).
+- Map colours and legend (4 only): idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey.
+- A selected station is drawn larger and centred in the right ("with agent") half, so the divider handle never covers it. The map remains interactive while the sidebar changes between overview and station details.
+- Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within ~44 px on screen. Cluster colour = mean over member stations of asleep / (asleep + idle) CPs, interpolated red → green in RGB (never via yellow); charging and offline CPs are ignored, and an all-charging cluster is yellow. Clicking it zooms in. Locations at the same spot fan out at high zoom.
+- **Live actions:** a ripple + label per transition (green "−W" on sleep, red on wake, yellow on charge start), an action ticker of the last 5 actions, and sleep/wake counters. Transitions come from diffing `cpState` between ticks; a seek or policy switch (>50% of CPs changing) resets with no animation.
+- **Swipe slider:** left half is the always-on counterfactual (every non-charging CP idle, kW burned), right half the shown policy (kW burned, % less idle power). The divider is draggable and keyboard-movable and does not pan the map. Watts come from `frontend/src/map/energy.ts` ([decision 0055](../decisions/0055-cluster-energy-saved-blobs.md)). `NetworkMap` takes `run` for this.
 - The station marker icon is `#station-icon` in the SVG file. Lines drawn in its `#lines` layer show up in the app.
 - Tick updates arrive as diffs. Apply them to an in-memory `cpState` map. Only the marker layer re-renders, never the base map. Target: 60 fps panning while a replay runs at 288×.
 - Locations with `confidence = low` get a dashed outline.
