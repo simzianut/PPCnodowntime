@@ -1,6 +1,6 @@
 import type { ChargePoint, PowerClass, State } from '../api/types'
 
-/** Mirrors config/power_profiles.yaml (decision 0063). */
+/** Mirrors config/power_profiles.yaml (decision 0067). */
 export const PROFILES: Record<PowerClass, { idle_w: number; standby_w: number; deep_sleep_w: number | null }> = {
   AC_22: { idle_w: 25, standby_w: 9, deep_sleep_w: null },
   DC_50: { idle_w: 105, standby_w: 35, deep_sleep_w: 20 },

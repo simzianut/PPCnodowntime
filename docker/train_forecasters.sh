@@ -13,7 +13,8 @@ mkdir -p runs logs artifacts data/interim
 DATA_FILES="sessions charge_points locations cp_active_days context signals signals_evtag01 signals_papp03"
 SMOKE="--set params.max_cps=20 --set params.n_train_cpdays=300 --set params.n_val_cpdays=100 --set params.n_test_cpdays=150"
 
-run() { $COMPOSE run --rm train "$@"; }
+need_image() { docker image inspect ppc-train:latest >/dev/null 2>&1 || { echo "image ppc-train:latest missing: run build first"; exit 1; }; }
+run() { need_image; $COMPOSE run --rm -T train "$@"; }
 log() { echo "[$(date '+%F %T')] $*"; }
 
 preflight() {
@@ -69,7 +70,7 @@ print(f\"{m['run_id']:<40} {m['status']:<8} {m.get('duration_s') or '':>8} {m.ge
 
 chown_back() {
   # containers run as root; give the outputs back to the current user
-  $COMPOSE run --rm --entrypoint chown train -R "$(id -u):$(id -g)" /app/runs /app/data/interim \
+  $COMPOSE run --rm -T --entrypoint chown train -R "$(id -u):$(id -g)" /app/runs /app/data/interim \
     /app/artifacts
 }
 

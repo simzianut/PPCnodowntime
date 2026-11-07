@@ -1,4 +1,4 @@
-# 0066: The frontend uses a plain "control room" style, and the energy chart is two total bars
+# 0068: The frontend uses a plain "control room" style, and the energy chart is two total bars
 
 - Date: 2026-11-08
 - Who: tudor + tudor-claude

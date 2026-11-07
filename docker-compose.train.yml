@@ -8,6 +8,7 @@ x-train: &train
       GIT_DIRTY: ${GIT_DIRTY:-false}
   image: ppc-train:latest
   shm_size: 8gb
+  network_mode: none
   volumes:
     - ./data:/app/data:ro
     # forecaster feature cache (decision 0059); must stay writable

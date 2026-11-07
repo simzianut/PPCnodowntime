@@ -7,9 +7,12 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 ## Services and ports
 | Service | Port | Owner | Notes |
 |---|---|---|---|
-| Postgres 16 + PostGIS 3 | 5432 | M3 | `docker-compose.yml`, DB name `ppc` |
-| FastAPI (`api.main:app`) | 8000 | M4 | REST under `/api`, WebSocket under `/ws` |
+| Postgres 16 + PostGIS 3 | 5432 | M3 | compose service `ppc-db`, DB name `ppc`. Locally bound to `127.0.0.1:5432`; not published on the server (decision 0066) |
+| FastAPI (`api.main:app`) | 8000 | M4 | REST under `/api`, WebSocket under `/ws`. Compose service `ppc-api`, 1 uvicorn worker; not published, reached through `ppc-web` |
+| nginx (`ppc-web`) | 80 in the container; host `HTTP_PORT` (8080) locally | deploy | The only entry point: built SPA at `/`, proxies `/api` and `/ws` to `ppc-api:8000`. On the server Traefik routes to it over `TRAEFIK_NETWORK` (decision 0066) |
 | Vite dev server | 5173 | M5 | |
+
+Compose service names carry a `ppc-` prefix (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector` under profile `live`) because they are DNS names on Traefik's shared network.
 
 ## Environment variables
 | Name | Used by | Example | Notes |
@@ -20,12 +23,18 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 | `LIVE_POLL_S` | M1 | `300` | Live collector interval |
 | `AMPWHERE_ENABLED` | M1 | `0` | Must be explicitly enabled by a human, see decision 0003 |
 | `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
-| `VITE_API_URL` | M5 | `http://localhost:8000` | |
+| `VITE_API_URL` | M5 | `http://localhost:8000` | Build time. Unset = `http://localhost:8000` (dev). Empty string = same origin (`/api`, `ws(s)://<page host>/ws`), used by the `ppc-web` image (decision 0066) |
 | `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 | `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
 | `RL_AGENT` | M4 API, evaluator | `auto` | Which trained agent serves `rl_ppo`: `ppo` (edy's PPO), `maskppo`, `ddqn`, or `auto` = maskppo if `artifacts/maskppo_policy.zip` exists, else ppo (decision 0061) |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
+| `POSTGRES_PASSWORD` | compose | `ppc` | Password for `ppc-db`; the compose `DATABASE_URL` is built from it. Must be a real secret on the server (decision 0066). Never commit |
+| `HTTP_PORT` | compose | `8080` | Host port of `ppc-web` locally. Not used on the server |
+| `TRAEFIK_NETWORK` | compose (server) | `traefik` | Existing external Docker network of the server's Traefik; becomes the stack's default network |
+| `PPC_HOST` | compose (server) | `ppc.example.com` | Host rule of the Traefik router on `ppc-web` |
+| `TRAEFIK_ENTRYPOINT` | compose (server) | `websecure` | Traefik entrypoint for the router |
+| `COMPOSE_FILE`, `COMPOSE_PROFILES` | compose | `docker-compose.yml:docker-compose.server.yml`, `live` | Set in the server `.env` so plain `docker compose up -d` uses the server override; `live` adds `ppc-collector` |
 
 ## Make targets and entry points
 `make` targets (spec 00 §4) call one entry point per module. A module provides it by adding the file; until then the target prints "not implemented yet".
