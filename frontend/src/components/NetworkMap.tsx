@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { POLICY_LABELS, type ChargePoint, type Location, type Run, type State } from '../api/types'
 import {
-  MAX_K, centerOn, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
+  MAX_K, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
   type Cluster, type MapFrame, type Point, type View, type Viewport,
 } from '../map/geo'
 import { MAP_COLORS, PROFILES, markerColor, overheadW, stateGroup, type StateGroup } from '../map/energy'
