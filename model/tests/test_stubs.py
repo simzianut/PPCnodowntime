@@ -21,7 +21,7 @@ def _make_dummy_state() -> SimState:
     ]
     signals = pd.DataFrame(columns=["ts", "location_id", "signal", "value", "eta_ts"])
     context = {"B": {"temp_c": 15.0, "precip_mm": 0.0, "wind_kmh": 10.0, "is_holiday": False}}
-    return SimState(t=t, cps=cps, signals=signals, context=context)
+    return SimState(t=t, cps=cps, signals=signals, context=context, forecast=None)
 
 
 def test_constant_forecaster():
