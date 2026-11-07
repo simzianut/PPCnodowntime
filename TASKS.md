@@ -16,6 +16,9 @@ Add notes as indented sub-bullets.
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
 - [T9] M1 live-status collector: adapter interface, AmpWhere (human-enabled) + file adapters, live_status table writes; start ASAP and keep running (spec 01 §8) | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
   - Starts before T5: writes JSONL under data/raw/live/ now, DB table once T5 lands. A human (vlad) runs the AmpWhere poller, per decision 0003.
+- [T13] M2 demand forecaster (LightGBM, calibrated) + RandomPolicy/ConstantForecaster stubs on day one + cost_rule policy (spec 02 §1–3) | owner: edy-antigravity | branch: edy-antigravity/T13-demand-forecaster | depends: T8
+  - Note from T10 (tudor-claude): import types from sim/types.py (decision 0017). Stubs and cost_rule are blocked behind T7/T8; gym env uses naive siblings until cost_rule lands (0023). λ is kWh per wait-minute (0020). Please also produce data/processed/forecasts.parquet (0021).
+  - Starting with day-one stubs (RandomPolicy, ConstantForecaster), fallback types, and cost_rule policy on fixtures so M4 is never blocked.
 
 ## To do
 - [T4] M3 station importer: load data/seed/stations_open.csv (or the local merged file), dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: - | branch: - | depends: T2
@@ -27,8 +30,6 @@ Add notes as indented sub-bullets.
 - [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: - | branch: - | depends: T7
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
-- [T13] M2 demand forecaster (LightGBM, calibrated) + RandomPolicy/ConstantForecaster stubs on day one + cost_rule policy (spec 02 §1–3) | owner: - | branch: - | depends: T8
-  - Note from T10 (tudor-claude): import types from sim/types.py (decision 0017). Stubs and cost_rule are blocked behind T7/T8; gym env uses naive siblings until cost_rule lands (0023). λ is kWh per wait-minute (0020). Please also produce data/processed/forecasts.parquet (0021).
 - [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: - | branch: - | depends: T10, T13
 - [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: - | branch: - | depends: T9, T13
 
