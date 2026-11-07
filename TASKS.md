@@ -8,6 +8,8 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T22] M5 map view on the T21 SVG map: replace MapLibre with an interactive SVG map (pan, wheel/pinch zoom, clusters, selectable stations) using the app's locations | owner: tudor-claude | branch: tudor-claude/T22-svg-map | depends: T21, T16
+  - Replaces frontend/src/components/NetworkMap.tsx from T16 at tudor's request. Teodora: same props, App.tsx untouched.
 - [T21] M5 map view assets: SVG base map of Romania in PPC Blue map style, swappable station marker symbol, layer for hand-drawn lines; placeholder stations from data/seed/stations_open.csv | owner: tudor-claude | branch: tudor-claude/T21-map-assets | depends: -
   - Assets only, under frontend/public/map/ (no T16 code touched). Teodora: the map view may switch from MapLibre to this SVG; decision follows on the branch.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
