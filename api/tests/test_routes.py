@@ -1,11 +1,9 @@
-"""REST routes in fixture mode and the real-mode stub."""
+"""REST routes in fixture mode (real mode: test_engine_routes.py)."""
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
 
-from api.main import NOT_IMPLEMENTED, create_app
 from api.models import (
     EvalResults,
     Location,
@@ -154,20 +152,6 @@ def test_eval_route(client):
     body = client.get("/api/eval").json()
     EvalResults.model_validate(body)
     assert body["fixture"] is True
-
-
-def test_real_mode_stub():
-    with TestClient(create_app(fixtures=False)) as c:
-        assert c.get("/api/health").json() == {"ok": True}
-        for method, url in (
-            ("get", "/api/stations"),
-            ("get", "/api/eval"),
-            ("post", "/api/runs"),
-            ("put", "/api/settings/autonomy"),
-        ):
-            r = getattr(c, method)(url)
-            assert r.status_code == 503
-            assert r.json() == {"detail": NOT_IMPLEMENTED}
 
 
 def test_cors(client):

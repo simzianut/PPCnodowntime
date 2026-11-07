@@ -43,11 +43,12 @@ def data_dir() -> Path:
 
 
 def load_processed(base: Path | None = None) -> SimData:
-    """Load M1/M2 outputs from data/processed and CPs from the station seed (until T4/T5)."""
-    from sim.stations_seed import load_seed_stations
+    """Load M1/M2 outputs from data/processed and stations via load_stations."""
+    from sim.stations_seed import load_stations
 
-    p = (base or data_dir()) / "processed"
-    locations, cps = load_seed_stations()
+    base = base or data_dir()
+    p = base / "processed"
+    locations, cps = load_stations(base)
     forecasts = p / "forecasts.parquet"
     return SimData(
         locations=locations,
@@ -65,12 +66,14 @@ def processed_available(base: Path | None = None) -> bool:
 
 
 def load_default(seed: int = 0) -> SimData:
-    """Real processed data when present, else the seeded synthetic bundle."""
+    """Real processed data when present, else synthetic sessions on load_stations()."""
     if processed_available():
         return load_processed()
+    from sim.stations_seed import load_stations
     from sim.synthetic import generate
 
-    return generate(seed=seed)
+    locations, cps = load_stations()
+    return generate(seed=seed, locations=locations, cps=cps)
 
 
 def load_m1_fixtures(base: Path | None = None) -> SimData:
