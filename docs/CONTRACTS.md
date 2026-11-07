@@ -2,20 +2,173 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
+Version: v0, 2026-11-07. Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+
 ## Services and ports
 | Service | Port | Owner | Notes |
 |---|---|---|---|
+| Postgres 16 + PostGIS 3 | 5432 | M3 | `docker-compose.yml`, DB name `ppc` |
+| FastAPI (`api.main:app`) | 8000 | M4 | REST under `/api`, WebSocket under `/ws` |
+| Vite dev server | 5173 | M5 | |
 
 ## Environment variables
 | Name | Used by | Example | Notes |
 |---|---|---|---|
+| `DATABASE_URL` | M1, M3, M4 | `postgresql+psycopg://ppc:ppc@localhost:5432/ppc` | |
+| `DATA_DIR` | M1, M2, M4 | `./data` | |
+| `API_FIXTURES` | M4 | `0` | `1` = serve every route from `fixtures/` |
+| `LIVE_POLL_S` | M1 | `300` | Live collector interval |
+| `AMPWHERE_ENABLED` | M1 | `0` | Must be explicitly enabled by a human, see decision 0003 |
+| `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
+| `VITE_API_URL` | M5 | `http://localhost:8000` | |
 
-## API
-<!-- One block per route:
-### GET /api/example
-Request: ...
-Response 200: ```json { } ```
-Errors: ...
--->
+## Shared enums
+```
+State        = CHARGING | IDLE | WAKING | STANDBY | DEEP_SLEEP | OFFLINE
+TargetState  = IDLE | STANDBY | DEEP_SLEEP                     # what a policy may command
+PowerClass   = AC_22 | DC_50 | DC_HPC
+ContextType  = urban | retail | highway | airport | other
+Confidence   = high | medium | low
+Autonomy     = ACT | RECOMMEND
+CommandStatus= applied | pending | approved | rejected | expired
+PolicyName   = always_on | naive_quiet_hours | cost_rule | rl_ppo
+LiveStatus   = CHARGING | AVAILABLE | OFFLINE | UNKNOWN
+Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traffic_index
+```
+
+## Config files
+| File | Owner | Keys |
+|---|---|---|
+| `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
+| `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, context_multiplier{ContextType: float}` |
+| `config/sim.yaml` | M4 | `slot_s, lambda_grid, default_lambda, naive_quiet_hours_per_day, min_awake_per_location, recommendation_ttl_slots, eval_days` |
 
 ## Data schemas / shared types
+
+### DB tables (M3 owns; full DDL in spec 03 §3)
+`locations`, `charge_points`, `source_refs`, `cp_state`, `state_events`, `commands`, `settings`, `live_status` (written by M1).
+
+### Parquet files (M1 owns, under `data/processed/`)
+| File | Columns |
+|---|---|
+| `sessions.parquet` | `session_id str, cp_id str, location_id str, arrival_ts ts[UTC], departure_ts ts[UTC], energy_kwh float, donor_charger_id str, split {train,test}` |
+| `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)` |
+| `context.parquet` | `ts_hour ts[UTC], county_code str, temp_c float, precip_mm float, wind_kmh float, is_holiday bool` |
+| `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
+| `donor_chargers.parquet` | `donor_charger_id, site, power_class, sessions_per_day, util_quantile` |
+| `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
+
+### Python interfaces (M2 ↔ M4)
+```python
+@dataclass
+class CpView:            # one charge point, as a policy sees it
+    cp_id: str; location_id: str; power_class: PowerClass; connectors: list[str]
+    state: State; seconds_in_state: int
+
+@dataclass
+class SimState:
+    t: datetime                       # slot start, tz-aware Europe/Bucharest
+    cps: list[CpView]
+    signals: pd.DataFrame             # signals with ts <= t (the signals.parquet schema)
+    context: dict[str, dict]          # county_code -> weather/holiday at t
+    forecast: pd.DataFrame | None     # ForecastOutput, filled by engine if a forecaster is set
+
+@dataclass
+class Command:
+    cp_id: str; target_state: TargetState; reason: str
+
+class Policy(Protocol):
+    name: PolicyName
+    def decide(self, state: SimState) -> list[Command]: ...
+
+class Forecaster(Protocol):
+    def predict(self, state: SimState) -> pd.DataFrame: ...
+    # ForecastOutput columns: cp_id, p_arrival_15, p_arrival_30, p_arrival_60, expected_arrivals_60
+```
+`sim.gym_env.ChargePointEnv(split, lambda_wait, sibling_policy, seed)` is a Gymnasium environment. Its observation and action spaces are defined in spec 02 §4.
+
+### `artifacts/eval_results.json` (M4 writes, M5 reads)
+```json
+{
+  "generated_at": "2026-11-07T12:00:00Z",
+  "test_days": ["2024-03-12", "..."],
+  "results": [
+    {"policy": "rl_ppo", "lambda": 0.1, "overhead_kwh": 0, "saved_kwh": 0, "saved_pct": 0,
+     "wait_min_total": 0, "wait_min_mean": 0, "wait_min_p95": 0, "sessions": 0, "waited_sessions": 0, "sleep_share": 0}
+  ]
+}
+```
+The curve is built from the rows that share a `policy` and differ in `lambda`. Baselines have `lambda: null`.
+
+## API (M4 owns, base `http://localhost:8000`)
+
+### Shared payloads
+```ts
+type Location = { location_id: string; name: string; partner: string|null; address: string|null;
+  county_code: string; lat: number; lon: number; context_type: ContextType;
+  primary_source: string; confidence: Confidence; charge_points: ChargePoint[] };
+type ChargePoint = { cp_id: string; power_class: PowerClass; max_kw: number|null;
+  connectors: string[]; current_type: "AC"|"DC"; state?: State };
+type Kpis = { overhead_kwh: number; saved_kwh: number; saved_pct: number;
+  wait_min_total: number; wait_min_mean: number; wait_min_p95: number;
+  sessions: number; waited_sessions: number; sleep_share: number };
+type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyName;
+  from_state: State; target_state: TargetState; reason: string; status: CommandStatus; expires_at: string };
+```
+
+### GET /api/health
+Response 200: `{"ok": true}`
+
+### GET /api/stations?bbox=minLon,minLat,maxLon,maxLat&county=B
+Response 200: `Location[]`. `state` is included only when a live run exists.
+
+### GET /api/stations/{location_id}
+Response 200: `Location`. Errors: 404.
+
+### GET /api/policies
+Response 200: `[{"name": "rl_ppo", "lambdas": [0.1], "available": true}, ...]`
+
+### GET /api/settings/autonomy · PUT /api/settings/autonomy
+Body / response: `{"mode": "ACT" | "RECOMMEND"}`
+
+### POST /api/runs
+Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
+Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown policy, date not a test day).
+
+### GET /api/runs/{run_id}
+Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
+
+### POST /api/runs/{run_id}/control
+Request: `{"action": "play"|"pause"|"speed"|"seek"|"focus", "value": number|string|null}`. Response 200: same body as GET run.
+
+### WS /ws/runs/{run_id}
+The server sends one message per engine step:
+```json
+{"type": "tick", "run_id": "uuid", "sim_time": "2024-03-12T03:05:00+02:00", "slot": 37,
+ "kpis": {"always_on": {}, "naive_quiet_hours": {}, "cost_rule": {}, "rl_ppo": {}},
+ "focus_policy": "rl_ppo",
+ "changes": [{"cp_id": "L00012-1", "state": "STANDBY"}],
+ "events": [{"type": "arrival", "cp_id": "L00012-2", "wait_min": 3.0}],
+ "recommendations": [/* Recommendation, only new or changed ones */]}
+```
+The first message after connecting is `{"type": "snapshot", ...}`: the same as a tick, but `changes` lists every CP. The last message is `{"type": "done", "kpis": {...}}`.
+
+### GET /api/runs/{run_id}/cp/{cp_id}/timeline
+Response 200:
+```json
+{"cp_id": "L00012-1", "policy": "rl_ppo",
+ "states": [{"from": "ISO", "to": "ISO", "state": "IDLE"}],
+ "arrivals": [{"ts": "ISO", "wait_min": 0}],
+ "intents": [{"ts": "ISO", "eta_ts": "ISO"}],
+ "forecast": [{"ts": "ISO", "p_arrival_30": 0.12}],
+ "commands": [{"ts": "ISO", "target_state": "STANDBY", "reason": "p30=0.02", "status": "applied"}]}
+```
+
+### GET /api/recommendations?run_id=&status=pending
+Response 200: `Recommendation[]`
+
+### POST /api/recommendations/{id}
+Request: `{"decision": "approve"|"reject"}`. Response 200: `Recommendation`. Errors: 404; 409 if the recommendation has expired or was already decided.
+
+### GET /api/eval
+Response 200: the contents of `artifacts/eval_results.json`. Errors: 404 if the file doesn't exist yet.
