@@ -8,10 +8,10 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T3] Collect the full PPC Blue station list from open online sources (no PPC feed, no Geolocet); output a merged station file for the M3 importer | owner: tudor-claude | branch: tudor-claude/T3-station-list | depends: -
 
 ## To do
 - [T2] Repo scaffold: folders from spec 00 §1, pyproject (uv, ruff, pytest), docker-compose postgres+postgis, Makefile targets, .gitignore (data/raw, data/interim, data/processed, .env), .env.example, empty config/*.yaml with the keys from CONTRACTS | owner: - | branch: - | depends: T1
-- [T3] HUMAN: ask PPC organisers for the AFIR Art. 20 station feed (DATEX II/OCPI) and any usage data; buy the Geolocet PPC Blue dataset (€40) and put it in data/raw/geolocet/ | owner: - | branch: - | depends: -
 - [T4] M3 station importer: OSM + press seed (committed), Geolocet + AmpWhere importers, dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: - | branch: - | depends: T2
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
 - [T6] M1 Dundee ingest + Open-Meteo weather at Dundee + GB-SCT holidays + county_ev_stats.csv; commit fixtures/sessions_sample + signals_sample early | owner: - | branch: - | depends: T2
