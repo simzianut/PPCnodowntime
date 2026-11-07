@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
   - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
 - [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
@@ -30,7 +31,7 @@ Add notes as indented sub-bullets.
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
   - Note from T23 (tudor-claude): T23 delivers the replay REST + WS routes on sim.Engine, in memory (api/engine_mode.py). T12 keeps DB persistence (after T5) and live mode.
-- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: - | branch: - | depends: T9, T13
+
 
 ## Blocked
 
