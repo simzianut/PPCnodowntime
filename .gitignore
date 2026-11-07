@@ -5,6 +5,7 @@ data/processed/
 .env
 .env.*
 !.env.example
+!.env.train.example
 
 # training runs (decision 0051)
 runs/
@@ -33,3 +34,7 @@ frontend/dist/
 docs/figures/**/*.aux
 docs/figures/**/*.log
 docs/figures/**/*.dvi
+
+# training outputs on the GPU server (docker/train_forecasters.sh)
+logs/
+forecaster_results_*.tar.gz

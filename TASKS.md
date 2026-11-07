@@ -8,7 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T32] GPU-server package for forecaster training (F0/F1/F2 + ablation): writable data/interim mount in docker-compose.train.yml, docker/train_forecasters.sh (preflight, build+verify, GPU smoke, suites, results pack), .env.train.example, docs/TRAINING_GPU.md | owner: vlad-claude | branch: main (small) | depends: T25, T26
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
   - Tudor picked D (live actions) + B's swipe slider; PR #7 open (decision 0063). Test: `cd frontend && npm test`, `make api` + `make web`.
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
@@ -30,6 +29,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T32] GPU-server package for forecaster training (F0/F1/F2 + ablation): writable data/interim mount in docker-compose.train.yml, docker/train_forecasters.sh (preflight, build+verify, GPU smoke, suites, results pack), .env.train.example, docs/TRAINING_GPU.md | owner: vlad-claude | branch: main (small) | depends: T25, T26
+  - docker-compose.train.yml mounts data/interim writable (the forecaster cache crashed on the read-only mount); docker/train_forecasters.sh stages; .env.train.example; docs/TRAINING_GPU.md; decision 0062. Test: `bash -n docker/train_forecasters.sh`; on the server `docker/train_forecasters.sh preflight`.
 - [T31] Wire the new RL agents into the app: PolicyNames rl_maskppo, rl_ddqn, oracle (replay only) in sim/evaluate.py and the API real mode; RL_AGENT switch picks which agent serves rl_ppo | owner: vlad-claude | branch: vlad-claude/T31-rl-wiring | depends: T27
   - model/rl_select.py (RL_AGENT resolve + loaders), PolicyName rl_maskppo/rl_ddqn/oracle, evaluator + API real mode run them; oracle replay-only (live → 400); decision 0061. API smoke on real data 2024-01-01: oracle 77.4% saved / 0 wait, current rl_ppo (edy's 25k-step PPO) 75.3% / 999.5 wait-min over 1,067 of 1,137 sessions, cost_rule 12.1% / 3.8. Test: `uv run --extra rl --extra train pytest model/tests/test_rl_select.py api/tests/test_engine_routes.py sim/tests/test_evaluate.py`.
   - Note for tudor: api/tests/test_routes.py::test_recommendations_routes fails on main (fixture mode, 29 == 28 applied), unrelated to T31.
