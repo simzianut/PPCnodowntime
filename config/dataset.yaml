@@ -21,3 +21,12 @@ dundee:
     ac: AC_22
     rapid: DC_50
     ultra_rapid: DC_HPC
+
+# County EV statistics (spec 01 section 7). Source licence: OGL-ROU-1.0.
+county_ev:
+  url: https://data.gov.ro/dataset/b93e0946-2592-4ed7-a520-e07cba6acd07/resource/3e30eb2a-5079-4421-9701-67cf346f972f/download/parc-auto-combistibil.csv
+  file_name: parc-auto-combistibil.csv
+  user_agent: PPCnodowntime-hackathon (educational; contact via repo)
+  # Counties sharing one rate = sum(ev) / sum(population) * 1000.
+  pool_groups:
+    B_IF: [B, IF]

@@ -76,7 +76,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
 | `donor_chargers.parquet` | `donor_charger_id (<cp>#<lane>), site, power_class, sessions_per_day, util_quantile`, plus `base_cp_id, lane, n_sessions_train, active_days_train, first_ts, last_ts, util_basis {train,test}` (decision 0027) |
 | `donor_occupancy.parquet` | `donor_charger_id, hour_of_week int 0..167 (local, Mon 00h = 0), occupancy_share float` |
-| `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
+| `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000`, plus `ev_per_1000_raw, pool_group` (B and IF share a pooled `ev_per_1000`, decision 0030) |
 | `data/processed/traffic_typical.parquet` | `location_id str, hour_of_week int 0..167 (local, Mon 00h = 0), typical_index float 0..1, source str` (decision 0028) |
 | `data/raw/live/ampwhere_snapshot_latest.json.gz` (gitignored, decision 0029) | the latest raw AmpWhere snapshot, overwritten at every resync; read by the T4 importer |
 | `data/raw/live/statuses-YYYYMMDD.jsonl` (gitignored, decision 0016) | one JSON object per status: `ts ISO UTC, source, source_location_id, source_cp_id?, connector?, raw_status, status LiveStatus, cp_id? (null until matched), name?, lat?, lon?, operator?, provider_id? int, evse_id?, power_kw?, current_type? AC|DC, source_updated_at? ISO`. After an AmpWhere snapshot: one row per charger of every provider; after a delta: rows only for changed locations (decision 0016) |

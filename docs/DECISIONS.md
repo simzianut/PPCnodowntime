@@ -37,3 +37,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0027](decisions/0027-dundee-cleaning-and-lanes.md) | 2026-11-07 | vlad + vlad-claude | Dundee cleaning rules, 2-lane split of chargers, donor utilisation
 - [0028](decisions/0028-real-traffic-tomtom-mapbox.md) | 2026-11-07 | vlad + vlad-claude | Real traffic index: TomTom live, Mapbox typical travel times for training/replay; Google not used
 - [0029](decisions/0029-ampwhere-ppc-station-list.md) | 2026-11-07 | vlad + vlad-claude | AmpWhere snapshot is the main PPC Blue station list (local only)
+- [0030](decisions/0030-county-ev-density-bucharest-ilfov-pool.md) | 2026-11-07 | vlad + vlad-claude | County EV density from DRPCIV end-2025 + INS 2026; Bucharest and Ilfov share one pooled rate

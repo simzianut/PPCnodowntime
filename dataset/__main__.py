@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from dataset import dundee
+from dataset import county_stats, dundee
 
 
 def step_dundee_download() -> dict:
@@ -17,10 +17,15 @@ def step_dundee_build() -> dict:
     return {k: v for k, v in rep.items() if k != "lanes_per_cp"}
 
 
-# Append later steps here: county stats, mapping, signals, context.
+def step_county_stats() -> dict:
+    return county_stats.build()
+
+
+# Append later steps here: mapping, signals, context.
 STEPS = [
     ("dundee.download", step_dundee_download),
     ("dundee.build", step_dundee_build),
+    ("county_stats", step_county_stats),
 ]
 
 

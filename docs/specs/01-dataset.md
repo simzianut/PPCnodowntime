@@ -109,6 +109,7 @@ Live mode does not use this generator. M2 samples live signals from the forecast
 ## 7. County EV stats (must-have)
 - Source: data.gov.ro "parc-auto-romania", the end-2025 file. Filter `category = M1` and `fuel = ELECTRIC`, then aggregate by county. Population comes from INS.
 - Output `data/seed/county_ev_stats.csv`: `county_code`, `county_name`, `ev_count`, `population`, `ev_per_1000`. It is committed, because the source is open (OGL-ROU-1.0).
+- Built by `python -m dataset.county_stats`. Population: INS TEMPO POP105A at 1 Jan 2026, committed as `data/seed/ro_county_population.csv`. Bucharest and Ilfov share one pooled `ev_per_1000` (decision [0030](../decisions/0030-county-ev-density-bucharest-ilfov-pool.md)).
 
 ## 8. Live-status collector (must-have, runs for the whole hackathon)
 
