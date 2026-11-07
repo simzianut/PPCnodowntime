@@ -19,10 +19,11 @@ Add notes as indented sub-bullets.
 - [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6
 
 - [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T7
-## To do
-- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
+- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
   - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
   - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
+
+## To do
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
 - [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: - | branch: - | depends: T10, T13
