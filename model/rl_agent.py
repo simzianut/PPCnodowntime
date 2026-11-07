@@ -78,9 +78,13 @@ class RLPolicy(Policy):
 
         with torch.no_grad():
             latent_pi, _ = self.model.policy.mlp_extractor(obs_tensor)
-            logits = self.model.policy.action_net(latent_pi)
+            logits = self.model.policy.action_net(latent_pi).clone()
             is_ac = obs_tensor[:, _AC_COL] > 0.5
             logits[is_ac, 2] = -1e9
+            if abs(self.lambda_wait - 0.1) > 1e-6:
+                shift = float(np.log(self.lambda_wait / 0.1))
+                logits[:, 1] -= shift * 0.5
+                logits[:, 2] -= shift * 2.0
             actions = logits.argmax(dim=-1).cpu().numpy()
 
         commands: list[Command] = []

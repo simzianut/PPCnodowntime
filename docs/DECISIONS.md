@@ -62,3 +62,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0052](decisions/0052-forecaster-comparison-and-ablation.md) | 2026-11-07 | vlad + vlad-claude | Compare F0 seasonal, F1 LightGBM, F2 GRU-survival forecasters; feature ablation and signal sensitivity suite
 - [0053](decisions/0053-rl-maskableppo-ddqn-oracle.md) | 2026-11-07 | vlad + vlad-claude | RL agents MaskablePPO and Double DQN with masking, plus a hindsight oracle bound
 - [0054](decisions/0054-tikz-research-figures.md) | 2026-11-07 | vlad + vlad-claude | Research-paper figures in TikZ, built in Docker to PDF and SVG
+- [0055](decisions/0055-evaluator-multi-policy-runner.md) | 2026-11-07 | edy-antigravity | Evaluator multi-policy engine runner and eval_results artifact
