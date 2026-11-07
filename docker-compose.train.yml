@@ -1,0 +1,28 @@
+# GPU_ID=1 docker compose -f docker-compose.train.yml run --rm train run config/train/smoke.yaml
+x-train: &train
+  build:
+    context: .
+    dockerfile: docker/train.Dockerfile
+    args:
+      GIT_SHA: ${GIT_SHA:-unknown}
+      GIT_DIRTY: ${GIT_DIRTY:-false}
+  image: ppc-train:latest
+  shm_size: 8gb
+  volumes:
+    - ./data:/app/data:ro
+    - ./runs:/app/runs
+    - ./artifacts:/app/artifacts
+    - ./config:/app/config:ro
+
+services:
+  train:
+    <<: *train
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${GPU_ID:-0}"]
+              capabilities: [gpu]
+  train-cpu:
+    <<: *train

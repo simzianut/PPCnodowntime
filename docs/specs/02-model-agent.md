@@ -110,3 +110,13 @@ In live mode there is no future ground truth. `model.live_signals.sample(locatio
 - Every policy satisfies the `Policy` interface and runs in the engine on the fixture data.
 - `rl_ppo` saves more energy than `naive_quiet_hours` at equal or lower total added wait, on the test days.
 - `decide()` takes under 50 ms per slot for 1,500 CPs, so the agent can run live.
+
+## 8. Training runs (decisions 0051–0058)
+
+Every model is trained through `python -m model.experiments` (CONTRACTS "Training runs"), on the GPU server in Docker (`docker/train.Dockerfile`, `GPU_ID` selects the host GPU) or locally with `make train-local`.
+
+- **Output:** each run writes `runs/<name>-<sha8>-s<seed>/`, with a manifest for reproducibility.
+- **Artifacts:** `promote` is the only way a run's model reaches `artifacts/`.
+- **Models compared:**
+  - forecasters F0 seasonal, F1 LightGBM, F2 GRU, plus a feature ablation and sensitivity suite (0052)
+  - policies MaskablePPO, Double DQN and a hindsight oracle bound (0053)

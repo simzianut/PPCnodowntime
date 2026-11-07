@@ -18,3 +18,20 @@ make lint    # ruff
 ```
 
 Repo layout and conventions: `docs/specs/00-foundation.md`. Interfaces: `docs/CONTRACTS.md`.
+
+## Training on the GPU server
+Reproducible runs in Docker (decision 0051). Needs Docker with the NVIDIA container toolkit.
+
+```
+make train-image                                   # build ppc-train:latest (stamps git sha)
+make train-docker CONFIG=config/train/smoke.yaml SEED=0 GPU_ID=1   # one run on host GPU 1
+GPU_ID=1 docker compose -f docker-compose.train.yml run --rm train run config/train/smoke.yaml --set params.epochs=10
+make train-suite-docker SUITE=config/train/suites/smoke_seeds.yaml # several runs + summary table
+docker compose -f docker-compose.train.yml run --rm train promote runs/<run_id>   # into artifacts/
+make train-local CONFIG=config/train/smoke.yaml    # no Docker (CPU or local GPU)
+```
+
+- Data is mounted read-only from `./data`. Runs go to `./runs/<run_id>/` (gitignored): config, manifest, metrics, log, model. Suites write `runs/suites/<name>-<hash>/summary.{csv,md}`.
+- Nothing reaches `artifacts/` until `promote`. Promote also writes `<name>_provenance.json`.
+- Same config, seed, data and image give the same `metrics.json` on the same GPU model and driver (the manifest records both).
+- Add a trainer: write `train(ctx: RunContext) -> dict` with `@register("f2_gru", kind="forecaster", promote={...})` and add one line `"f2_gru": "model.experiments.f2_gru:train"` to `MODULES` in `model/experiments/registry.py`.

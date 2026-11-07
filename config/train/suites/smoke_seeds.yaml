@@ -1,0 +1,5 @@
+name: smoke_seeds
+runs:
+  - config: config/train/smoke.yaml
+    seeds: [0, 1]
+summary_metrics: [loss, accuracy]
