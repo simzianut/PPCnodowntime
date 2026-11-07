@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
 - [T37] Live mode (live part of T12): shadow F2 agent on real AmpWhere statuses, 5-min wall-clock slots, live signals from F0 rates, same KPIs/WS ticks as replay | owner: vlad-claude | branch: vlad-claude/T37-live-mode | depends: T36, T9, T15
   - Decision 0070. T12 keeps DB persistence; its live-mode part moves here.
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
