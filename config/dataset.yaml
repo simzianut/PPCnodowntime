@@ -1,0 +1,23 @@
+# M1 owns. Dundee donor ingest settings (spec 01 §3).
+dundee:
+  base_url: https://www.arcgis.com/sharing/rest/content/items/{item_id}/data
+  files:
+    - {name: dundee_ev_2021H2.csv, item_id: 189b838f51e74f6bb77509d91c47d7c0}
+    - {name: dundee_ev_2022.csv, item_id: f1a6b5df441d4606821d5f1a78e92d7e}
+    - {name: dundee_ev_2023.csv, item_id: 80df5f177b8c4a94b2bc692835801e8e}
+    - {name: dundee_ev_2024.csv, item_id: 8b443deaf9174b7aa9d3e10eaa906422}
+    - {name: dundee_ev_2025.csv, item_id: e185a3a1cfc948a69ada76e950b9d447}
+  lat: 56.462
+  lon: -2.9707
+  start: "2021-07-01"
+  end: "2025-08-31"
+  split_date: "2023-12-31"   # local arrival date <= this is train
+  min_session_s: 120
+  max_session_s: 86400
+  max_lanes: 2
+  download_delay_s: 5
+  user_agent: PPCnodowntime-hackathon (educational; contact via repo)
+  power_class:
+    ac: AC_22
+    rapid: DC_50
+    ultra_rapid: DC_HPC

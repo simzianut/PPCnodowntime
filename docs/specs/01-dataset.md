@@ -34,13 +34,25 @@ Run it all with `make data`. Every step is a CLI under `python -m dataset.<step>
 
 ## 3. Donor data: Dundee (must-have)
 
-- **Source:** Dundee City Council EV charging sessions, Jul 2021 – Aug 2025, one CSV per year. Download them into `data/raw/dundee/`. The licence isn't stated, so the raw files are never committed.
+Decision: [0017](../decisions/0017-dundee-cleaning-and-lanes.md).
+
+- **Source:** Dundee City Council EV charging sessions, Jul 2021 – Aug 2025, one CSV per year.
+  - `python -m dataset.dundee download` fetches them from the public ArcGIS item URLs listed in `config/dataset.yaml` into `data/raw/dundee/`.
+  - The licence isn't stated, so the raw files are never committed.
 - **Cleaning:**
   - parse timestamps in Europe/London
+  - departure = Start + Duration, falling back to End
+  - drop End < Start and departure ≤ arrival
   - drop sessions under 2 minutes or over 24 hours
-  - drop sessions with 0 kWh
-  - merge duplicate rows
-- **Chargers:** one row per charger ID. Map the source's AC / rapid / ultra-rapid tag to `power_class`: AC → `AC_22`, rapid → `DC_50`, ultra-rapid → `DC_HPC`. Compute utilisation stats per charger: sessions per day, and occupancy share by hour of the week.
+  - drop sessions with blank or ≤ 0 kWh
+  - drop duplicate session IDs
+
+  The counts per rule go to `data/processed/reports/dundee_cleaning.json`.
+- **Lanes:** the source has no connector column and sessions on one charger overlap. Each charger ID is split greedily into at most `max_lanes = 2` lanes (`<cp>#1`, `<cp>#2`). Sessions that overflow both lanes are dropped. Each lane is one donor charger.
+- **Chargers:** one row per lane in `donor_chargers.parquet`.
+  - Map the source's tag to `power_class`: ac → `AC_22`, rapid → `DC_50`, ultra_rapid → `DC_HPC`.
+  - Utilisation is computed on the training period: `sessions_per_day` and `util_quantile` within class. Chargers that only exist in the test period use the test period (`util_basis = test`).
+  - Occupancy share by local hour of the week goes to `donor_occupancy.parquet`.
 - **Weather at Dundee:** Open-Meteo historical archive, hourly temperature, precipitation and wind, attached to each session's arrival hour.
 - **Holidays:** `holidays.country_holidays("GB", subdiv="SCT")`.
 - **Split:** the training period ends 2023-12-31. The test period starts 2024-01-01. The split is written into the outputs as a `split` column.
