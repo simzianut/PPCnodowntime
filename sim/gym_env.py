@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 import weakref
 from collections import OrderedDict
 from collections.abc import Sequence
@@ -216,9 +217,13 @@ class _AgentPolicy:
 
 def _default_sibling(index: _DataIndex, lambda_wait: float) -> Policy:
     # Decision 0023: cost_rule once M2 ships it, naive_quiet_hours until then.
+    # OSError: LightGBM's native lib (libomp) missing; model/ imports it on load.
     try:
         from model.cost_rule import CostRulePolicy
-    except ImportError:
+    except (ImportError, OSError) as exc:
+        warnings.warn(
+            f"cost_rule unavailable ({exc}); siblings use naive_quiet_hours", stacklevel=3
+        )
         return index.naive()
     mapl = sim_config().min_awake_per_location
     return CostRulePolicy(lambda_wait=lambda_wait, min_awake_per_location=mapl)
