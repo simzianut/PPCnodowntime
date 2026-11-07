@@ -9,8 +9,9 @@ Add notes as indented sub-bullets.
 
 ## In progress
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
+  - Tudor picked D (live actions) + B's swipe slider; PR #7 open (decision 0063). Test: `cd frontend && npm test`, `make api` + `make web`.
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
-  - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
+  - Folded into T30 (PR #7); PR #5 closed. Decision renumbered 0055 → 0062.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
