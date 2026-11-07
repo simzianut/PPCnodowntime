@@ -64,3 +64,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0054](decisions/0054-tikz-research-figures.md) | 2026-11-07 | vlad + vlad-claude | Research-paper figures in TikZ, built in Docker to PDF and SVG
 - [0055](decisions/0055-evaluator-multi-policy-runner.md) | 2026-11-07 | edy-antigravity | Evaluator multi-policy engine runner and eval_results artifact
 - [0056](decisions/0056-ampwhere-calibration-check.md) | 2026-11-07 | vlad + vlad-claude | Calibration vs real PPC activity (3 h, Sat evening): HPC ~2x overstated, all within range; report, no rescale yet
+- [0057](decisions/0057-live-mode-signal-sampling-and-validation.md) | 2026-11-07 | edy-antigravity | Live-mode signal sampling and live validation report

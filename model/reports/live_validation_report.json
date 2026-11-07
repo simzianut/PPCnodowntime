@@ -1,0 +1,157 @@
+{
+  "generated_at": "2026-11-07T20:43:06.694004+00:00",
+  "evaluation_scope": "live_status_vs_forecast",
+  "samples_evaluated": 288,
+  "metrics": {
+    "mean_absolute_error": 0.0099,
+    "root_mean_squared_error": 0.0118,
+    "mean_predicted_occupancy": 0.09,
+    "mean_observed_occupancy": 0.09
+  },
+  "hourly_comparison": [
+    {
+      "hour": 0,
+      "predicted_occupancy": 0.0745,
+      "observed_occupancy": 0.079,
+      "gap": 0.0046
+    },
+    {
+      "hour": 1,
+      "predicted_occupancy": 0.06,
+      "observed_occupancy": 0.0444,
+      "gap": -0.0156
+    },
+    {
+      "hour": 2,
+      "predicted_occupancy": 0.0476,
+      "observed_occupancy": 0.0588,
+      "gap": 0.0113
+    },
+    {
+      "hour": 3,
+      "predicted_occupancy": 0.038,
+      "observed_occupancy": 0.0521,
+      "gap": 0.0141
+    },
+    {
+      "hour": 4,
+      "predicted_occupancy": 0.032,
+      "observed_occupancy": 0.01,
+      "gap": -0.022
+    },
+    {
+      "hour": 5,
+      "predicted_occupancy": 0.03,
+      "observed_occupancy": 0.0105,
+      "gap": -0.0195
+    },
+    {
+      "hour": 6,
+      "predicted_occupancy": 0.032,
+      "observed_occupancy": 0.034,
+      "gap": 0.0019
+    },
+    {
+      "hour": 7,
+      "predicted_occupancy": 0.038,
+      "observed_occupancy": 0.0333,
+      "gap": -0.0047
+    },
+    {
+      "hour": 8,
+      "predicted_occupancy": 0.0476,
+      "observed_occupancy": 0.0473,
+      "gap": -0.0003
+    },
+    {
+      "hour": 9,
+      "predicted_occupancy": 0.06,
+      "observed_occupancy": 0.0472,
+      "gap": -0.0128
+    },
+    {
+      "hour": 10,
+      "predicted_occupancy": 0.0745,
+      "observed_occupancy": 0.0877,
+      "gap": 0.0132
+    },
+    {
+      "hour": 11,
+      "predicted_occupancy": 0.09,
+      "observed_occupancy": 0.1017,
+      "gap": 0.0117
+    },
+    {
+      "hour": 12,
+      "predicted_occupancy": 0.1055,
+      "observed_occupancy": 0.1065,
+      "gap": 0.001
+    },
+    {
+      "hour": 13,
+      "predicted_occupancy": 0.12,
+      "observed_occupancy": 0.1369,
+      "gap": 0.0169
+    },
+    {
+      "hour": 14,
+      "predicted_occupancy": 0.1324,
+      "observed_occupancy": 0.1394,
+      "gap": 0.007
+    },
+    {
+      "hour": 15,
+      "predicted_occupancy": 0.142,
+      "observed_occupancy": 0.1291,
+      "gap": -0.0129
+    },
+    {
+      "hour": 16,
+      "predicted_occupancy": 0.148,
+      "observed_occupancy": 0.1535,
+      "gap": 0.0055
+    },
+    {
+      "hour": 17,
+      "predicted_occupancy": 0.15,
+      "observed_occupancy": 0.1356,
+      "gap": -0.0144
+    },
+    {
+      "hour": 18,
+      "predicted_occupancy": 0.148,
+      "observed_occupancy": 0.1611,
+      "gap": 0.0132
+    },
+    {
+      "hour": 19,
+      "predicted_occupancy": 0.142,
+      "observed_occupancy": 0.1412,
+      "gap": -0.0007
+    },
+    {
+      "hour": 20,
+      "predicted_occupancy": 0.1324,
+      "observed_occupancy": 0.1297,
+      "gap": -0.0028
+    },
+    {
+      "hour": 21,
+      "predicted_occupancy": 0.12,
+      "observed_occupancy": 0.1098,
+      "gap": -0.0102
+    },
+    {
+      "hour": 22,
+      "predicted_occupancy": 0.1055,
+      "observed_occupancy": 0.1239,
+      "gap": 0.0183
+    },
+    {
+      "hour": 23,
+      "predicted_occupancy": 0.09,
+      "observed_occupancy": 0.0877,
+      "gap": -0.0023
+    }
+  ]
+}
