@@ -1,17 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import maplibregl, { type ExpressionSpecification, type GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent, type Marker } from 'maplibre-gl'
-import { Compass, MapPin, Minus, Plus, RotateCcw } from 'lucide-react'
-import type { FeatureCollection, Point } from 'geojson'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { STATE_COLORS, type Location, type State } from '../api/types'
-
-interface MapProperties {
-  location_id: string
-  name: string
-  cp_count: number
-  asleep_count: number
-  confidence: string
-  dominant: string
-}
+import {
+  MAX_K, centerOn, clampView, clusterPoints, fitPoints, parseFrame, project, zoomAt,
+  type Cluster, type MapFrame, type View,
+} from '../map/geo'
 
 interface NetworkMapProps {
   locations: Location[]
@@ -20,205 +13,336 @@ interface NetworkMapProps {
   onSelect: (location: Location | null) => void
 }
 
+const BASE_MAP_URL = '/map/romania.svg'
+const HOME: View = { k: 1, tx: 0, ty: 0 }
+const CLUSTER_RADIUS_PX = 34
+const SELECT_MIN_K = 6
+const SPIDER_K = 12
+const DRAG_THRESHOLD_PX = 4
 const states = Object.keys(STATE_COLORS) as State[]
 
-function makeFeatureCollection(locations: Location[], cpState: Record<string, State>): FeatureCollection<Point, MapProperties> {
-  return {
-    type: 'FeatureCollection',
-    features: locations.map((location) => {
-      const shares = new Map<State, number>()
-      for (const cp of location.charge_points) {
-        const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'
-        shares.set(state, (shares.get(state) ?? 0) + 1)
-      }
-      const dominant = [...shares.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? 'IDLE'
-      const asleep_count = (shares.get('STANDBY') ?? 0) + (shares.get('DEEP_SLEEP') ?? 0)
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [location.lon, location.lat] },
-        properties: { location_id: location.location_id, name: location.name, cp_count: location.charge_points.length, asleep_count, confidence: location.confidence, dominant },
-      }
-    }),
-  }
+interface BaseMap { frame: MapFrame; markup: string }
+
+async function loadBaseMap(): Promise<BaseMap> {
+  const text = await (await fetch(BASE_MAP_URL)).text()
+  const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement
+  const frame = parseFrame(svg)
+  svg.querySelector('#stations')?.replaceChildren()
+  svg.querySelector(':scope > title')?.remove()
+  return { frame, markup: svg.innerHTML }
 }
 
-function gradientFor(location: Location, statesByCp: Record<string, State>) {
+function stateCounts(location: Location, cpState: Record<string, State>) {
   const counts = new Map<State, number>()
   for (const cp of location.charge_points) {
-    const state = statesByCp[cp.cp_id] ?? cp.state ?? 'IDLE'
+    const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'
     counts.set(state, (counts.get(state) ?? 0) + 1)
   }
+  return counts
+}
+
+function arc(r0: number, r1: number, a0: number, a1: number) {
+  const pt = (r: number, a: number) => `${(r * Math.sin(a)).toFixed(2)},${(-r * Math.cos(a)).toFixed(2)}`
+  const large = a1 - a0 > Math.PI ? 1 : 0
+  return `M${pt(r1, a0)}A${r1},${r1} 0 ${large} 1 ${pt(r1, a1)}L${pt(r0, a1)}A${r0},${r0} 0 ${large} 0 ${pt(r0, a0)}Z`
+}
+
+function StateRing({ counts, total }: { counts: Map<State, number>; total: number }) {
+  const entries = states.filter((state) => counts.get(state)).map((state) => [state, counts.get(state)!] as const)
+  if (entries.length === 1) return <circle r={11.25} fill="none" stroke={STATE_COLORS[entries[0][0]]} strokeWidth={3.5} />
   let cursor = 0
-  const slices = [...counts.entries()].map(([state, count]) => {
-    const start = cursor
-    cursor += count / location.charge_points.length * 100
-    return `${STATE_COLORS[state]} ${start}% ${cursor}%`
-  })
-  return `conic-gradient(${slices.join(',')})`
+  return <>{entries.map(([state, count]) => {
+    const a0 = (cursor / total) * 2 * Math.PI
+    cursor += count
+    return <path key={state} d={arc(9.5, 13, a0, (cursor / total) * 2 * Math.PI)} fill={STATE_COLORS[state]} />
+  })}</>
+}
+
+function useAnimatedView(frame: MapFrame | null) {
+  const [view, setViewState] = useState<View>(HOME)
+  const viewRef = useRef(view)
+  const animRef = useRef(0)
+  const setView = useCallback((next: View) => {
+    cancelAnimationFrame(animRef.current)
+    viewRef.current = next
+    setViewState(next)
+  }, [])
+  const animateTo = useCallback((target: View, duration = 380) => {
+    if (!frame) return
+    cancelAnimationFrame(animRef.current)
+    const from = viewRef.current
+    const to = clampView(target, frame)
+    const start = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const e = 1 - (1 - t) ** 3
+      const k = from.k * (to.k / from.k) ** e
+      const blend = from.k === to.k ? e : (k - from.k) / (to.k - from.k)
+      const next = { k, tx: from.tx + (to.tx - from.tx) * blend, ty: from.ty + (to.ty - from.ty) * blend }
+      viewRef.current = next
+      setViewState(next)
+      if (t < 1) animRef.current = requestAnimationFrame(step)
+    }
+    animRef.current = requestAnimationFrame(step)
+  }, [frame])
+  useEffect(() => () => cancelAnimationFrame(animRef.current), [])
+  return { view, viewRef, setView, animateTo }
 }
 
 export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }: NetworkMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<MapLibreMap | null>(null)
-  const markersRef = useRef(new Map<string, { marker: Marker; element: HTMLButtonElement }>())
-  const [zoom, setZoom] = useState(5.7)
-  const [mapReady, setMapReady] = useState(false)
-  const data = useMemo(() => makeFeatureCollection(locations, cpState), [locations, cpState])
-  const locationsRef = useRef(locations)
-  const onSelectRef = useRef(onSelect)
-  locationsRef.current = locations
-  onSelectRef.current = onSelect
+  const [base, setBase] = useState<BaseMap | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  const [panning, setPanning] = useState(false)
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const frame = base?.frame ?? null
+  const { view, viewRef, setView, animateTo } = useAnimatedView(frame)
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/positron',
-      center: [24.9, 45.8],
-      zoom: 5.7,
-      minZoom: 4.5,
-      maxZoom: 15,
-      attributionControl: false,
-    })
-    mapRef.current = map
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), 'top-right')
-    map.on('load', () => {
-      map.addSource('stations', {
-        type: 'geojson',
-        data: makeFeatureCollection(locationsRef.current, {}),
-        cluster: true,
-        clusterMaxZoom: 7,
-        clusterRadius: 48,
-        clusterProperties: {
-          asleep_count: ['+', ['get', 'asleep_count']],
-          cp_count: ['+', ['get', 'cp_count']],
-        },
-      })
-      map.addLayer({
-        id: 'station-clusters',
-        type: 'circle',
-        source: 'stations',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': '#e4efff',
-          'circle-radius': ['step', ['get', 'point_count'], 19, 10, 23, 30, 28],
-          'circle-stroke-color': '#ffffff',
-          'circle-stroke-width': 2,
-        },
-      })
-      map.addLayer({
-        id: 'cluster-count',
-        type: 'symbol',
-        source: 'stations',
-        filter: ['has', 'point_count'],
-        layout: { 'text-field': ['concat', ['get', 'point_count_abbreviated'], '\n', ['get', 'asleep_count'], ' asleep'], 'text-size': 10, 'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'], 'text-line-height': 1.2, 'text-allow-overlap': true },
-        paint: { 'text-color': '#24588d' },
-      })
-      map.addLayer({
-        id: 'station-points',
-        type: 'circle',
-        source: 'stations',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': ['match', ['get', 'dominant'], 'CHARGING', STATE_COLORS.CHARGING, 'IDLE', STATE_COLORS.IDLE, 'WAKING', STATE_COLORS.WAKING, 'STANDBY', STATE_COLORS.STANDBY, 'DEEP_SLEEP', STATE_COLORS.DEEP_SLEEP, 'OFFLINE', STATE_COLORS.OFFLINE, '#4388ea'] as ExpressionSpecification,
-          'circle-radius': 6,
-          'circle-stroke-color': '#fff',
-          'circle-stroke-width': 1.5,
-          'circle-opacity': ['case', ['<', ['zoom'], 7.8], 1, 0],
-          'circle-stroke-opacity': ['case', ['<', ['zoom'], 7.8], 1, 0],
-        },
-      })
-      map.addLayer({
-        id: 'low-confidence-outline',
-        type: 'circle',
-        source: 'stations',
-        filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'confidence'], 'low']],
-        paint: { 'circle-radius': 9, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#526781', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': ['case', ['<', ['zoom'], 7.8], 1, 0] },
-      })
-      setMapReady(true)
-    })
-    map.on('zoom', () => setZoom(map.getZoom()))
-    map.on('click', 'station-clusters', (event: MapMouseEvent) => {
-      const feature = map.queryRenderedFeatures(event.point, { layers: ['station-clusters'] })[0]
-      if (!feature) return
-      const clusterId = feature.properties?.cluster_id
-      const source = map.getSource('stations') as GeoJSONSource
-      void source.getClusterExpansionZoom(Number(clusterId)).then((nextZoom) => {
-        map.easeTo({ center: (feature.geometry as Point).coordinates as [number, number], zoom: nextZoom + 0.2, duration: 450 })
-      }).catch(() => undefined)
-    })
-    map.on('click', 'station-points', (event: MapMouseEvent) => {
-      const id = map.queryRenderedFeatures(event.point, { layers: ['station-points'] })[0]?.properties?.location_id
-      if (typeof id === 'string') onSelectRef.current(locationsRef.current.find((location) => location.location_id === id) ?? null)
-    })
-    map.on('mouseenter', 'station-clusters', () => { map.getCanvas().style.cursor = 'pointer' })
-    map.on('mouseleave', 'station-clusters', () => { map.getCanvas().style.cursor = '' })
-    map.on('mouseenter', 'station-points', () => { map.getCanvas().style.cursor = 'pointer' })
-    map.on('mouseleave', 'station-points', () => { map.getCanvas().style.cursor = '' })
-    return () => {
-      for (const item of markersRef.current.values()) item.marker.remove()
-      markersRef.current.clear()
-      map.remove()
-      mapRef.current = null
-    }
+    let live = true
+    loadBaseMap().then((loaded) => { if (live) setBase(loaded) }).catch((error: Error) => { if (live) setLoadError(error.message) })
+    return () => { live = false }
+  }, [])
+
+  useLayoutEffect(() => {
+    const element = canvasRef.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => setSize({ w: entry.contentRect.width, h: entry.contentRect.height }))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Screen pixels per outer (viewBox) unit, for preserveAspectRatio "slice".
+  const fitScale = frame && size.w ? Math.max(size.w / frame.width, size.h / frame.height) : 1
+  const px = 1 / fitScale
+
+  const points = useMemo(() => frame ? locations.map((location) => ({ id: location.location_id, ...project(frame, location.lon, location.lat) })) : [], [frame, locations])
+  const pointById = useMemo(() => new Map(points.map((p) => [p.id, p])), [points])
+  const byId = useMemo(() => new Map(locations.map((location) => [location.location_id, location])), [locations])
+  const clusterK = 2 ** (Math.round(Math.log2(view.k) * 4) / 4)
+  const clusters = useMemo(() => clusterPoints(points, clusterK, CLUSTER_RADIUS_PX * px), [points, clusterK, px])
+
+  const toOuter = useCallback((clientX: number, clientY: number) => {
+    const matrix = svgRef.current?.getScreenCTM()
+    if (!matrix) return { x: 0, y: 0 }
+    const p = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse())
+    return { x: p.x, y: p.y }
   }, [])
 
   useEffect(() => {
-    const source = mapRef.current?.getSource('stations') as GeoJSONSource | undefined
-    source?.setData(data)
-  }, [data])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !mapReady) return
-    const markers = markersRef.current
-    for (const location of locations) {
-      let entry = markers.get(location.location_id)
-      if (!entry) {
-        const element = document.createElement('button')
-        element.className = 'map-dot'
-        element.type = 'button'
-        element.setAttribute('aria-label', `Open ${location.name}`)
-        element.addEventListener('click', (event) => {
-          event.stopPropagation()
-          onSelectRef.current(locationsRef.current.find((item) => item.location_id === location.location_id) ?? null)
-        })
-        const marker = new maplibregl.Marker({ element, anchor: 'center' }).setLngLat([location.lon, location.lat]).addTo(map)
-        entry = { marker, element }
-        markers.set(location.location_id, entry)
-      }
-      entry.element.style.background = gradientFor(location, cpState)
-      entry.element.classList.toggle('is-selected', location.location_id === selectedLocationId)
-      entry.element.classList.toggle('is-low-confidence', location.confidence === 'low')
-      const counts = new Map<State, number>()
-      location.charge_points.forEach((cp) => { const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'; counts.set(state, (counts.get(state) ?? 0) + 1) })
-      entry.element.title = `${location.name} · ${[...counts].map(([state, count]) => `${state.replace('_', ' ')} ${Math.round(count / location.charge_points.length * 100)}%`).join(' · ')}`
-      entry.element.style.display = zoom >= 7.8 ? 'block' : 'none'
+    const svg = svgRef.current
+    if (!svg || !frame) return
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const speed = event.ctrlKey ? 0.012 : 0.0018
+      const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 16 : 1) * speed)
+      const p = toOuter(event.clientX, event.clientY)
+      setView(zoomAt(viewRef.current, viewRef.current.k * factor, p.x, p.y, frame))
     }
-  }, [locations, cpState, zoom, mapReady, selectedLocationId])
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [frame, setView, toOuter, viewRef])
+
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const gesture = useRef<{ moved: boolean; startX: number; startY: number; suppressClick: boolean }>({ moved: false, startX: 0, startY: 0, suppressClick: false })
+
+  function onPointerDown(event: React.PointerEvent<SVGSVGElement>) {
+    if (event.button !== 0 && event.pointerType === 'mouse') return
+    pointers.current.set(event.pointerId, toOuter(event.clientX, event.clientY))
+    if (pointers.current.size === 1) gesture.current = { moved: false, startX: event.clientX, startY: event.clientY, suppressClick: false }
+  }
+
+  function onPointerMove(event: React.PointerEvent<SVGSVGElement>) {
+    if (!frame || !pointers.current.has(event.pointerId)) return
+    const g = gesture.current
+    if (!g.moved && Math.hypot(event.clientX - g.startX, event.clientY - g.startY) < DRAG_THRESHOLD_PX && pointers.current.size === 1) return
+    if (!g.moved) {
+      g.moved = true
+      setPanning(true)
+      svgRef.current?.setPointerCapture(event.pointerId)
+    }
+    const prev = new Map(pointers.current)
+    const now = toOuter(event.clientX, event.clientY)
+    pointers.current.set(event.pointerId, now)
+    const current = viewRef.current
+    if (pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.keys()].slice(0, 2)
+      const pa = prev.get(a)!, pb = prev.get(b)!, na = pointers.current.get(a)!, nb = pointers.current.get(b)!
+      const d0 = Math.hypot(pa.x - pb.x, pa.y - pb.y) || 1
+      const d1 = Math.hypot(na.x - nb.x, na.y - nb.y)
+      const mid = { x: (na.x + nb.x) / 2, y: (na.y + nb.y) / 2 }
+      const prevMid = { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }
+      const zoomed = zoomAt(current, current.k * (d1 / d0), mid.x, mid.y, frame)
+      setView(clampView({ ...zoomed, tx: zoomed.tx + mid.x - prevMid.x, ty: zoomed.ty + mid.y - prevMid.y }, frame))
+    } else {
+      const last = prev.get(event.pointerId)!
+      setView(clampView({ k: current.k, tx: current.tx + now.x - last.x, ty: current.ty + now.y - last.y }, frame))
+    }
+  }
+
+  function onPointerEnd(event: React.PointerEvent<SVGSVGElement>) {
+    pointers.current.delete(event.pointerId)
+    if (pointers.current.size === 0) {
+      if (gesture.current.moved) gesture.current.suppressClick = true
+      setPanning(false)
+    }
+  }
+
+  function consumeDrag() {
+    const dragged = gesture.current.suppressClick
+    gesture.current.suppressClick = false
+    return dragged
+  }
+
+  function zoomBy(factor: number) {
+    if (!frame) return
+    const v = viewRef.current
+    animateTo(zoomAt(v, v.k * factor, frame.width / 2, frame.height / 2, frame), 260)
+  }
+
+  function openCluster(cluster: Cluster) {
+    if (!frame || consumeDrag()) return
+    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is (typeof points)[number] => !!p)
+    const k = isInseparable(cluster)
+      ? Math.max(SPIDER_K, viewRef.current.k)
+      : Math.min(MAX_K, Math.max(fitPoints(frame, members, 0.35).k, viewRef.current.k * 2))
+    animateTo(centerOn(frame, cluster.x, cluster.y, k))
+  }
+
+  function selectLocation(id: string) {
+    if (consumeDrag()) return
+    onSelect(byId.get(id) ?? null)
+  }
 
   useEffect(() => {
-    if (!selectedLocationId) return
-    const location = locations.find((item) => item.location_id === selectedLocationId)
-    if (location) mapRef.current?.flyTo({ center: [location.lon, location.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 })
-  }, [selectedLocationId, locations])
+    if (!frame || !selectedLocationId) return
+    const point = pointById.get(selectedLocationId)
+    if (point) animateTo(centerOn(frame, point.x, point.y, Math.max(viewRef.current.k, SELECT_MIN_K)), 600)
+  }, [selectedLocationId, frame, pointById, animateTo, viewRef])
 
-  function zoomBy(delta: number) { mapRef.current?.easeTo({ zoom: Math.max(4.5, Math.min(15, (mapRef.current?.getZoom() ?? 6) + delta)), duration: 260 }) }
+  function onKeyDown(event: React.KeyboardEvent<SVGSVGElement>) {
+    if (!frame || event.target !== event.currentTarget) return
+    const step = 80 * px
+    const v = viewRef.current
+    const pan: Record<string, [number, number]> = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }
+    if (event.key === '+' || event.key === '=') zoomBy(1.6)
+    else if (event.key === '-' || event.key === '_') zoomBy(1 / 1.6)
+    else if (event.key === '0') animateTo(HOME)
+    else if (pan[event.key]) setView(clampView({ k: v.k, tx: v.tx + pan[event.key][0], ty: v.ty + pan[event.key][1] }, frame))
+    else return
+    event.preventDefault()
+  }
+
+  function isInseparable(cluster: Cluster) {
+    const members = cluster.ids.map((id) => pointById.get(id)).filter((p): p is (typeof points)[number] => !!p)
+    const xs = members.map((p) => p.x)
+    const ys = members.map((p) => p.y)
+    const spread = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
+    return spread * MAX_K < CLUSTER_RADIUS_PX * px
+  }
+
+  function renderStation(id: string, x: number, y: number) {
+    const location = byId.get(id)
+    if (!location) return null
+    const counts = stateCounts(location, cpState)
+    const total = location.charge_points.length || 1
+    const shares = [...counts].map(([state, count]) => `${state.replace('_', ' ').toLowerCase()} ${Math.round((count / total) * 100)}%`).join(', ')
+    const selected = location.location_id === selectedLocationId
+    return <g key={location.location_id} className={`map-marker map-station${selected ? ' is-selected' : ''}`} transform={`translate(${x} ${y}) scale(${px})`}
+      role="button" tabIndex={0} aria-pressed={selected} aria-label={`${location.name}: ${shares}`}
+      onClick={() => selectLocation(location.location_id)}
+      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(location) } }}>
+      <title>{`${location.name} · ${shares}`}</title>
+      <circle className="station-hit" r={17} />
+      <g className="station-body">
+        {selected && <circle className="station-selected" r={16.5} />}
+        {location.confidence === 'low' && <circle className="station-low" r={16.5} />}
+        <StateRing counts={counts} total={location.charge_points.length} />
+        <use href="#station-icon" transform="scale(0.62)" />
+      </g>
+    </g>
+  }
+
+  const baseMarkup = useMemo(() => ({ __html: base?.markup ?? '' }), [base])
+  const totalCp = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
 
   return (
     <section className="map-card" aria-label="Romania charging network map">
-      <div className="map-topline">
-        <div className="map-title"><div className="map-title-icon"><MapPin size={15} /></div><div><strong>Romania network</strong><span>{locations.length} locations · {locations.reduce((sum, location) => sum + location.charge_points.length, 0)} charge points</span></div></div>
-        <div className="map-status"><span className="live-dot" /> {zoom < 7.8 ? 'Clusters' : 'Stations'}<span className="zoom-badge">z {zoom.toFixed(1)}</span></div>
-      </div>
-      <div className="map-canvas" ref={containerRef}>
+      <div className="map-canvas svg-map" ref={canvasRef} style={{ '--s': view.k * fitScale } as React.CSSProperties}>
+        {loadError && <div className="map-error">Base map failed to load: {loadError}</div>}
+        {frame && <svg
+          ref={svgRef}
+          className={panning ? 'is-panning' : ''}
+          viewBox={`0 0 ${frame.width} ${frame.height}`}
+          preserveAspectRatio="xMidYMid slice"
+          tabIndex={0}
+          role="application"
+          aria-label={`Map of ${locations.length} locations. Drag to pan, scroll or pinch to zoom, plus and minus keys to zoom.`}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          onDoubleClick={(event) => {
+            if ((event.target as Element).closest('.map-marker')) return
+            const p = toOuter(event.clientX, event.clientY)
+            animateTo(zoomAt(viewRef.current, viewRef.current.k * 2, p.x, p.y, frame), 260)
+          }}
+          onClick={(event) => { if (!(event.target as Element).closest('.map-marker')) { if (!consumeDrag()) onSelect(null) } }}
+          onKeyDown={onKeyDown}
+        >
+          <g transform={`translate(${view.tx} ${view.ty}) scale(${view.k})`}>
+            <g className="base-map" dangerouslySetInnerHTML={baseMarkup} />
+          </g>
+          <g className="map-markers">
+            {clusters.map((cluster) => {
+              const x = cluster.x * view.k + view.tx
+              const y = cluster.y * view.k + view.ty
+              if (cluster.ids.length > 1 && view.k >= SPIDER_K && isInseparable(cluster)) {
+                const ring = 20 + 4 * cluster.ids.length
+                return <g key={`spider-${cluster.ids[0]}`}>
+                  {cluster.ids.map((id, i) => {
+                    const a = (i / cluster.ids.length) * 2 * Math.PI - Math.PI / 2
+                    const sx = x + Math.cos(a) * ring * px
+                    const sy = y + Math.sin(a) * ring * px
+                    return <g key={id}>
+                      <line className="spider-leg" x1={x} y1={y} x2={sx} y2={sy} />
+                      {renderStation(id, sx, sy)}
+                    </g>
+                  })}
+                </g>
+              }
+              if (cluster.ids.length > 1) {
+                const members = cluster.ids.map((id) => byId.get(id)).filter((item): item is Location => !!item)
+                const cps = members.reduce((sum, location) => sum + location.charge_points.length, 0)
+                const asleep = members.reduce((sum, location) => {
+                  const counts = stateCounts(location, cpState)
+                  return sum + (counts.get('STANDBY') ?? 0) + (counts.get('DEEP_SLEEP') ?? 0)
+                }, 0)
+                const r = Math.min(24, 13 + Math.log2(cluster.ids.length) * 2.4)
+                const label = `${cluster.ids.length} locations, ${cps} charge points, ${asleep} asleep. Zoom in.`
+                return <g key={cluster.ids[0]} className="map-marker map-cluster" transform={`translate(${x} ${y}) scale(${px})`} role="button" tabIndex={0} aria-label={label}
+                  onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
+                  <title>{label}</title>
+                  <circle className="cluster-hit" r={r + 4} />
+                  <circle className="cluster-body" r={r} />
+                  <text className="cluster-count" dy="0.35em">{cluster.ids.length}</text>
+                  {asleep > 0 && <g className="cluster-asleep" transform={`translate(${r * 0.72} ${-r * 0.72})`}>
+                    <circle r={8.5} fill={STATE_COLORS.DEEP_SLEEP} />
+                    <text dy="0.35em">{asleep}</text>
+                  </g>}
+                </g>
+              }
+              return renderStation(cluster.ids[0], x, y)
+            })}
+          </g>
+        </svg>}
         <div className="map-controls">
-          <button aria-label="Zoom in" onClick={() => zoomBy(0.8)}><Plus size={16} /></button>
-          <button aria-label="Zoom out" onClick={() => zoomBy(-0.8)}><Minus size={16} /></button>
-          <button aria-label="Reset map view" onClick={() => mapRef.current?.easeTo({ center: [24.9, 45.8], zoom: 5.7, duration: 500 })}><RotateCcw size={15} /></button>
+          <button aria-label="Zoom in" onClick={() => zoomBy(1.6)}><Plus size={16} /></button>
+          <button aria-label="Zoom out" onClick={() => zoomBy(1 / 1.6)}><Minus size={16} /></button>
+          <button aria-label="Reset map view" onClick={() => animateTo(HOME)}><RotateCcw size={15} /></button>
         </div>
-        <div className="map-north"><Compass size={14} /> N</div>
+        <div className="map-zoom-badge" aria-hidden="true">{locations.length} locations · {totalCp} CPs · {view.k.toFixed(1)}×</div>
       </div>
       <div className="map-legend">
         {states.map((state) => <span key={state}><i style={{ background: STATE_COLORS[state] }} />{state === 'DEEP_SLEEP' ? 'Deep sleep' : state.charAt(0) + state.slice(1).toLowerCase()}</span>)}

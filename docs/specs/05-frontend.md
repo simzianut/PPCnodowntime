@@ -4,7 +4,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 
 ## 1. Stack
 - React 18 + TypeScript + Vite, dev server on `:5173`.
-- MapLibre GL JS with the OpenFreeMap "positron" style (no key needed).
+- Map: an inline SVG base map, `frontend/public/map/romania.svg` (decision 0043), with its own pan, zoom and clustering code in `frontend/src/map/geo.ts` ([decision 0044](../decisions/0044-interactive-svg-map.md)). No tile server, no map library.
 - Recharts for the charts. Plain CSS variables for the white-only PPC theme.
 - API base from `VITE_API_URL` (default `http://localhost:8000`).
 - Develop against `API_FIXTURES=1` on the backend, or against an MSW mock built from `fixtures/`.
@@ -38,8 +38,9 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 - Each **location** is one marker. Its colour shows the state of its CPs, split by share when the CPs are in mixed states.
 - State colours and legend: CHARGING `#22C55E`, IDLE `#06B6D4`, STANDBY `#F59E0B`, WAKING `#F97316`, DEEP_SLEEP `#6366F1`, OFFLINE `#EF4444`.
 - Markers expose status shares on hover and a black ring when selected. The map remains interactive while the sidebar changes between overview and station details.
-- Clusters form below zoom level 8. A cluster's badge shows how many CPs are asleep.
-- Tick updates arrive as diffs. Apply them to an in-memory `cpState` map and update the GeoJSON source without re-creating layers. Target: 60 fps panning while a replay runs at 288×.
+- Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within 34 px on screen. A cluster is a black bubble with a location count and a badge for asleep CPs; clicking it zooms in. Locations at the same spot fan out at high zoom.
+- The station marker icon is `#station-icon` in the SVG file. Lines drawn in its `#lines` layer show up in the app.
+- Tick updates arrive as diffs. Apply them to an in-memory `cpState` map. Only the marker layer re-renders, never the base map. Target: 60 fps panning while a replay runs at 288×.
 - Locations with `confidence = low` get a dashed outline.
 
 ### 3.2 Policy comparison KPIs

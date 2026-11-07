@@ -1185,87 +1185,87 @@
   </g>
   <g id="labels">
     <circle class="city-dot" cx="529.3" cy="803.5" r="2.6"/>
-    <text class="city" x="534.9" y="807.5">Târgu Jiu</text>
+    <text class="city" x="529.3" y="803.5" dx="0.55em" dy="0.35em">Târgu Jiu</text>
     <circle class="city-dot" cx="701.3" cy="938.3" r="2.6"/>
-    <text class="city" x="706.9" y="942.3">Slatina</text>
+    <text class="city" x="701.3" y="938.3" dx="0.55em" dy="0.35em">Slatina</text>
     <circle class="city-dot" cx="851.7" cy="1039" r="2.6"/>
-    <text class="city" x="857.3" y="1043">Alexandria</text>
+    <text class="city" x="851.7" y="1039" dx="0.55em" dy="0.35em">Alexandria</text>
     <circle class="city-dot" cx="872" cy="827.3" r="2.6"/>
-    <text class="city" x="877.6" y="831.3">Târgoviște</text>
+    <text class="city" x="872" y="827.3" dx="0.55em" dy="0.35em">Târgoviște</text>
     <circle class="city-dot" cx="951.6" cy="1054.9" r="2.6"/>
-    <text class="city" x="957.2" y="1058.9">Giurgiu</text>
+    <text class="city" x="951.6" y="1054.9" dx="0.55em" dy="0.35em">Giurgiu</text>
     <circle class="city-dot" cx="1173.6" cy="908.6" r="2.6"/>
-    <text class="city" x="1179.2" y="912.6">Slobozia</text>
+    <text class="city" x="1173.6" y="908.6" dx="0.55em" dy="0.35em">Slobozia</text>
     <circle class="city-dot" cx="577.3" cy="572.3" r="2.6"/>
-    <text class="city" x="582.9" y="576.3">Alba Iulia</text>
+    <text class="city" x="577.3" y="572.3" dx="0.55em" dy="0.35em">Alba Iulia</text>
     <circle class="city-dot" cx="723.6" cy="330" r="2.6"/>
-    <text class="city" x="729.2" y="334">Bistrița</text>
+    <text class="city" x="723.6" y="330" dx="0.55em" dy="0.35em">Bistrița</text>
     <circle class="city-dot" cx="473.2" cy="616" r="2.6"/>
-    <text class="city" x="478.8" y="620">Deva</text>
+    <text class="city" x="473.2" y="616" dx="0.55em" dy="0.35em">Deva</text>
     <circle class="city-dot" cx="496.2" cy="321.5" r="2.6"/>
-    <text class="city" x="501.8" y="325.5">Zalău</text>
+    <text class="city" x="496.2" y="321.5" dx="0.55em" dy="0.35em">Zalău</text>
     <circle class="city-dot" cx="468.2" cy="178.3" r="2.6"/>
-    <text class="city" x="473.8" y="182.3">Satu Mare</text>
+    <text class="city" x="468.2" y="178.3" dx="0.55em" dy="0.35em">Satu Mare</text>
     <circle class="city-dot" cx="703.2" cy="789.1" r="2.6"/>
-    <text class="city" x="708.8" y="793.1">Râmnicu Vâlcea</text>
+    <text class="city" x="703.2" y="789.1" dx="0.55em" dy="0.35em">Râmnicu Vâlcea</text>
     <circle class="city-dot" cx="924.4" cy="619.5" r="2.6"/>
-    <text class="city" x="930" y="623.5">Sfântu Gheorghe</text>
+    <text class="city" x="924.4" y="619.5" dx="0.55em" dy="0.35em">Sfântu Gheorghe</text>
     <circle class="city-dot" cx="882.2" cy="507.9" r="2.6"/>
-    <text class="city" x="887.8" y="511.9">Miercurea Ciuc</text>
+    <text class="city" x="882.2" y="507.9" dx="0.55em" dy="0.35em">Miercurea Ciuc</text>
     <circle class="city-dot" cx="1016.9" cy="375.6" r="2.6"/>
-    <text class="city" x="1022.5" y="379.6">Piatra Neamț</text>
+    <text class="city" x="1016.9" y="375.6" dx="0.55em" dy="0.35em">Piatra Neamț</text>
     <circle class="city-dot" cx="1265.7" cy="748.6" r="2.6"/>
-    <text class="city" x="1271.3" y="752.6">Brăila</text>
+    <text class="city" x="1265.7" y="748.6" dx="0.55em" dy="0.35em">Brăila</text>
     <circle class="city-dot" cx="1228.8" cy="445.9" r="2.6"/>
-    <text class="city" x="1234.4" y="449.9">Vaslui</text>
+    <text class="city" x="1228.8" y="445.9" dx="0.55em" dy="0.35em">Vaslui</text>
     <circle class="city-dot" cx="433.9" cy="891.8" r="2.6"/>
-    <text class="city" x="439.5" y="895.8">Drobeta-Turnu Severin</text>
+    <text class="city" x="433.9" y="891.8" dx="0.55em" dy="0.35em">Drobeta-Turnu Severin</text>
     <circle class="city-dot" cx="1395.6" cy="769.2" r="2.6"/>
-    <text class="city" x="1401.2" y="773.2">Tulcea</text>
+    <text class="city" x="1395.6" y="769.2" dx="0.55em" dy="0.35em">Tulcea</text>
     <circle class="city-dot" cx="222.7" cy="551.3" r="2.6"/>
-    <text class="city" x="228.3" y="555.3">Arad</text>
+    <text class="city" x="222.7" y="551.3" dx="0.55em" dy="0.35em">Arad</text>
     <circle class="city-dot" cx="316.9" cy="350.3" r="2.6"/>
-    <text class="city" x="322.5" y="354.3">Oradea</text>
+    <text class="city" x="316.9" y="350.3" dx="0.55em" dy="0.35em">Oradea</text>
     <circle class="city-dot" cx="664.6" cy="635.4" r="2.6"/>
-    <text class="city" x="670.2" y="639.4">Sibiu</text>
+    <text class="city" x="664.6" y="635.4" dx="0.55em" dy="0.35em">Sibiu</text>
     <circle class="city-dot" cx="997.5" cy="214.3" r="2.6"/>
-    <text class="city" x="1003.1" y="218.3">Suceava</text>
+    <text class="city" x="997.5" y="214.3" dx="0.55em" dy="0.35em">Suceava</text>
     <circle class="city-dot" cx="1083.4" cy="778.8" r="2.6"/>
-    <text class="city" x="1089" y="782.8">Buzău</text>
+    <text class="city" x="1083.4" y="778.8" dx="0.55em" dy="0.35em">Buzău</text>
     <circle class="city-dot" cx="1277.8" cy="712" r="2.6"/>
-    <text class="city" x="1283.4" y="716">Galați</text>
+    <text class="city" x="1277.8" y="712" dx="0.55em" dy="0.35em">Galați</text>
     <circle class="city-dot" cx="1143" cy="658.1" r="2.6"/>
-    <text class="city" x="1148.6" y="662.1">Focșani</text>
+    <text class="city" x="1143" y="658.1" dx="0.55em" dy="0.35em">Focșani</text>
     <circle class="city-dot" cx="615.8" cy="962.1" r="2.6"/>
-    <text class="city" x="621.4" y="966.1">Craiova</text>
+    <text class="city" x="615.8" y="962.1" dx="0.55em" dy="0.35em">Craiova</text>
     <circle class="city-dot" cx="1164.8" cy="988.4" r="2.6"/>
-    <text class="city" x="1170.4" y="992.4">Călărași</text>
+    <text class="city" x="1164.8" y="988.4" dx="0.55em" dy="0.35em">Călărași</text>
     <circle class="city-dot" cx="311.6" cy="747.5" r="2.6"/>
-    <text class="city" x="317.2" y="751.5">Reșița</text>
+    <text class="city" x="311.6" y="747.5" dx="0.55em" dy="0.35em">Reșița</text>
     <circle class="city-dot" cx="207.6" cy="644.1" r="2.6"/>
-    <text class="city" x="213.2" y="648.1">Timișoara</text>
+    <text class="city" x="207.6" y="644.1" dx="0.55em" dy="0.35em">Timișoara</text>
     <circle class="city-dot" cx="1060.3" cy="188.5" r="2.6"/>
-    <text class="city" x="1065.9" y="192.5">Botoșani</text>
+    <text class="city" x="1060.3" y="188.5" dx="0.55em" dy="0.35em">Botoșani</text>
     <circle class="city-dot" cx="577.1" cy="209.2" r="2.6"/>
-    <text class="city" x="582.7" y="213.2">Baia Mare</text>
+    <text class="city" x="577.1" y="209.2" dx="0.55em" dy="0.35em">Baia Mare</text>
     <circle class="city-dot" cx="730.6" cy="463" r="2.6"/>
-    <text class="city" x="736.2" y="467">Târgu Mureș</text>
+    <text class="city" x="730.6" y="463" dx="0.55em" dy="0.35em">Târgu Mureș</text>
     <circle class="city-dot" cx="780.5" cy="845.4" r="2.6"/>
-    <text class="city" x="786.1" y="849.4">Pitești</text>
+    <text class="city" x="780.5" y="845.4" dx="0.55em" dy="0.35em">Pitești</text>
     <circle class="city-dot" cx="895.2" cy="669.1" r="2.6"/>
-    <text class="city" x="900.8" y="673.1">Brașov</text>
+    <text class="city" x="895.2" y="669.1" dx="0.55em" dy="0.35em">Brașov</text>
     <circle class="city-dot" cx="962.6" cy="825.3" r="2.6"/>
-    <text class="city" x="968.2" y="829.3">Ploiești</text>
+    <text class="city" x="962.6" y="825.3" dx="0.55em" dy="0.35em">Ploiești</text>
     <circle class="city-dot" cx="1101.1" cy="458.4" r="2.6"/>
-    <text class="city" x="1106.7" y="462.4">Bacău</text>
+    <text class="city" x="1101.1" y="458.4" dx="0.55em" dy="0.35em">Bacău</text>
     <circle class="city-dot" cx="580.1" cy="410.4" r="2.6"/>
-    <text class="city" x="585.7" y="414.4">Cluj-Napoca</text>
+    <text class="city" x="580.1" y="410.4" dx="0.55em" dy="0.35em">Cluj-Napoca</text>
     <circle class="city-dot" cx="1366.3" cy="989.2" r="2.6"/>
-    <text class="city" x="1371.9" y="993.2">Constanța</text>
+    <text class="city" x="1366.3" y="989.2" dx="0.55em" dy="0.35em">Constanța</text>
     <circle class="city-dot" cx="1203.9" cy="323" r="2.6"/>
-    <text class="city" x="1209.5" y="327">Iași</text>
+    <text class="city" x="1203.9" y="323" dx="0.55em" dy="0.35em">Iași</text>
     <circle class="city-dot" cx="972.2" cy="938.2" r="4"/>
-    <text class="capital" x="979.2" y="942.2">București</text>
+    <text class="capital" x="972.2" y="938.2" dx="0.55em" dy="0.35em">București</text>
     <text class="country-ro" x="792.2" y="578.4" text-anchor="middle">România</text>
     <text class="country" x="164.7" y="188.1" text-anchor="middle">Ungaria</text>
     <text class="country" x="125.5" y="956.9" text-anchor="middle">Serbia</text>

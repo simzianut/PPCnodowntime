@@ -181,8 +181,10 @@ def build(out: Path) -> None:
         cls = "capital" if p["name"] == "Bucharest" else "city"
         r = 4 if cls == "capital" else 2.6
         labels.append(f'    <circle class="city-dot" cx="{fmt(x)}" cy="{fmt(y)}" r="{r}"/>')
-        tx, ty = fmt(x + r + 3), fmt(y + 4)
-        labels.append(f'    <text class="{cls}" x="{tx}" y="{ty}">{name}</text>')
+        labels.append(
+            f'    <text class="{cls}" x="{fmt(x)}" y="{fmt(y)}" dx="0.55em" dy="0.35em">'
+            f"{name}</text>"
+        )
     for name, lon, lat, cls in AREA_LABELS:
         x, y = project(lon, lat)
         labels.append(

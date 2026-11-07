@@ -48,4 +48,4 @@
 ## Consequences
 - Natural Earth roads are sparse and some motorway segments are out of date.
 - A static SVG has no zoom levels. The PPC map's black count bubbles and the clustering in spec 05 §3.1 must be done in app code if we keep this map.
-- Whether the app's map view (T16, MapLibre today) switches to this SVG is still open. Tudor and Teodora decide.
+- The app's map view uses this SVG ([decision 0044](0044-interactive-svg-map.md)).

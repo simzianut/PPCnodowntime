@@ -51,3 +51,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0041](decisions/0041-frontend-seed-demo.md) | 2026-11-07 | teodora | Seed-data demo adapter for frontend work before the API exists
 - [0042](decisions/0042-frontend-map-first-white-theme.md) | 2026-11-07 | teodora | Map-first split, white-only theme, station summary presentation and status markers
 - [0043](decisions/0043-svg-base-map.md) | 2026-11-07 | tudor + tudor-claude | SVG base map of Romania (Natural Earth, Web Mercator) with a swappable station icon and a layer for hand-drawn lines
+- [0044](decisions/0044-interactive-svg-map.md) | 2026-11-07 | tudor + tudor-claude | Map view is an interactive inline SVG (pan, zoom, clusters, spiderfy) replacing MapLibre
