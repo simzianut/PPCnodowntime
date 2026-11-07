@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -37,7 +38,7 @@ from api.models import (
 from model import rl_select
 from model.oracle import HindsightOraclePolicy
 from sim.config import CONFIG_DIR, ROOT, TZ, sim_config
-from sim.data import SimData
+from sim.data import SimData, data_dir
 from sim.engine import Engine
 from sim.types import STATES, Autonomy, CommandStatus, PolicyName, State
 from stations import store
@@ -50,7 +51,6 @@ PENDING = CommandStatus.pending.value
 EXPIRED = CommandStatus.expired.value
 APPLIED = CommandStatus.applied.value
 HISTORY_FLUSH_TICKS = 12
-LIVE_DETAIL = "live mode comes with T12; only replay runs are available"
 ORACLE_LIVE_DETAIL = "oracle is replay-only (it reads the true sessions); live runs cannot use it"
 
 
@@ -468,6 +468,18 @@ class EngineManager:
         self._cost_rule_cls = None
         self._ready_lock: asyncio.Lock | None = None
         self._bg: set[asyncio.Task] = set()
+        # live mode (decision 0070); tests replace these attributes
+        from api import live_mode
+
+        self.live_dir = Path(os.environ.get("LIVE_DIR", "") or data_dir() / "raw" / "live")
+        self.live_clock = live_mode.clock_from_env
+        self.live_lag_s = float(os.environ.get("LIVE_LAG_S", live_mode.DEFAULT_LAG_S))
+        self.live_poll_s = 1.0
+        self.source_refs: pd.DataFrame | None = None
+        self.live_forecaster_factory = live_mode.live_forecaster
+        self._live_fc = None
+        self._live_rates: tuple[dict, str] | None = None
+        self._live_traffic: dict | None = None
 
     # ---- loading
     def load(self) -> None:
@@ -584,9 +596,39 @@ class EngineManager:
             for p in PolicyName
         ]  # fmt: skip
 
-    def make_policies(self, names: list[str], lam: float) -> list:
+    # ---- live mode helpers (lazy, cached)
+    def live_source_refs(self) -> pd.DataFrame | None:
+        if self.source_refs is None:
+            p = data_dir() / "processed" / "source_refs.parquet"
+            self.source_refs = pd.read_parquet(p) if p.exists() else None
+        return self.source_refs
+
+    def get_live_forecaster(self):
+        if self._live_fc is None:
+            self._live_fc = self.live_forecaster_factory()
+            log.info("live forecaster: %s", self._live_fc[1])
+        return self._live_fc
+
+    def get_live_rates(self) -> tuple[dict, str]:
+        from api.live_mode import location_rates
+
+        if self._live_rates is None:
+            self._live_rates = location_rates(self.data)
+            log.info("live signal rates: %s (%d locations)", self._live_rates[1],
+                     len(self._live_rates[0]))  # fmt: skip
+        return self._live_rates
+
+    def get_live_traffic(self) -> dict:
+        from api.live_mode import typical_traffic
+
+        if self._live_traffic is None:
+            self._live_traffic = typical_traffic()
+        return self._live_traffic
+
+    def make_policies(self, names: list[str], lam: float, forecaster=None) -> list:
         from sim.baselines import AlwaysOn
 
+        fc = self.forecaster if forecaster is None else forecaster
         out: list = []
         for n in names:
             if n == "always_on":
@@ -599,7 +641,7 @@ class EngineManager:
                     sim_config_path=CONFIG_DIR / "sim.yaml",
                 ))  # fmt: skip
             elif n in ("rl_ppo", "rl_maskppo", "rl_ddqn"):
-                out.append(rl_select.load_policy(n, forecaster=self.forecaster, lam=lam))
+                out.append(rl_select.load_policy(n, forecaster=fc, lam=lam))
             elif n == "oracle":
                 out.append(HindsightOraclePolicy(self._sessions, sim_config().slot_s))
         return out
@@ -607,9 +649,8 @@ class EngineManager:
     # ---- runs
     async def create_run(self, body: RunCreate) -> EngineRun:
         data = await self.ready()
-        if body.mode == "live":
-            raise HTTPException(
-                400, ORACLE_LIVE_DETAIL if PolicyName.oracle in body.policies else LIVE_DETAIL)
+        if body.mode == "live" and PolicyName.oracle in body.policies:
+            raise HTTPException(400, ORACLE_LIVE_DETAIL)
         names = list(dict.fromkeys(p.value for p in body.policies))
         bad = {n: self.unavailable[n] for n in names if n in self.unavailable}
         if bad:
@@ -618,6 +659,11 @@ class EngineManager:
             raise HTTPException(400, "focus_policy must be one of policies")
         focus = body.focus_policy.value if body.focus_policy is not None else (
             "rl_ppo" if "rl_ppo" in names else names[-1])  # fmt: skip
+        lam = body.lambda_ or sim_config().default_lambda
+        if body.mode == "live":
+            from api.live_mode import create_live_run
+
+            return self._add_run(await create_live_run(self, body, names, focus, lam))
         if not self.test_days:
             raise HTTPException(400, "the loaded data has no test days")
         day = self.test_days[0] if body.date is None else body.date
@@ -629,7 +675,6 @@ class EngineManager:
                     400, f"date must be a test day covered by forecasts.parquet ({rng}): {days}"
                 )
             raise HTTPException(400, f"date must be one of the test days {days}")
-        lam = body.lambda_ or sim_config().default_lambda
         await self.load_autonomy()
         history = await asyncio.to_thread(self._history_enabled)
 
@@ -646,6 +691,9 @@ class EngineManager:
             raise HTTPException(500, f"run creation failed ({_short_error(e)})") from e
         run = EngineRun(self, body, day, names, focus, lam, pols, eng)
         run.history = history
+        return self._add_run(run)
+
+    def _add_run(self, run: EngineRun) -> EngineRun:
         self.runs[run.run_id] = run
         while len(self.runs) > MAX_RUNS:
             self.drop_run(next(iter(self.runs)))
@@ -689,9 +737,11 @@ class EngineManager:
         return entry.rec
 
     def latest_states(self) -> dict[str, str] | None:
+        """States of the newest live run, else of the newest run (replay maps keep working)."""
         if not self.runs:
             return None
-        return next(reversed(self.runs.values())).cp_states()
+        live = [r for r in self.runs.values() if r.mode == "live"]
+        return (live[-1] if live else next(reversed(self.runs.values()))).cp_states()
 
     def with_state(self, loc: dict, states: dict[str, str] | None) -> dict:
         if states is None:
