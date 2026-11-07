@@ -22,6 +22,19 @@ Version: v0, 2026-11-07. Specs: `docs/specs/`. Every contract below has a sample
 | `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
 | `VITE_API_URL` | M5 | `http://localhost:8000` | |
 
+## Make targets and entry points
+`make` targets (spec 00 §4) call one entry point per module. A module provides it by adding the file; until then the target prints "not implemented yet".
+| Target | Runs | Owner |
+|---|---|---|
+| `make seed` | `python -m stations` (`stations/__main__.py`) | M3 |
+| `make data` | `python -m dataset` (`dataset/__main__.py`) | M1 |
+| `make train` | `python -m model` (`model/__main__.py`) | M2 |
+| `make api` | `uvicorn api.main:app --port 8000` | M4 |
+| `make web` | `npm run dev` in `frontend/` | M5 |
+| `make test` | `pytest` (tests in `<package>/tests/` and `tests/`), then `npm test` in `frontend/` if it exists | all |
+
+Migrations: plain SQL files `db/migrations/NNNN_slug.sql`, applied by `make db` in filename order, each once. Applied files are recorded in table `schema_migrations(filename text primary key, applied_at timestamptz)`. Never edit an applied migration; add a new one.
+
 ## Shared enums
 ```
 State        = CHARGING | IDLE | WAKING | STANDBY | DEEP_SLEEP | OFFLINE
