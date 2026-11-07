@@ -1,0 +1,50 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{style}
+\begin{document}
+\begin{tikzpicture}
+\tikzset{f/.style={box, text width=3.0cm, minimum height=0.8cm, font=\scriptsize, inner sep=3pt},
+  sens/.style={mock, text width=1.6cm, minimum height=0.8cm, font=\scriptsize, inner sep=2pt}}
+
+%% ---- ablation ladder ----
+\grp{abl}{0,0.9}{6.1,7.0}{Ablation ladder}
+\node[f, real, text width=3.0cm] (s1) at (1.9,5.9) {\textbf{1} calendar + history};
+\node[f, real, text width=3.0cm] (s2) at (1.9,4.7) {\textbf{2} + traffic index};
+\node[f, mock, text width=3.0cm] (s3) at (1.9,3.5) {\textbf{3} + EV-weighted flow};
+\node[f, mock, text width=3.0cm] (s4) at (1.9,2.3) {\textbf{4} + PPC Blue intents};
+\draw[arr] (s1) -- (s2);
+\draw[arr] (s2) -- (s3);
+\draw[arr] (s3) -- (s4);
+\node[sens] (v3) at (5.0,3.5) {EV tag 0.1\\ (sensitivity)};
+\node[sens] (v4) at (5.0,2.3) {intent share 0.3 (sensitivity)};
+\draw[arrm] (s3) -- (v3);
+\draw[arrm] (s4) -- (v4);
+\node[real, text width=2.2cm, minimum height=0.5cm, font=\scriptsize, inner sep=2pt] at (1.5,1.4) {measured value};
+\node[mock, text width=2.8cm, minimum height=0.5cm, font=\scriptsize, inner sep=2pt] at (4.5,1.4) {value under mock assumptions};
+
+%% ---- policies ----
+\grp{pol}{6.9,0.9}{11.0,7.0}{Policies compared}
+\foreach \y/\t in {5.9/{always-on}, 5.0/{naive quiet hours}, 4.1/{cost rule}, 3.2/{MaskablePPO}, 2.3/{Double DQN}}
+  \node[plain, text width=2.7cm, minimum height=0.6cm, font=\scriptsize, inner sep=2pt] at (8.95,\y) {\t};
+\node[plain, text width=2.7cm, minimum height=0.6cm, font=\scriptsize, inner sep=2pt, dashed] at (8.95,1.4) {hindsight oracle (upper bound)};
+
+\draw[arr] (6.1,3.9) -- (6.9,3.9);
+\draw[arr] (11.0,3.9) -- (11.8,3.9);
+
+%% ---- evaluation ----
+\grp{ev}{11.8,0.9}{17.2,7.0}{Energy vs added wait}
+\draw[->, line width=\lw, draw=g1] (12.7,2.6) -- (17.0,2.6) node[font=\scriptsize, below left, text=g1, inner sep=2pt] {added wait};
+\draw[->, line width=\lw, draw=g1] (12.7,2.6) -- (12.7,6.3) node[font=\scriptsize, above right, text=g1, inner sep=2pt, anchor=north west, rotate=90, yshift=-1pt] {};
+\node[font=\scriptsize, text=g1, rotate=90, anchor=south] at (12.35,4.4) {energy saved};
+\draw[acc, line width=0.9pt] (12.7,2.6) .. controls (13.2,4.9) and (14.8,5.5) .. (16.8,5.7);
+\fill[g1] (12.7,2.6) circle (2pt) node[font=\scriptsize, anchor=north west, xshift=2pt, yshift=-2pt, text=g1] {always-on};
+\node[draw=g1, fill=white, rectangle, rotate=45, inner sep=1.8pt] (orc) at (13.1,6.0) {};
+\node[font=\scriptsize, text=g1, anchor=west] at (13.35,6.0) {oracle};
+\fill[acc] (14.6,5.3) circle (2pt);
+\draw[arrm, shorten >=2pt] (14.6,5.3) -- (orc);
+\node[lbl, fill=g5] at (15.4,5.85) {\% of oracle};
+\node[font=\scriptsize\itshape, text=g1] at (15.2,3.2) {schematic, not results};
+\node[plain, text width=4.9cm, minimum height=0.9cm, font=\scriptsize, inner sep=3pt, align=left] at (14.5,1.55) {\textbf{Metrics:} energy saved (kWh, \%); added wait (total, mean, p95); \% of oracle};
+
+\node[font=\scriptsize, text=g1, text width=17cm, align=center] at (8.6,0.3) {Ablation steps are scored with forecast metrics on the 2024--2025 test sample; policies are compared on the same test period. Sensitivity variants rerun a step with the changed mock parameter.};
+\end{tikzpicture}
+\end{document}

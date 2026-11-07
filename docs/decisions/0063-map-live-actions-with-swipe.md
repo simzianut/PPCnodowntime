@@ -1,9 +1,9 @@
-# 0056: Map shows live agent actions on a quiet base, with a without/with-agent swipe slider
+# 0063: Map shows live agent actions on a quiet base, with a without/with-agent swipe slider
 
 - Date: 2026-11-07
 - Who: tudor + tudor-claude
 - Status: accepted
-- Supersedes: the marker and cluster parts of [0046](0046-interactive-svg-map.md) (6-state rings, numbered clusters) and of [0055](0055-cluster-energy-saved-blobs.md) (energy-saved blobs, red → yellow → green)
+- Supersedes: the marker and cluster parts of [0046](0046-interactive-svg-map.md) (6-state rings, numbered clusters) and of [0062](0062-cluster-energy-saved-blobs.md) (energy-saved blobs, red → yellow → green)
 - Affects: spec 05, `frontend/src/components/NetworkMap.tsx`, `frontend/src/map/energy.ts`, `frontend/src/App.css`
 
 ## Context
@@ -27,5 +27,5 @@
 ## Consequences
 - A selected station is centred in the right ("with agent") half, so the divider handle never covers it.
 - Transitions are found by diffing `cpState` between ticks. A seek or policy switch (>50% of CPs changing at once) is treated as a reset, with no animations.
-- Watts still come from the hand-copied profiles in `frontend/src/map/energy.ts` (placeholder from 0055, must be kept in sync with `config/power_profiles.yaml`).
+- Watts still come from the hand-copied profiles in `frontend/src/map/energy.ts` (placeholder from 0062, must be kept in sync with `config/power_profiles.yaml`).
 - The 6 per-state colours are no longer on the map; WAKING vs IDLE and STANDBY vs DEEP_SLEEP are not distinguished there.

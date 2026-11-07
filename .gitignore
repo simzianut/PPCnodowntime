@@ -6,6 +6,9 @@ data/processed/
 .env.*
 !.env.example
 
+# training runs (decision 0051)
+runs/
+
 # python
 __pycache__/
 *.py[cod]
@@ -24,3 +27,9 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# LaTeX figures: keep built outputs in docs/figures/build, ignore aux files
+!docs/figures/build/
+docs/figures/**/*.aux
+docs/figures/**/*.log
+docs/figures/**/*.dvi

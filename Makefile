@@ -1,4 +1,4 @@
-.PHONY: db migrate db-down seed data train api web test lint
+.PHONY: db migrate db-down seed data train api web test lint train-image train-image-verify train-docker train-suite-docker train-local figures figures-local
 
 PSQL = docker compose exec -T -e PGOPTIONS=--client-min-messages=warning db psql -U ppc -d ppc -v ON_ERROR_STOP=1 -q
 # Runs `python -m <pkg>` if the module has added its entry point (CONTRACTS: make targets).
@@ -48,3 +48,33 @@ test:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
+
+# Reproducible GPU training (decision 0051). Needs Docker + NVIDIA container toolkit.
+CONFIG ?= config/train/smoke.yaml
+SEED ?= 0
+GPU_ID ?= 0
+export GIT_SHA := $(shell git rev-parse HEAD 2>/dev/null)
+export GIT_DIRTY := $(if $(shell git status --porcelain 2>/dev/null),true,false)
+
+train-image:
+	docker compose -f docker-compose.train.yml build train
+
+train-image-verify:
+	docker build -f docker/train.Dockerfile --target verify -t ppc-train:verify .
+
+train-docker:
+	GPU_ID=$(GPU_ID) docker compose -f docker-compose.train.yml run --rm train run $(CONFIG) --seed $(SEED) $(ARGS)
+
+train-suite-docker:
+	GPU_ID=$(GPU_ID) docker compose -f docker-compose.train.yml run --rm train suite $(SUITE) $(ARGS)
+
+train-local:
+	uv run --extra rl --extra train python -m model.experiments run $(CONFIG) --seed $(SEED) $(ARGS)
+
+# Paper figures (docs/figures): pinned TeX Live in Docker, or local TeX with figures-local.
+figures:
+	docker build -f docker/tex.Dockerfile -t ppc-figures .
+	docker run --rm -v "$(PWD)":/work -w /work ppc-figures
+
+figures-local:
+	bash docs/figures/build.sh

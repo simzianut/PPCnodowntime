@@ -62,5 +62,12 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0052](decisions/0052-forecaster-comparison-and-ablation.md) | 2026-11-07 | vlad + vlad-claude | Compare F0 seasonal, F1 LightGBM, F2 GRU-survival forecasters; feature ablation and signal sensitivity suite
 - [0053](decisions/0053-rl-maskableppo-ddqn-oracle.md) | 2026-11-07 | vlad + vlad-claude | RL agents MaskablePPO and Double DQN with masking, plus a hindsight oracle bound
 - [0054](decisions/0054-tikz-research-figures.md) | 2026-11-07 | vlad + vlad-claude | Research-paper figures in TikZ, built in Docker to PDF and SVG
-- [0055](decisions/0055-cluster-energy-saved-blobs.md) | 2026-11-07 | tudor + tudor-claude | Map clusters are colour blobs showing average energy saved (red → green), replacing numbered bubbles
-- [0056](decisions/0056-map-live-actions-with-swipe.md) | 2026-11-07 | tudor + tudor-claude | Map is a quiet 4-colour base with live agent actions (ripples, ticker) and a without/with-agent swipe slider; replaces state rings and energy blobs
+- [0055](decisions/0055-evaluator-multi-policy-runner.md) | 2026-11-07 | edy-antigravity | Evaluator multi-policy engine runner and eval_results artifact
+- [0056](decisions/0056-ampwhere-calibration-check.md) | 2026-11-07 | vlad + vlad-claude | Calibration vs real PPC activity (3 h, Sat evening): HPC ~2x overstated, all within range; report, no rescale yet
+- [0057](decisions/0057-live-mode-signal-sampling-and-validation.md) | 2026-11-07 | edy-antigravity | Live-mode signal sampling and live validation report
+- [0058](decisions/0058-training-infra-implementation.md) | 2026-11-07 | vlad + vlad-claude | Training infra details: pins (CUDA 12.4.1, torch 2.6.0, uv 0.11.26, sb3 2.8.0), venv at /opt/venv, GPU-free verify stage, strict deterministic mode, trainer registry
+- [0059](decisions/0059-forecaster-training-implementation.md) | 2026-11-07 | vlad + vlad-claude | Forecaster training implementation: shared seeded CP-day sample, vectorised feature builder + cache, monotone horizons, F0/F1/F2 settings
+- [0060](decisions/0060-rl-training-implementation.md) | 2026-11-07 | vlad + vlad-claude | RL training implementation: active-only episodes, DC oversampling, fixed validation episodes with in-engine references, masked Double DQN, own-CP oracle, hyperparameters
+- [0061](decisions/0061-rl-agents-in-the-app.md) | 2026-11-07 | vlad + vlad-claude | New RL agents reach the app as PolicyNames rl_maskppo / rl_ddqn / oracle (replay only); RL_AGENT picks the agent behind rl_ppo
+- [0062](decisions/0062-cluster-energy-saved-blobs.md) | 2026-11-07 | tudor + tudor-claude | Map clusters are colour blobs showing average energy saved (red → green), replacing numbered bubbles
+- [0063](decisions/0063-map-live-actions-with-swipe.md) | 2026-11-07 | tudor + tudor-claude | Map is a quiet 4-colour base with live agent actions (ripples, ticker) and a without/with-agent swipe slider; replaces state rings and energy blobs

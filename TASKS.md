@@ -8,16 +8,9 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
-- [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
-  - Decision 0051. Contract: CONTRACTS "Training runs".
-- [T26] M2 forecaster comparison: F0 seasonal hour-of-week baseline, F1 LightGBM (existing, wrapped for reproducible runs + 2024–25 test split + inactive days excluded), F2 GRU with 12-bucket survival head; shared metrics (AUC, PR-AUC, Brier, log loss, reliability); feature ablation + sensitivity suite (steps 1–4 on v3, step 3 on signals_evtag01, step 4 on signals_papp03) | owner: vlad-claude | branch: vlad-claude/T26-forecasters | depends: T25
-  - Decision 0052. Writes forecasts.parquet per run (CONTRACTS schema) so T11 can evaluate the cost rule with any forecaster.
-- [T27] M2 RL agents: MaskablePPO (sb3-contrib) and Double DQN with action masking on ChargePointEnv, hindsight oracle bound policy, env-level evaluation on held-out days for model selection | owner: vlad-claude | branch: vlad-claude/T27-rl-agents | depends: T25
-  - Decision 0053. Edy's plain PPO (model/train_rl.py) stays untouched for comparison. Wake cost comes from config/power_profiles.yaml wake_extra_wh (M3 will set it).
-- [T28] Research-paper figures in TikZ → PDF + SVG: system overview, forecaster architectures, RL loop (MaskablePPO + DDQN), reproducible training pipeline, experiment design; docker/tex.Dockerfile + `make figures` | owner: vlad-claude | branch: vlad-claude/T28-figures | depends: -
-  - Decision 0054.
-- [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
+  - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
@@ -30,11 +23,27 @@ Add notes as indented sub-bullets.
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
   - Note from T23 (tudor-claude): T23 delivers the replay REST + WS routes on sim.Engine, in memory (api/engine_mode.py). T12 keeps DB persistence (after T5) and live mode.
-- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: - | branch: - | depends: T9, T13
+
 
 ## Blocked
 
 ## Done
+- [T31] Wire the new RL agents into the app: PolicyNames rl_maskppo, rl_ddqn, oracle (replay only) in sim/evaluate.py and the API real mode; RL_AGENT switch picks which agent serves rl_ppo | owner: vlad-claude | branch: vlad-claude/T31-rl-wiring | depends: T27
+  - model/rl_select.py (RL_AGENT resolve + loaders), PolicyName rl_maskppo/rl_ddqn/oracle, evaluator + API real mode run them; oracle replay-only (live → 400); decision 0061. API smoke on real data 2024-01-01: oracle 77.4% saved / 0 wait, current rl_ppo (edy's 25k-step PPO) 75.3% / 999.5 wait-min over 1,067 of 1,137 sessions, cost_rule 12.1% / 3.8. Test: `uv run --extra rl --extra train pytest model/tests/test_rl_select.py api/tests/test_engine_routes.py sim/tests/test_evaluate.py`.
+  - Note for tudor: api/tests/test_routes.py::test_recommendations_routes fails on main (fixture mode, 29 == 28 applied), unrelated to T31.
+  - Note for teodora (T16–T18): add rl_maskppo, rl_ddqn, oracle to frontend/src/api/types.ts PolicyName + POLICY_LABELS to show them.
+- [T27] M2 RL agents: MaskablePPO (sb3-contrib) and Double DQN with action masking on ChargePointEnv, hindsight oracle bound policy, env-level evaluation on held-out days for model selection | owner: vlad-claude | branch: vlad-claude/T27-rl-agents | depends: T25
+  - model.experiments rl_maskppo / rl_ddqn / oracle; EpisodeEnv (active CP-days, DC ×3), fixed validation episodes with always_on / cost_rule / oracle in the same engine; MaskablePPOPolicy + DDQNPolicy adapters (not yet wired into sim/API); suite rl_sweep; decisions 0053, 0060. Test: `uv run --extra rl --extra train pytest model/tests/test_rl_agents.py`; server: pass `--set data.forecasts=<abs path to T26 run>/forecasts.parquet`.
+- [T26] M2 forecaster comparison: F0 seasonal hour-of-week baseline, F1 LightGBM (existing, wrapped for reproducible runs + 2024–25 test split + inactive days excluded), F2 GRU with 12-bucket survival head; shared metrics (AUC, PR-AUC, Brier, log loss, reliability); feature ablation + sensitivity suite (steps 1–4 on v3, step 3 on signals_evtag01, step 4 on signals_papp03) | owner: vlad-claude | branch: vlad-claude/T26-forecasters | depends: T25
+  - model.experiments f0_seasonal / f1_lgbm / f2_gru on one seeded active-CP-day sample (train ≤ 2023-09-30, val Q4 2023, test 2024–25), shared eval (AUC, PR-AUC, Brier, log loss, reliability), forecasts.parquet per run; suites forecasters / ablation / ablation_f2; decisions 0052, 0059. Smoke y30 AUC F0 0.86 / F1 0.95 / F2 0.96 (20 CPs, noisy). Test: `uv run --extra rl --extra train pytest model/tests/test_forecasters.py`; server: `python -m model.experiments suite config/train/suites/forecasters.yaml`.
+- [T28] Research-paper figures in TikZ → PDF + SVG: system overview, forecaster architectures, RL loop (MaskablePPO + DDQN), reproducible training pipeline, experiment design; docker/tex.Dockerfile + `make figures` | owner: vlad-claude | branch: vlad-claude/T28-figures | depends: -
+  - docs/figures/src/fig1–fig5 TikZ + style.tex; built PDF/SVG/PNG committed in docs/figures/build; build.sh (pdflatex + dvisvgm, no Ghostscript), docker/tex.Dockerfile; .gitattributes keeps *.sh LF; decision 0054. Test: `make figures-local` (MiKTeX/TeX Live) or `make figures` (Docker).
+- [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
+  - model.experiments CLI (run/suite/promote), runs/<name>-<sha8>-s<seed>/ with manifest, model/repro.py, docker/train.Dockerfile (CUDA 12.4.1, torch 2.6.0+cu124, GPU-free verify stage), docker-compose.train.yml with GPU_ID; decisions 0051, 0058. Image NOT built yet (laptop RAM): first build on the GPU server. Test: `uv run --extra rl --extra train pytest model/tests/test_experiments.py`; on the server `make train-image-verify`, then `make train-docker CONFIG=config/train/smoke.yaml GPU_ID=0`.
+- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
+  - LiveSignalSampler samples route intents, maps EV and ICE counts with CP charging confirmation; generates model/reports/live_validation_report.json; decision 0056. Test: uv run pytest model/tests/test_live_signals.py.
+- [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
+  - sim.evaluate runs policies over test days and lambda grid; generates artifacts/eval_results.json for GET /api/eval and the frontend Pareto curve; decision 0055. Test: uv run pytest sim/tests/test_evaluate.py.
 - [T24] Integrate T5 station data into the sim: per-CP power from the capacity table, RON KPIs (net B2B tariff), API autonomy + run history through stations.store | owner: tudor-claude | branch: tudor-claude/T24-t5-into-sim | depends: T5, T23
   - Per-CP watts from the T5 capacity table (engine, cost_rule, gym reward), overhead_ron/saved_ron at 1.15 RON/kWh in API + KPI cards, autonomy + focus-policy run history via stations.store (needs `make db`); fixed store.get_autonomy on Postgres; tests trimmed to basics; decision 0049. Test: `uv run pytest`, `make api` + `make web`.
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2

@@ -102,3 +102,36 @@ def test_run_history_and_autonomy_in_store(ec, tmp_path):
     assert ec.put("/api/settings/autonomy", json={"mode": "RECOMMEND"}).status_code == 200
     assert store.get_autonomy() == "RECOMMEND"
     assert ec.get("/api/settings/autonomy").json() == {"mode": "RECOMMEND"}
+
+
+@pytest.fixture
+def rl_client(small_data, tmp_path, monkeypatch):
+    from model import rl_select
+    from model.tests.test_rl_select import make_artifacts
+
+    make_artifacts(tmp_path / "artifacts", ("maskppo",))
+    monkeypatch.setattr(rl_select, "ROOT", tmp_path)
+    mgr = EngineManager(data=small_data, eval_path=tmp_path / "eval_results.json")
+    with TestClient(create_app(fixtures=False, manager=mgr)) as c:
+        yield c
+
+
+def test_policies_lists_all_seven(rl_client):
+    infos = {p["name"]: p for p in rl_client.get("/api/policies").json()}
+    assert list(infos) == [
+        "always_on", "naive_quiet_hours", "cost_rule", "rl_ppo", "rl_maskppo", "rl_ddqn", "oracle",
+    ]  # fmt: skip
+    assert infos["rl_maskppo"]["available"] and infos["oracle"]["available"]
+    assert not infos["rl_ddqn"]["available"]
+    assert infos["rl_ppo"]["available"]  # auto -> maskppo artifact
+
+
+def test_oracle_replay_and_live(rl_client):
+    pols = ["always_on", "rl_ppo", "oracle"]
+    rid = start(rl_client, policies=pols, focus_policy=None)
+    st = rl_client.get(f"/api/runs/{rid}").json()
+    assert st["focus_policy"] == "rl_ppo" and set(st["kpis"]) == set(pols)
+    r = rl_client.post("/api/runs", json=body(mode="live", policies=pols, focus_policy="oracle"))
+    assert r.status_code == 400 and "oracle" in r.json()["detail"]
+    r = rl_client.post("/api/runs", json=body(policies=["always_on", "rl_ddqn"]))
+    assert r.status_code == 400
