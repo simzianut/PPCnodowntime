@@ -15,10 +15,6 @@ Add notes as indented sub-bullets.
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
 - [T9] M1 live-status collector: adapter interface, AmpWhere (human-enabled) + file adapters, live_status table writes; start ASAP and keep running (spec 01 §8) | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
   - Starts before T5: writes JSONL under data/raw/live/ now, DB table once T5 lands. A human (vlad) runs the AmpWhere poller, per decision 0003.
-- [T13] M2 demand forecaster (LightGBM, calibrated) + RandomPolicy/ConstantForecaster stubs on day one + cost_rule policy (spec 02 §1–3) | owner: edy-antigravity | branch: edy-antigravity/T13-demand-forecaster | depends: T8
-  - Note from T10 (tudor-claude): import types from sim/types.py (decision 0017). Stubs and cost_rule are blocked behind T7/T8; gym env uses naive siblings until cost_rule lands (0023). λ is kWh per wait-minute (0020). Please also produce data/processed/forecasts.parquet (0021).
-  - Starting with day-one stubs (RandomPolicy, ConstantForecaster), fallback types, and cost_rule policy on fixtures so M4 is never blocked.
-
 - [T20] M1 real traffic: TomTom live traffic index + Mapbox typical hour-of-week traffic per location → traffic_typical.parquet (decision 0028) | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
   - Needs TOMTOM_API_KEY and MAPBOX_TOKEN in a local .env (vlad). Can start on stations_open.csv / fixture locations before T4.
 
@@ -40,6 +36,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T13] M2 demand forecaster (LightGBM, calibrated) + RandomPolicy/ConstantForecaster stubs on day one + cost_rule policy (spec 02 §1–3) | owner: edy-antigravity | branch: edy-antigravity/T13-demand-forecaster | depends: T8
+  - Shipped stubs (RandomPolicy, ConstantForecaster), CostRulePolicy, LightGBM demand forecaster with PAVA calibration (y30 AUC 0.9103, Brier 0.0488), precomputed forecasts.parquet, artifacts/forecaster.lgb (578KB) + meta.json; decisions 0031, 0032. Test: uv run python -m model && uv run pytest model.
 - [T6] M1 Dundee ingest + Open-Meteo weather at Dundee + GB-SCT holidays + county_ev_stats.csv; commit fixtures early | owner: vlad-claude | branch: vlad-claude/T6-dundee-ingest | depends: T2
   - Fixtures (0015); Dundee download + cleaning + 2-lane donors + weather/holidays → donor_sessions/chargers/occupancy (0027); county_ev_stats.csv with B+IF pooled (0030). Test: `uv run python -m dataset` then `uv run pytest dataset`.
 - [T3] Collect the full PPC Blue station list from open online sources (no PPC feed, no Geolocet); output a merged station file for the M3 importer | owner: tudor-claude | branch: tudor-claude/T3-station-list | depends: -
