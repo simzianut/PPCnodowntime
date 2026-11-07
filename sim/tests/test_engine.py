@@ -793,3 +793,20 @@ def test_benchmark_300_cps_4_policies():
     print(f"\nengine benchmark: {len(e.cp_ids)} CPs, 4 policies, 288 slots: {elapsed:.2f} s")
     assert k["always_on"]["sessions"] == 300 * 5
     assert elapsed < 20
+
+
+# ---- per-CP power (decision 0049) ----------------------------------------------------------
+
+
+def _hpc_data(*kws: float | None) -> SimData:
+    data = make_data([(f"L{i:05d}-1", "DC_HPC", ["CCS2"]) for i in range(len(kws))])
+    data.cps["max_kw"] = pd.Series(kws, dtype="float64")
+    return data
+
+
+def test_default_profiles_use_per_cp_watts_from_max_kw():
+    e = Engine(_hpc_data(300.0, 100.0, None), DAY, [AlwaysOnP()], sim_cfg=CFG)
+    assert e.idle_w.tolist() == [230.0, 130.0, 165.0]
+    k = e.run()["always_on"]
+    assert k["overhead_kwh"] == pytest.approx((230 + 130 + 165) * 24 / 1000)
+    assert k["overhead_ron"] == pytest.approx(k["overhead_kwh"] * 1.15, abs=1e-4)

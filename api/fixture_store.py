@@ -6,6 +6,7 @@ import gzip
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from functools import cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -17,9 +18,27 @@ from sim.types import STATE_INDEX, STATES, State
 FIXTURES_DIR = ROOT / "fixtures" / "api"
 RUN_DAY_FILE = "run_day.json"
 KPI_FIELDS = [
-    "overhead_kwh", "saved_kwh", "saved_pct", "wait_min_total", "wait_min_mean",
-    "wait_min_p95", "sessions", "waited_sessions", "sleep_share",
+    "overhead_kwh", "saved_kwh", "saved_pct", "overhead_ron", "saved_ron", "wait_min_total",
+    "wait_min_mean", "wait_min_p95", "sessions", "waited_sessions", "sleep_share",
 ]  # fmt: skip
+
+
+@cache
+def ron_per_kwh() -> float:
+    from stations.store import get_energy_tariffs
+
+    return float(get_energy_tariffs()["net_b2b_ron_per_kwh"])
+
+
+def with_ron(kpis: dict) -> dict:
+    """Kpis with `overhead_ron`/`saved_ron` (= kWh x net B2B tariff) filled in when missing."""
+    if "overhead_ron" in kpis and "saved_ron" in kpis:
+        return kpis
+    r = ron_per_kwh()
+    out = {**kpis}
+    out.setdefault("overhead_ron", round(kpis["overhead_kwh"] * r, 4))
+    out.setdefault("saved_ron", round(kpis["saved_kwh"] * r, 4))
+    return {f: out[f] for f in KPI_FIELDS if f in out} | out
 
 
 def load_json(name: str, fixtures_dir: Path = FIXTURES_DIR):
@@ -97,7 +116,7 @@ class RecordedDay:
                 self.commands[p].append(
                     [Cmd(c, State(f), State(t), r) for c, f, t, r in rec["commands"].get(p, [])]
                 )
-                self.kpis[p].append(rec["kpis"][p])
+                self.kpis[p].append(with_ron(rec["kpis"][p]))
             if "p30" in rec:
                 p30.append(rec["p30"])
         self.p30 = np.asarray(p30, dtype=np.float32) if p30 else None

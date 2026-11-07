@@ -15,7 +15,12 @@ import yaml
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
-from stations.state import VALID_CAUSES, VALID_STATES, evaluate_command_transition
+from stations.state import (
+    VALID_CAUSES,
+    VALID_STATES,
+    VALID_TARGET_STATES,
+    evaluate_command_transition,
+)
 
 log = logging.getLogger("stations.store")
 ROOT = Path(__file__).resolve().parent.parent
@@ -423,8 +428,9 @@ def get_autonomy() -> str:
                 text("SELECT value FROM settings WHERE key = 'autonomy_mode'")
             ).scalar()
         if val is not None:
-            parsed = json.loads(val) if isinstance(val, str) else val
-            return str(parsed)
+            if isinstance(val, str) and val.startswith('"'):  # json text (sqlite); psycopg decodes
+                val = json.loads(val)
+            return str(val)
     return _mem_autonomy
 
 
@@ -922,6 +928,98 @@ def record_state_event(
         "cause": c,
         "run_id": str(run_id),
     }
+
+
+_COMMAND_STATUSES = ("applied", "pending", "approved", "rejected", "expired")
+_HISTORY_TABLES = ("commands", "state_events")
+
+
+def run_history_enabled() -> bool:
+    """True when a DB is reachable and has the `commands` and `state_events` tables."""
+    eng = _get_engine()
+    return eng is not None and _has_tables(eng, *_HISTORY_TABLES)
+
+
+def _opt_db_ts(eng: Engine, ts: datetime | str | None) -> datetime | str | None:
+    return None if ts is None else _db_ts(eng, _utc_dt(ts))
+
+
+def _history_command_row(eng: Engine, run_id: str, c: dict[str, Any]) -> dict[str, Any]:
+    status = str(c["status"])
+    from_state = str(getattr(c["from_state"], "value", c["from_state"]))
+    target = str(getattr(c["target_state"], "value", c["target_state"]))
+    if status not in _COMMAND_STATUSES:
+        raise ValueError(f"invalid command status: {status!r}")
+    if from_state not in VALID_STATES or target not in VALID_TARGET_STATES:
+        raise ValueError(f"invalid command states: {from_state!r} -> {target!r}")
+    return {
+        "ts": _db_ts(eng, _utc_dt(c["ts"])),
+        "run_id": run_id,
+        "cp_id": str(c["cp_id"]),
+        "policy": str(getattr(c["policy"], "value", c["policy"])),
+        "from_state": from_state,
+        "target_state": target,
+        "reason": str(c.get("reason") or ""),
+        "status": status,
+        "expires_at": _opt_db_ts(eng, c.get("expires_at")),
+        "decided_by": c.get("decided_by"),
+        "decided_at": _opt_db_ts(eng, c.get("decided_at")),
+    }
+
+
+def _history_event_row(eng: Engine, run_id: str, e: dict[str, Any]) -> dict[str, Any]:
+    fs = str(getattr(e["from_state"], "value", e["from_state"]))
+    tos = str(getattr(e["to_state"], "value", e["to_state"]))
+    cause = str(e["cause"])
+    if fs not in VALID_STATES or tos not in VALID_STATES:
+        raise ValueError(f"invalid state event: {fs!r} -> {tos!r}")
+    if cause not in VALID_CAUSES:
+        raise ValueError(f"invalid cause: {cause!r}")
+    return {
+        "ts": _db_ts(eng, _utc_dt(e["ts"])),
+        "cp_id": str(e["cp_id"]),
+        "from_state": fs,
+        "to_state": tos,
+        "cause": cause,
+        "run_id": run_id,
+    }
+
+
+def record_run_history(
+    run_id: str, commands: list[dict[str, Any]], events: list[dict[str, Any]]
+) -> int:
+    """Bulk-insert a sim run's commands and state events in one transaction; returns rows written.
+
+    Without a reachable DB (or without the tables) nothing is written and 0 is returned.
+    """
+    if not commands and not events:
+        return 0
+    eng = _get_engine()
+    if eng is None or not _has_tables(eng, *_HISTORY_TABLES):
+        return 0
+    rid = str(run_id)
+    cmd_rows = [_history_command_row(eng, rid, c) for c in commands]
+    ev_rows = [_history_event_row(eng, rid, e) for e in events]
+    with eng.begin() as conn:
+        if cmd_rows:
+            conn.execute(
+                text(
+                    "INSERT INTO commands (ts, run_id, cp_id, policy, from_state, target_state, "
+                    "reason, status, expires_at, decided_by, decided_at) VALUES (:ts, :run_id, "
+                    ":cp_id, :policy, :from_state, :target_state, :reason, :status, :expires_at, "
+                    ":decided_by, :decided_at)"
+                ),
+                cmd_rows,
+            )
+        if ev_rows:
+            conn.execute(
+                text(
+                    "INSERT INTO state_events (ts, cp_id, from_state, to_state, cause, run_id) "
+                    "VALUES (:ts, :cp_id, :from_state, :to_state, :cause, :run_id)"
+                ),
+                ev_rows,
+            )
+    return len(cmd_rows) + len(ev_rows)
 
 
 def get_cp_states() -> dict[str, dict[str, Any]]:

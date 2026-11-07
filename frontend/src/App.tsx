@@ -32,7 +32,7 @@ function KpiCard({ policy, run }: { policy: PolicyName; run: Run | null }) {
     <article className={`policy-kpi ${run?.focus_policy === policy ? 'is-focus' : ''}`} style={{ '--policy': policyColors[policy] } as React.CSSProperties}>
       <div className="policy-kpi-head"><span className="policy-badge">{policyInitials[policy]}</span><span className="policy-name">{POLICY_LABELS[policy]}</span>{run?.focus_policy === policy && <span className="focus-tag">Shown</span>}</div>
       <div className="policy-kpi-values">
-        <div><strong>{format(kpi?.saved_kwh ?? 0)}</strong><span>kWh saved</span></div>
+        <div><strong>{format(kpi?.saved_kwh ?? 0)}</strong><span>kWh saved</span><small className="policy-kpi-ron">≈ {format(kpi?.saved_ron ?? 0, 0)} RON</small></div>
         <div className={`delta ${positive ? 'positive' : ''}`}>{positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}{format(kpi?.saved_pct ?? 0)}%</div>
       </div>
       <div className="policy-kpi-foot"><span><Clock3 size={12} /> {format(kpi?.wait_min_total ?? 0, 0)} min added</span><span>P95 {format(kpi?.wait_min_p95 ?? 0, 0)}m</span></div>
@@ -152,7 +152,7 @@ function RightPanel({ dashboard }: { dashboard: ReturnType<typeof useDashboard> 
         <CartesianGrid strokeDasharray="3 4" stroke="var(--chart-grid)" />
         <XAxis type="number" dataKey="wait_min_total" name="Added wait" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} label={{ value: 'Added wait · min', position: 'insideBottom', offset: -1, fill: 'var(--muted)', fontSize: 9 }} />
         <YAxis type="number" dataKey="saved_kwh" name="Energy saved" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} label={{ value: 'kWh saved', angle: -90, position: 'insideLeft', fill: 'var(--muted)', fontSize: 9 }} />
-        <Tooltip formatter={(value, key) => [`${format(Number(value))} ${key === 'saved_kwh' ? 'kWh saved' : 'min added'}`, '']} />
+        <Tooltip formatter={(value, key, item) => [`${format(Number(value))} ${key === 'saved_kwh' ? `kWh saved · ≈ ${format(item.payload?.saved_ron ?? 0, 0)} RON` : 'min added'}`, '']} />
         {POLICIES.map((policy) => <Scatter key={policy} name={POLICY_LABELS[policy]} data={curveData.filter((item) => item.policy === policy)} fill={policyColors[policy]} line={policy === 'always_on' ? false : { stroke: policyColors[policy], strokeWidth: 1.3 }} />)}
       </ComposedChart></ResponsiveContainer></div>
       <MiniLegend /></> : <div className="curve-chart empty-feed"><strong>Evaluation not run yet</strong><span>The trade-off curve appears once the evaluator has produced results.</span></div>}

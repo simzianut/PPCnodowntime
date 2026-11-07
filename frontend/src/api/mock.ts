@@ -1,6 +1,6 @@
 import Papa from 'papaparse'
 import stationCsv from '../../../data/seed/stations_open.csv?raw'
-import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type EvalResult, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from './types'
+import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type EvalResult, type Kpis, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from './types'
 
 interface StationRow {
   name: string
@@ -61,9 +61,14 @@ export const demoLocations: Location[] = rows.map((row, index) => {
   }
 })
 
+const TARIFF_RON_PER_KWH = 1.15
+const withRon = <T extends Omit<Kpis, 'overhead_ron' | 'saved_ron'>>(kpis: T) => ({
+  ...kpis, overhead_ron: Math.round(kpis.overhead_kwh * TARIFF_RON_PER_KWH * 10) / 10, saved_ron: Math.round(kpis.saved_kwh * TARIFF_RON_PER_KWH * 10) / 10,
+})
+
 const metric = (policy: PolicyName, scale: number): EvalResult => {
   const factor = policy === 'always_on' ? 0 : policy === 'naive_quiet_hours' ? 0.72 : policy === 'cost_rule' ? 0.88 : 1
-  return {
+  return withRon({
     policy,
     lambda: scale === 0 ? null : scale,
     overhead_kwh: Math.round((100 - scale * 16) * 10) / 10,
@@ -75,7 +80,7 @@ const metric = (policy: PolicyName, scale: number): EvalResult => {
     sessions: 264,
     waited_sessions: Math.round(scale * 11),
     sleep_share: Math.round(scale * 0.28 * 100) / 100,
-  }
+  })
 }
 
 export const demoEval: EvalData = {
@@ -119,7 +124,7 @@ export function createDemoRun(request: RunRequest): Run {
 
 function makeKpis(slot: number): Run['kpis'] {
   const progress = (slot > 0 ? ((slot - 1) % 288) + 1 : 0) / 288
-  return Object.fromEntries(POLICIES.map((policy) => [policy, {
+  return Object.fromEntries(POLICIES.map((policy) => [policy, withRon({
     overhead_kwh: Math.round((slot * (policy === 'always_on' ? 0.18 : 0.11)) * 10) / 10,
     saved_kwh: Math.round(slot * (policy === 'rl_ppo' ? 0.14 : policy === 'cost_rule' ? 0.11 : policy === 'naive_quiet_hours' ? 0.08 : 0) * 10) / 10,
     saved_pct: Math.round(progress * (policy === 'rl_ppo' ? 16.8 : policy === 'cost_rule' ? 13.1 : policy === 'naive_quiet_hours' ? 9.4 : 0) * 10) / 10,
@@ -129,7 +134,7 @@ function makeKpis(slot: number): Run['kpis'] {
     sessions: Math.round(progress * 264),
     waited_sessions: Math.round(progress * (policy === 'rl_ppo' ? 39 : 24)),
     sleep_share: Math.round(progress * (policy === 'rl_ppo' ? 0.27 : 0.2) * 100) / 100,
-  }]))
+  })]))
 }
 
 export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; tick: Tick } {

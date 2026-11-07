@@ -112,3 +112,37 @@ def test_cost_rule_route_intent_wakes_cp():
     # Route intent forces CPs at that location to stay IDLE
     assert cmd_map["L00001-1"] == TargetState.IDLE
     assert cmd_map["L00001-2"] == TargetState.IDLE
+
+
+def _hpc_state(p15: float) -> SimState:
+    t = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
+    cps = [
+        CpView("L1-1", "L1", PowerClass.DC_HPC, ["CCS"], State.IDLE, 300, 300.0),
+        CpView("L2-1", "L2", PowerClass.DC_HPC, ["CCS"], State.IDLE, 300, 100.0),
+        CpView("L3-1", "L3", PowerClass.DC_HPC, ["CCS"], State.IDLE, 300),
+    ]
+    fc = pd.DataFrame(
+        [
+            {"cp_id": c.cp_id, "p_arrival_15": p15, "p_arrival_30": p15, "p_arrival_60": p15,
+             "expected_arrivals_60": 0.1}
+            for c in cps
+        ]
+    )  # fmt: skip
+    return SimState(t=t, cps=cps, signals=pd.DataFrame(), context={}, forecast=fc)
+
+
+def test_cost_rule_per_cp_power_from_max_kw():
+    policy = CostRulePolicy(lambda_wait=0.1, min_awake_per_location=0, sim_config_path="-")
+    state = _hpc_state(p15=0.006)
+    p300, p100, pnone = (policy._profile(cp) for cp in state.cps)
+    assert (p300["idle_w"], p300["deep_sleep_w"], p300["standby_w"]) == (230.0, 32.0, 50.0)
+    assert (p100["idle_w"], p100["deep_sleep_w"]) == (130.0, 23.0)
+    assert pnone == policy.power_profiles[PowerClass.DC_HPC]
+    assert (p300["standby_wake_s"], p300["deep_sleep_wake_s"]) == (10.0, 180.0)
+    # 300 kW: standby saves almost as much as deep sleep, so the 180 s wait isn't worth it
+    cmd = {c.cp_id: c.target_state for c in policy.decide(state)}
+    assert cmd == {
+        "L1-1": TargetState.STANDBY,
+        "L2-1": TargetState.DEEP_SLEEP,
+        "L3-1": TargetState.DEEP_SLEEP,
+    }

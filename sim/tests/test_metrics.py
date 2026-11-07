@@ -9,7 +9,17 @@ def test_kpi_fields_match_contract():
     assert KPI_FIELDS == (
         "overhead_kwh", "saved_kwh", "saved_pct", "wait_min_total", "wait_min_mean",
         "wait_min_p95", "sessions", "waited_sessions", "sleep_share",
+        "overhead_ron", "saved_ron",
     )  # fmt: skip
+
+
+def test_ron_kpis_use_net_b2b_tariff():
+    m = PolicyMetrics()
+    m.add_energy_wh(2500.0)
+    k = m.kpis(10000.0)
+    assert (k["overhead_kwh"], k["saved_kwh"]) == (2.5, 7.5)
+    assert k["overhead_ron"] == pytest.approx(2.5 * 1.15)
+    assert k["saved_ron"] == pytest.approx(7.5 * 1.15)
 
 
 def test_empty_metrics_are_zero():

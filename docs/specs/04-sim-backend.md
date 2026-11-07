@@ -39,6 +39,9 @@ Per policy, as running totals and per slot:
 | `wait_min_total`, `wait_min_mean`, `wait_min_p95` | Added driver wait (sessions with wait 0 are included in the mean; p95 is over all sessions) |
 | `sessions`, `waited_sessions` | Helper counts |
 | `sleep_share` | Share of CP time spent in STANDBY or DEEP_SLEEP |
+| `overhead_ron`, `saved_ron` | The matching kWh × the net B2B tariff from `stations.store.get_energy_tariffs()` (1.15 RON/kWh, decision [0049](../decisions/0049-t5-data-in-sim-ron-kpis-run-history.md)) |
+
+Each CP's watts come from `stations.store.get_power_profile(power_class, max_kw)` (the capacity table of decision 0048) unless the engine is given explicit profiles (decision 0049).
 
 Drivers are never lost (decision 0006).
 
@@ -97,7 +100,7 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 - Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
 - Send ticks over the same WebSocket.
 
-**Engine mode (T23, default):** with `API_FIXTURES` unset, `api/engine_mode.py` runs each replay on `sim.Engine` in memory, with no DB. Stations come from `sim.stations_seed.load_stations()`: the real list when `data/processed/` has it, else the open seed. Sessions are real processed data or synthetic sessions on those stations. Live mode returns 400 until T12. Details in [0047](../decisions/0047-engine-backed-api-and-station-loader.md).
+**Engine mode (T23, default):** with `API_FIXTURES` unset, `api/engine_mode.py` runs each replay on `sim.Engine` in memory, with no DB. Stations come from `sim.stations_seed.load_stations()`: the real list when `data/processed/` has it, else the open seed. Sessions are real processed data or synthetic sessions on those stations. Live mode returns 400 until T12. Details in [0047](../decisions/0047-engine-backed-api-and-station-loader.md). Autonomy is stored through `stations.store`, and when the DB is up each run writes its focus policy's commands and state changes with its `run_id` ([0049](../decisions/0049-t5-data-in-sim-ron-kpis-run-history.md)).
 
 **Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations. Regenerate with `python -m api.fixtures_gen`; details in [0036](../decisions/0036-api-fixture-mode.md).
 

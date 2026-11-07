@@ -6,6 +6,8 @@ import math
 
 import numpy as np
 
+from sim.config import net_tariff_ron_per_kwh
+
 KPI_FIELDS: tuple[str, ...] = (
     "overhead_kwh",
     "saved_kwh",
@@ -16,6 +18,8 @@ KPI_FIELDS: tuple[str, ...] = (
     "sessions",
     "waited_sessions",
     "sleep_share",
+    "overhead_ron",
+    "saved_ron",
 )
 
 
@@ -93,6 +97,7 @@ class PolicyMetrics:
         """Kpis dict; savings are measured against `baseline_wh` (always_on, same run)."""
         saved_wh = baseline_wh - self.overhead_wh
         pct = 100.0 * saved_wh / baseline_wh if baseline_wh > 0 else 0.0
+        ron = net_tariff_ron_per_kwh() / 1000.0
         return {
             "overhead_kwh": _r(self.overhead_wh / 1000.0, 4),
             "saved_kwh": _r(saved_wh / 1000.0, 4),
@@ -103,4 +108,6 @@ class PolicyMetrics:
             "sessions": int(self.sessions),
             "waited_sessions": int(self.waited_sessions),
             "sleep_share": _r(self.sleep_share(), 4),
+            "overhead_ron": _r(self.overhead_wh * ron, 4),
+            "saved_ron": _r(saved_wh * ron, 4),
         }
