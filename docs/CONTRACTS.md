@@ -55,7 +55,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | File | Owner | Keys |
 |---|---|---|
 | `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
-| `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, context_multiplier{ContextType: float}` |
+| `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, rain_boost, traffic_noise_sd, seed, context_multiplier{ContextType: float}` (0039) |
 | `config/live.yaml` | M1 | `poll_s, min_request_gap_s, request_timeout_s, backoff{initial_s, factor, max_s, max_retries}, max_consecutive_failures, status_map{raw_word: LiveStatus}, ampwhere{snapshot_url, delta_url, resync_s, ppc_provider_id, user_agent}` |
 | `config/traffic.yaml` | M1 | `tomtom{flow_url, zoom, poll_s}, mapbox{directions_url, route_len_m, request_gap_s}, index_clip: [0, 1]` |
 | `config/dataset.yaml` | M1 | Dundee item IDs and filenames, Dundee coordinates, date range, `split_date`, `min_session_s`, `max_session_s`, `max_lanes`, `download_delay_s` |
