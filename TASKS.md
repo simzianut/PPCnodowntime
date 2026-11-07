@@ -8,7 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T23] Link stations → sim → API → frontend: shared station loader (real 445-location list when present locally), engine-backed API replay mode in memory, frontend tolerates missing eval | owner: tudor-claude | branch: tudor-claude/T23-link-modules | depends: T4, T10, T13, T14, T19
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
@@ -29,6 +28,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T23] Link stations → sim → API → frontend: shared station loader (real 445-location list when present locally), engine-backed API replay mode in memory, frontend tolerates missing eval | owner: tudor-claude | branch: tudor-claude/T23-link-modules | depends: T4, T10, T13, T14, T19
+  - sim.stations_seed.load_stations() feeds sim + API (real 445-location list from data/processed when present, else open seed); API_FIXTURES=0 now runs replays on sim.Engine in memory (api/engine_mode.py); frontend tolerates missing eval and requests only available policies; decision 0047. Test: copy ppc_locations.csv + ppc_charge_points.csv into data/processed/, `make api` + `make web`, open :5173; `uv run pytest api sim`. cost_rule/rl_ppo need libomp (macOS) + `--extra rl`.
 - [T22] M5 map view on the T21 SVG map: replace MapLibre with an interactive SVG map (pan, wheel/pinch zoom, clusters, selectable stations) using the app's locations | owner: tudor-claude | branch: tudor-claude/T22-svg-map | depends: T21, T16
   - NetworkMap.tsx now inlines frontend/public/map/romania.svg: drag/wheel/pinch/keyboard zoom, PPC-style clusters with asleep badge, spiderfy, selection; maplibre-gl removed; decision 0046. Same props, App.tsx untouched (Teodora: T16 map replaced). Test: `cd frontend && npm test && npm run dev`, open :5173.
 - [T21] M5 map view assets: SVG base map of Romania in PPC Blue map style, swappable station marker symbol, layer for hand-drawn lines | owner: tudor-claude | branch: tudor-claude/T21-map-assets | depends: -
