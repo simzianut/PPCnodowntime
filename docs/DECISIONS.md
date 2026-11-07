@@ -50,3 +50,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0040](decisions/0040-station-run-summary-contract.md) | 2026-11-07 | teodora | Run-scoped station summary with nullable live/model metrics
 - [0041](decisions/0041-frontend-seed-demo.md) | 2026-11-07 | teodora | Seed-data demo adapter for frontend work before the API exists
 - [0042](decisions/0042-frontend-map-first-white-theme.md) | 2026-11-07 | teodora | Map-first split, white-only theme, station summary presentation and status markers
+- [0043](decisions/0043-svg-base-map.md) | 2026-11-07 | tudor + tudor-claude | SVG base map of Romania (Natural Earth, Web Mercator) with a swappable station icon and a layer for hand-drawn lines
