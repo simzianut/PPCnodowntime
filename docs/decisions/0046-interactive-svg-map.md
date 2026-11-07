@@ -1,4 +1,4 @@
-# 0044: The map view is an interactive inline SVG, replacing MapLibre
+# 0046: The map view is an interactive inline SVG, replacing MapLibre
 
 - Date: 2026-11-07
 - Who: tudor + tudor-claude
@@ -7,7 +7,7 @@
 - Affects: spec 05, `frontend/src/components/NetworkMap.tsx`, `frontend/src/map/geo.ts`
 
 ## Context
-- Tudor wants the simulator map to be the PPC-style SVG from decision 0043. The station icon comes from that file, and lines can be drawn in it by hand.
+- Tudor wants the simulator map to be the PPC-style SVG from decision 0045. The station icon comes from that file, and lines can be drawn in it by hand.
 - MapLibre can't render that file as-is. Its tiles also come from a third-party server.
 
 ## Decision

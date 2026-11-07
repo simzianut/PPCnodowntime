@@ -1,0 +1,81 @@
+{
+  "policy_name": "rl_ppo",
+  "lambda_wait": 0.1,
+  "total_timesteps": 25000,
+  "n_envs": 8,
+  "network_architecture": {
+    "pi": [
+      64,
+      64
+    ],
+    "vf": [
+      64,
+      64
+    ]
+  },
+  "observation_dim": 31,
+  "observation_fields": [
+    "p_arrival_15",
+    "p_arrival_30",
+    "p_arrival_60",
+    "expected_arrivals_60",
+    "intents_0_15",
+    "intents_15_30",
+    "intents_30_60",
+    "ev_flow_15",
+    "traffic_index",
+    "hour_sin",
+    "hour_cos",
+    "weekday_mon",
+    "weekday_tue",
+    "weekday_wed",
+    "weekday_thu",
+    "weekday_fri",
+    "weekday_sat",
+    "weekday_sun",
+    "is_holiday",
+    "state_charging",
+    "state_idle",
+    "state_waking",
+    "state_standby",
+    "state_deep_sleep",
+    "state_offline",
+    "seconds_in_state",
+    "siblings_idle_share",
+    "siblings_total",
+    "power_ac_22",
+    "power_dc_50",
+    "power_dc_hpc"
+  ],
+  "action_space": [
+    "IDLE",
+    "STANDBY",
+    "DEEP_SLEEP"
+  ],
+  "train_days": [
+    "2023-10-02",
+    "2023-10-03",
+    "2023-10-04",
+    "2023-10-05",
+    "2023-10-06",
+    "2023-10-07",
+    "2023-10-08",
+    "2023-10-09",
+    "2023-10-10",
+    "2023-10-11",
+    "2023-10-12",
+    "2023-10-13"
+  ],
+  "val_days": [
+    "2023-10-14",
+    "2023-10-15"
+  ],
+  "metrics": {
+    "val_mean_reward": -37.65269444444447,
+    "val_mean_overhead_kwh": 0.1956586805555562,
+    "val_mean_wait_min": 2.7499999999999996
+  },
+  "model_file": "ppo_policy.zip",
+  "file_size_bytes": 181673,
+  "size_mb": 0.173
+}

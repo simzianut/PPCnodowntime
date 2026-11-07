@@ -4,7 +4,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 
 ## 1. Stack
 - React 18 + TypeScript + Vite, dev server on `:5173`.
-- Map: an inline SVG base map, `frontend/public/map/romania.svg` (decision 0043), with its own pan, zoom and clustering code in `frontend/src/map/geo.ts` ([decision 0044](../decisions/0044-interactive-svg-map.md)). No tile server, no map library.
+- Map: an inline SVG base map, `frontend/public/map/romania.svg` (decision 0045), with its own pan, zoom and clustering code in `frontend/src/map/geo.ts` ([decision 0046](../decisions/0046-interactive-svg-map.md)). No tile server, no map library.
 - Recharts for the charts. Plain CSS variables for the white-only PPC theme.
 - API base from `VITE_API_URL` (default `http://localhost:8000`).
 - Develop against `API_FIXTURES=1` on the backend, or against an MSW mock built from `fixtures/`.

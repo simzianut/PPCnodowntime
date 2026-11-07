@@ -61,6 +61,7 @@ def test_forecaster_predict_simstate():
         cps=cps,
         signals=pd.DataFrame(columns=["ts", "location_id", "signal", "value", "eta_ts"]),
         context={"B": {"temp_c": 18.0, "precip_mm": 0.0, "wind_kmh": 5.0, "is_holiday": False}},
+        forecast=None,
     )
     res_df = forecaster.predict(state)
     assert len(res_df) == 2

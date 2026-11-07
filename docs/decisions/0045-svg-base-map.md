@@ -1,4 +1,4 @@
-# 0043: SVG base map of Romania for the map view, in a PPC Blue map style
+# 0045: SVG base map of Romania for the map view, in a PPC Blue map style
 
 - Date: 2026-11-07
 - Who: tudor + tudor-claude
@@ -48,4 +48,4 @@
 ## Consequences
 - Natural Earth roads are sparse and some motorway segments are out of date.
 - A static SVG has no zoom levels. The PPC map's black count bubbles and the clustering in spec 05 §3.1 must be done in app code if we keep this map.
-- The app's map view uses this SVG ([decision 0044](0044-interactive-svg-map.md)).
+- The app's map view uses this SVG ([decision 0046](0046-interactive-svg-map.md)).

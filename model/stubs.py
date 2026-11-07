@@ -37,25 +37,14 @@ class ConstantForecaster(Forecaster):
 
     def predict(self, state: SimState) -> pd.DataFrame:
         """Return constant predictions dataframe for all charge points in state."""
-        rows = [
+        return pd.DataFrame(
             {
-                "cp_id": cp.cp_id,
+                "cp_id": [cp.cp_id for cp in state.cps],
                 "p_arrival_15": self.p_arrival_15,
                 "p_arrival_30": self.p_arrival_30,
                 "p_arrival_60": self.p_arrival_60,
                 "expected_arrivals_60": self.expected_arrivals_60,
             }
-            for cp in state.cps
-        ]
-        return pd.DataFrame(
-            rows,
-            columns=[
-                "cp_id",
-                "p_arrival_15",
-                "p_arrival_30",
-                "p_arrival_60",
-                "expected_arrivals_60",
-            ],
         )
 
 

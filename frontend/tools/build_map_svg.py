@@ -1,4 +1,4 @@
-"""Build the SVG base map of Romania (decision 0043)."""
+"""Build the SVG base map of Romania (decision 0045)."""
 
 import argparse
 import csv
@@ -109,7 +109,7 @@ def paths(items, attrs=lambda p: "") -> str:
 
 METADATA = (
     "Base map: Natural Earth 10m (public domain). Stations: data/seed/stations_open.csv"
-    " (OSM ODbL, OCM CC BY 4.0). Projection: decision 0043."
+    " (OSM ODbL, OCM CC BY 4.0). Projection: decision 0045."
 )
 
 STYLE = """
