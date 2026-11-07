@@ -21,7 +21,6 @@ Add notes as indented sub-bullets.
   - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
   - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
 
-- [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: edy-antigravity | branch: edy-antigravity/T14-ppo-agent | depends: T10, T13
 ## To do
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
@@ -31,6 +30,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: edy-antigravity | branch: edy-antigravity/T14-ppo-agent | depends: T10, T13
+  - Shipped RLPolicy, vectorized action masking, sub-15ms 1500-CP decide(), artifacts/ppo_policy.zip (173KB) + meta.json, and train_rl.py; decision 0044. Test: uv run pytest model/tests/test_rl_agent.py.
 - [T20] M1 real traffic: Mapbox typical + TomTom live | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
   - traffic_typical.parquet for all 445 locations from Mapbox (10,875 requests); TomTom live_index with quality filter (0028, 0043). Test: `uv run python -m dataset.traffic live --n 3`, `uv run pytest dataset/tests/test_traffic.py`.
 - [T9] M1 live-status collector | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
