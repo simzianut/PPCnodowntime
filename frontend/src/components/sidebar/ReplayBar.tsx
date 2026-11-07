@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown, Pause, Play, Radio, RotateCcw } from 'lucide-react'
+import { ChevronDown, Pause, Play, RotateCcw } from 'lucide-react'
 import type { useDashboard } from '../../state/useDashboard'
 import { formatClock, formatDate } from './shared'
 import './replayBar.css'
@@ -81,13 +81,12 @@ export function ReplayBar({ dashboard }: { dashboard: ReturnType<typeof useDashb
         <strong aria-live="off">{clock}</strong>
         <div className="rb-meta">
           {isLive
-            ? <span className="rb-live-badge"><i />Live network</span>
+            ? <span className="rb-live-badge">Live network</span>
             : <label className="rb-date" title="Replay date">
-              <CalendarDays size={11} />
               <select value={selectedDate ?? runDate ?? ''} onChange={(event) => { setSelectedDate(event.target.value); void startRun('replay', event.target.value) }}>
                 {dateOptions.map((date) => <option value={date} key={date}>{formatDate(date)}</option>)}
               </select>
-              <ChevronDown size={11} />
+              <ChevronDown size={12} />
             </label>}
         </div>
       </div>
@@ -96,7 +95,7 @@ export function ReplayBar({ dashboard }: { dashboard: ReturnType<typeof useDashb
         {!done && <button className="rb-icon" title="Restart from 00:00" aria-label="Restart from 00:00" disabled={!run} onClick={() => void restart()}><RotateCcw size={14} /></button>}
         <button className="rb-icon rb-skip" title="Back 1 hour (←)" aria-label="Back 1 hour" disabled={!run || slot <= 0} onClick={() => skip(-HOUR)}>−1h</button>
         <button className={`rb-play ${done ? 'rb-play-again' : ''}`} title={done ? 'Replay again' : running ? 'Pause (Space)' : 'Play (Space)'} aria-label={done ? 'Replay again' : running ? 'Pause replay' : 'Play replay'} disabled={!run} onClick={toggle}>
-          {done ? <><RotateCcw size={15} /><span>Replay again</span></> : running ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+          {done ? <><RotateCcw size={14} /><span>Replay again</span></> : running ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
         </button>
         {!done && <button className="rb-icon rb-skip" title="Forward 1 hour (→)" aria-label="Forward 1 hour" disabled={!run || slot >= SLOTS} onClick={() => skip(HOUR)}>+1h</button>}
       </div>}
@@ -106,7 +105,7 @@ export function ReplayBar({ dashboard }: { dashboard: ReturnType<typeof useDashb
           {SPEEDS.map((speed) => <button key={speed.value} role="radio" aria-checked={run?.speed === speed.value} className={run?.speed === speed.value ? 'active' : ''} title={speed.hint} disabled={!run} onClick={() => void control('speed', speed.value)}>{speed.label}</button>)}
         </div>}
         <button className={`rb-live-toggle ${isLive ? 'on' : ''}`} title={isLive ? 'Back to replay' : 'Switch to the live network'} onClick={() => void startRun(isLive ? 'replay' : 'live', isLive ? selectedDate : null)}>
-          <Radio size={11} />{isLive ? 'Back to replay' : 'Live'}
+          {isLive ? 'Back to replay' : 'Switch to live'}
         </button>
       </div>
     </div>

@@ -1,31 +1,30 @@
-import { POLICY_LABELS, type PolicyName, type Run } from '../../api/types'
+import type { Kpis } from '../../api/types'
 import type { useDashboard } from '../../state/useDashboard'
-import { format, policyColors } from './shared'
+import { format, formatClock, formatDate } from './shared'
 import './policyCards.css'
 
-function KpiCard({ policy, role, run }: { policy: PolicyName; role: string; run: Run | null }) {
-  const kpi = run?.kpis[policy]
-  const agent = policy === 'rl_ppo'
-  return (
-    <article className={`h2h-card ${agent ? 'is-agent' : 'is-baseline'}`} style={{ '--policy': policyColors[policy] } as React.CSSProperties}>
-      <header className="h2h-head"><span className="h2h-dot" /><span className="h2h-name">{POLICY_LABELS[policy]}</span><span className="h2h-role">{role}</span></header>
-      <div className="h2h-main"><strong>{format(kpi?.saved_kwh ?? 0)}</strong><span>kWh saved</span></div>
-      <div className="h2h-ron">≈ {format(kpi?.saved_ron ?? 0, 0)} RON</div>
-      <dl className="h2h-stats">
-        <div><dt>Saved</dt><dd>{format(kpi?.saved_pct ?? 0)}%</dd></div>
-        <div><dt>Avg wait per charge</dt><dd>{format(kpi?.wait_min_mean ?? 0, 2)} min</dd></div>
-      </dl>
-    </article>
-  )
-}
+type Row = { label: string; cell: (kpi: Kpis, baseline: boolean) => string }
+
+const ROWS: Row[] = [
+  { label: 'Idle energy', cell: (kpi) => `${format(kpi.overhead_kwh, 0)} kWh` },
+  { label: 'Energy saved', cell: (kpi, baseline) => baseline ? '—' : `${format(kpi.saved_kwh, 0)} kWh (${format(kpi.saved_pct, 0)}%)` },
+  { label: 'Cost saved', cell: (kpi, baseline) => baseline ? '—' : `${format(kpi.saved_ron, 0)} RON` },
+  { label: 'Avg wait per charge', cell: (kpi) => `${kpi.wait_min_mean.toFixed(1)} min` },
+]
 
 export function PolicyCards({ dashboard }: { dashboard: ReturnType<typeof useDashboard> }) {
   const { run } = dashboard
-  return <>
-    <div className="panel-heading"><div><span className="eyebrow">Performance</span><h2>Agent vs always on</h2></div></div>
-    <div className="h2h">
-      <KpiCard policy="always_on" role="Baseline" run={run} />
-      <KpiCard policy="rl_ppo" role="Agent" run={run} />
-    </div>
-  </>
+  const base = run?.kpis.always_on
+  const agent = run?.kpis.rl_ppo
+  return <section className="panel-section">
+    <div className="section-head"><h2>Totals so far</h2><span>{run ? `${formatDate(run.sim_time.slice(0, 10))}${formatClock(run.sim_time) === '00:00' ? '' : `, 00:00–${formatClock(run.sim_time)}`}` : ''}</span></div>
+    <table className="kpi-table">
+      <thead><tr><th scope="col"><span className="sr-only">Metric</span></th><th scope="col">Without agent</th><th scope="col" className="is-agent">With RL agent</th></tr></thead>
+      <tbody>{ROWS.map((row) => <tr key={row.label}>
+        <th scope="row">{row.label}</th>
+        <td>{base ? row.cell(base, true) : '—'}</td>
+        <td className="is-agent">{agent ? row.cell(agent, false) : '—'}</td>
+      </tr>)}</tbody>
+    </table>
+  </section>
 }
