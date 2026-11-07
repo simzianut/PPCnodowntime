@@ -1,0 +1,29 @@
+name: rl_sweep
+runs:
+  - config: config/train/oracle.yaml
+  - config: config/train/rl_maskppo.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.03}
+  - config: config/train/rl_maskppo.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.1}
+  - config: config/train/rl_maskppo.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.3}
+  - config: config/train/rl_ddqn.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.03}
+  - config: config/train/rl_ddqn.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.1}
+  - config: config/train/rl_ddqn.yaml
+    seeds: [0, 1, 2]
+    set: {params.lambda_wait: 0.3}
+summary_metrics:
+  - val.agent.all.saved_pct
+  - val.agent.all.wait_min_mean
+  - val.agent.all.wait_min_p95
+  - val.pct_of_oracle_savings.all
+  - val.cost_rule.all.saved_pct
+  - val.oracle.all.saved_pct
+  - best_val_reward
