@@ -1,0 +1,14 @@
+name: smoke
+kind: forecaster
+model: smoke
+seed: 0
+device: auto
+deterministic: true
+data: {}
+params:
+  n_samples: 2048
+  n_features: 16
+  hidden: 32
+  epochs: 5
+  batch_size: 128
+  lr: 0.01

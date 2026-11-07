@@ -6,6 +6,9 @@ data/processed/
 .env.*
 !.env.example
 
+# training runs (decision 0051)
+runs/
+
 # python
 __pycache__/
 *.py[cod]

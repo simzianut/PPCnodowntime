@@ -1,0 +1,9 @@
+data/
+runs/
+artifacts/
+.venv
+frontend/node_modules
+.git
+__pycache__
+*.pyc
+*.zip
