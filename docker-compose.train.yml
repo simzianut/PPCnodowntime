@@ -10,6 +10,8 @@ x-train: &train
   shm_size: 8gb
   volumes:
     - ./data:/app/data:ro
+    # forecaster feature cache (decision 0059); must stay writable
+    - ./data/interim:/app/data/interim
     - ./runs:/app/runs
     - ./artifacts:/app/artifacts
     - ./config:/app/config:ro
