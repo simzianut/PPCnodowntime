@@ -28,13 +28,14 @@ CITY_NAMES = {
     "Rimnicu Vilcea": "Râmnicu Vâlcea",
     "Sfintu-Gheorghe": "Sfântu Gheorghe",
 }
-NEIGHBOURS = [
-    ("UNGARIA", 21.0, 47.75),
-    ("SERBIA", 20.6, 44.4),
-    ("BULGARIA", 25.3, 43.55),
-    ("UCRAINA", 26.6, 48.35),
-    ("REPUBLICA MOLDOVA", 28.55, 47.15),
-    ("MAREA NEAGRĂ", 29.55, 43.95),
+AREA_LABELS = [
+    ("România", 24.95, 46.05, "country-ro"),
+    ("Ungaria", 20.95, 47.75, "country"),
+    ("Serbia", 20.7, 44.35, "country"),
+    ("Bulgaria", 25.3, 43.55, "country"),
+    ("Ucraina", 26.6, 48.35, "country"),
+    ("Moldova", 28.6, 47.15, "country"),
+    ("Marea Neagră", 29.7, 43.95, "sea"),
 ]
 
 
@@ -113,35 +114,34 @@ METADATA = (
 
 STYLE = """
     svg { font-family: Roboto, "Helvetica Neue", Arial, sans-serif; }
-    #sea { fill: #aadaff; }
-    #neighbours path { fill: #eeece8; stroke: #c9c4bb; stroke-width: 0.8; }
-    #land-ro path { fill: #f8f7f4; }
-    #urban path { fill: #ebe7e0; }
-    #lakes path { fill: #aadaff; }
-    #rivers path { fill: none; stroke: #aadaff; stroke-linecap: round; stroke-linejoin: round; }
-    #counties path { fill: none; stroke: #b9b3c9; stroke-width: 0.7; stroke-dasharray: 3 2; }
+    #sea, #lakes path { fill: #44bcea; }
+    #neighbours path { fill: #f2f2f2; stroke: #4a4a4a; stroke-width: 0.9; }
+    #land-ro path { fill: #f2f2f2; }
+    #urban path { fill: #ebebeb; }
+    #rivers path { fill: none; stroke: #44bcea; stroke-linecap: round; stroke-linejoin: round; }
+    #counties path { fill: none; stroke: #8c8c8c; stroke-width: 0.9; stroke-dasharray: 1.2 2.6;
+      stroke-linecap: round; }
     #roads path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    #roads .casing { stroke: #e3dfd7; stroke-width: 3.2; }
-    #roads .road { stroke: #ffffff; stroke-width: 2; }
-    #roads .motorway-casing { stroke: #e9b440; stroke-width: 4.2; }
-    #roads .motorway { stroke: #fcd56b; stroke-width: 2.8; }
-    #border path { fill: none; stroke: #8f8a99; stroke-width: 1.4; stroke-dasharray: 6 3 1.5 3; }
+    #roads .casing { stroke: #dddddd; stroke-width: 2.6; }
+    #roads .road { stroke: #ffffff; stroke-width: 1.6; }
+    #roads .motorway-casing { stroke: #d2d2d2; stroke-width: 3.6; }
+    #roads .motorway { stroke: #ffffff; stroke-width: 2.4; }
+    #border path { fill: none; stroke: #3c3c3c; stroke-width: 1.3; }
     #labels text { paint-order: stroke; stroke: #ffffff; stroke-width: 3; stroke-linejoin: round; }
-    #labels .city { fill: #3c4043; font-size: 11px; }
-    #labels .capital { fill: #202124; font-size: 15px; font-weight: 700; }
-    #labels .city-dot { fill: #ffffff; stroke: #5f6368; stroke-width: 1.2; }
-    #labels .country { fill: #8a8f96; font-size: 13px; letter-spacing: 3px; font-weight: 500; }
-    #labels .sea { fill: #5b8fc7; stroke: none; font-size: 14px; letter-spacing: 4px;
-      font-style: italic; }
+    #labels .city { fill: #3c3c3c; font-size: 12px; }
+    #labels .capital { fill: #3c3c3c; font-size: 15px; font-weight: 500; }
+    #labels .city-dot { fill: #ffffff; stroke: #3c3c3c; stroke-width: 1.2; }
+    #labels .country { fill: #616161; font-size: 15px; }
+    #labels .country-ro { fill: #616161; font-size: 24px; font-weight: 700; }
+    #labels .sea { fill: #ffffff; stroke: none; font-size: 14px; }
     #lines path, #lines line, #lines polyline {
       fill: none; stroke: #0057b8; stroke-width: 2.5; stroke-linecap: round; }
     #stations .low { opacity: 0.55; }
 """
 
 STATION_ICON = """    <g id="station-icon">
-      <path d="M0,0C-1.5,-5 -8,-9.5 -8,-16A8,8 0 1 1 8,-16C8,-9.5 1.5,-5 0,0Z"
-            fill="#0057b8" stroke="#ffffff" stroke-width="1.5"/>
-      <circle cx="0" cy="-16" r="3.2" fill="#ffffff"/>
+      <circle r="13" fill="#9fbf9f" fill-opacity="0.55"/>
+      <circle r="10" fill="#0b1a2a"/>
     </g>"""
 
 
@@ -156,7 +156,7 @@ def build(out: Path) -> None:
     lakes = clipped(load("ne_10m_lakes"), 0.3)
     rivers = [
         *clipped(load("ne_10m_rivers_lake_centerlines"), 0.4),
-        *clipped(load("ne_10m_rivers_europe"), 0.4),
+        *clipped(load("ne_10m_rivers_europe"), 0.4, lambda p: (p.get("scalerank") or 99) <= 10),
     ]
     road_feats = list(
         clipped(
@@ -168,7 +168,7 @@ def build(out: Path) -> None:
 
     def river_attrs(p):
         rank = p.get("scalerank") or 10
-        width = 3.5 if rank <= 2 else 1.6 if rank <= 9 else 1.0
+        width = 3.5 if rank <= 2 else 1.4 if rank <= 9 else 0.9
         return f' stroke-width="{fmt(width)}"'
 
     labels = []
@@ -183,9 +183,8 @@ def build(out: Path) -> None:
         labels.append(f'    <circle class="city-dot" cx="{fmt(x)}" cy="{fmt(y)}" r="{r}"/>')
         tx, ty = fmt(x + r + 3), fmt(y + 4)
         labels.append(f'    <text class="{cls}" x="{tx}" y="{ty}">{name}</text>')
-    for name, lon, lat in NEIGHBOURS:
+    for name, lon, lat, cls in AREA_LABELS:
         x, y = project(lon, lat)
-        cls = "sea" if name.startswith("MAREA") else "country"
         labels.append(
             f'    <text class="{cls}" x="{fmt(x)}" y="{fmt(y)}" text-anchor="middle">'
             f"{escape(name)}</text>"
