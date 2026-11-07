@@ -2,7 +2,7 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
-Version: v0.2, 2026-11-07 (station run summary; decision 0040). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+Version: v0.3, 2026-11-07 (engine-backed API replay mode, shared station loader; decision 0047). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
 
 ## Services and ports
 | Service | Port | Owner | Notes |
@@ -16,7 +16,7 @@ Version: v0.2, 2026-11-07 (station run summary; decision 0040). Specs: `docs/spe
 |---|---|---|---|
 | `DATABASE_URL` | M1, M3, M4 | `postgresql+psycopg://ppc:ppc@localhost:5432/ppc` | |
 | `DATA_DIR` | M1, M2, M4 | `./data` | |
-| `API_FIXTURES` | M4 | `0` | `1` = serve every route from `fixtures/` |
+| `API_FIXTURES` | M4 | `0` | `1` = serve every route from `fixtures/`. `0` = in-memory replay runs on `sim.Engine` (decision 0047) |
 | `LIVE_POLL_S` | M1 | `300` | Live collector interval |
 | `AMPWHERE_ENABLED` | M1 | `0` | Must be explicitly enabled by a human, see decision 0003 |
 | `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
@@ -73,6 +73,8 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `charge_points.parquet` | `cp_id str (<location_id>-<n>), location_id, power_class PowerClass, max_kw float, connectors list[str], current_type AC|DC, cp_count_estimated bool`. One row per physical unit. |
 | `source_refs.parquet` | `source (ampwhere|osm|ocm), source_id, location_id, cp_id?`. AmpWhere connector rows use `source_id = "<uid>|<charger id>"`, which matches live JSONL `source_location_id|source_cp_id`. |
 | `other_chargers.parquet` | `uid, provider_id int, operator, name, lat, lon, county_code, n_connectors int, max_kw float, power_class` (non-PPC operators, context only) |
+
+The sim and the API read stations through `sim.stations_seed.load_stations()` (decision 0047), in this order: `locations.parquet` + `charge_points.parquet`; else the CSV export `ppc_locations.csv` + `ppc_charge_points.csv` (same IDs, `connectors` joined with `+`); else the committed open seed `data/seed/stations_open.csv`. All of these except the seed are AmpWhere-derived and stay local.
 
 ### Parquet files (M1 owns, under `data/processed/`)
 | File | Columns |
@@ -197,7 +199,8 @@ Body / response: `{"mode": "ACT" | "RECOMMEND"}`
 
 ### POST /api/runs
 Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
-Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown policy, date not a test day).
+Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a test day, `live` before T12).
+`date: null` in a replay means the first test day.
 Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
 
 ### GET /api/runs/{run_id}
