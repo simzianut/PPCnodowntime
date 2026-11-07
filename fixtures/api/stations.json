@@ -1,0 +1,4177 @@
+[
+ {
+  "location_id": "L10001",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "AB",
+  "lat": 46.087905,
+  "lon": 23.591835,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10001-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10001-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10002",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "AB",
+  "lat": 46.086021,
+  "lon": 23.593714,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10002-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10002-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10003",
+  "name": "OMV Alba Iulia",
+  "partner": "fuel station",
+  "address": "OMV",
+  "county_code": "AB",
+  "lat": 46.089961,
+  "lon": 23.59369,
+  "context_type": "highway",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10003-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10003-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10003-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10004",
+  "name": "PPC",
+  "partner": null,
+  "address": null,
+  "county_code": "AR",
+  "lat": 46.173005,
+  "lon": 21.371827,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10004-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10004-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10005",
+  "name": "PPC",
+  "partner": null,
+  "address": null,
+  "county_code": "AR",
+  "lat": 46.180664,
+  "lon": 21.293686,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10005-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10005-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10006",
+  "name": "Penny Arad UTA",
+  "partner": "penny",
+  "address": "Strada Bumbacului",
+  "county_code": "AR",
+  "lat": 46.194252,
+  "lon": 21.308373,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10006-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10006-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10006-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10007",
+  "name": "Enel X Pitesti Retail Park",
+  "partner": "mall",
+  "address": null,
+  "county_code": "AG",
+  "lat": 44.823793,
+  "lon": 24.911802,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10007-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10007-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10007-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10007-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10007-5",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10008",
+  "name": "Enel X Petrom Căteasca",
+  "partner": "fuel station",
+  "address": "petrom",
+  "county_code": "AG",
+  "lat": 44.755235,
+  "lon": 25.082168,
+  "context_type": "highway",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10008-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10008-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10008-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10009",
+  "name": "Spalatorie AlexDora",
+  "partner": null,
+  "address": "Strada Simion Mandrescu 52",
+  "county_code": "BN",
+  "lat": 47.154325,
+  "lon": 24.509384,
+  "context_type": "urban",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10009-1",
+    "power_class": "DC_50",
+    "max_kw": 30.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10009-2",
+    "power_class": "DC_50",
+    "max_kw": 30.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10010",
+  "name": "MegaImage",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "BV",
+  "lat": 45.679049,
+  "lon": 25.60655,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10010-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10010-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10011",
+  "name": "Parcare Mall",
+  "partner": "mall",
+  "address": "Strada Principală",
+  "county_code": "BR",
+  "lat": 45.22975,
+  "lon": 27.937195,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10011-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10011-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10011-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10012",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "B",
+  "lat": 44.386341,
+  "lon": 26.130882,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10012-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10012-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10013",
+  "name": "PPC Blue",
+  "partner": null,
+  "address": null,
+  "county_code": "B",
+  "lat": 44.500659,
+  "lon": 26.068998,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10013-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10013-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10014",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "B",
+  "lat": 44.391768,
+  "lon": 26.093637,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10014-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10014-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10015",
+  "name": "PPC Blue",
+  "partner": null,
+  "address": null,
+  "county_code": "B",
+  "lat": 44.479349,
+  "lon": 26.104674,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10015-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10015-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10016",
+  "name": "Enel X Auchan Pallady",
+  "partner": "auchan",
+  "address": "Bulevardul Theodor Pallady",
+  "county_code": "B",
+  "lat": 44.406388,
+  "lon": 26.203246,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10016-1",
+    "power_class": "DC_HPC",
+    "max_kw": 150.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10016-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10017",
+  "name": "Mega Image Preciziei",
+  "partner": "mega image",
+  "address": "Strada Preciziei",
+  "county_code": "B",
+  "lat": 44.431252,
+  "lon": 25.993464,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10017-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10017-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10017-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10018",
+  "name": "Strada Dâmbovița",
+  "partner": null,
+  "address": "Strada Dâmbovița 25",
+  "county_code": "B",
+  "lat": 44.44527,
+  "lon": 26.032454,
+  "context_type": "urban",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10018-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10018-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10019",
+  "name": "Promenada Mall Enel X",
+  "partner": "mall",
+  "address": "246B Calea Floreasca",
+  "county_code": "B",
+  "lat": 44.478276,
+  "lon": 26.103432,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10019-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10019-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10019-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10019-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10019-5",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10020",
+  "name": "Enel X Mega Image Morarilor",
+  "partner": "mega image",
+  "address": "Mega Image Morarilor, 101, Bulevardul Basarabia, București, Sector 3, Bucharest, 031742, Romania",
+  "county_code": "B",
+  "lat": 44.437501,
+  "lon": 26.169011,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10020-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10020-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10021",
+  "name": "ppc blue",
+  "partner": null,
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.747703,
+  "lon": 23.451136,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10021-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10021-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10022",
+  "name": "OMV Turda",
+  "partner": "fuel station",
+  "address": "Str Armatei",
+  "county_code": "CJ",
+  "lat": 46.53806,
+  "lon": 23.783513,
+  "context_type": "highway",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10022-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10022-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10022-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10023",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "CT",
+  "lat": 44.203103,
+  "lon": 28.649063,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10023-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10024",
+  "name": "Strada Marinei",
+  "partner": null,
+  "address": "Strada Marinei",
+  "county_code": "CT",
+  "lat": 44.173631,
+  "lon": 28.664152,
+  "context_type": "urban",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10024-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10024-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10024-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10025",
+  "name": "Enel X Soseaua Mangaliei",
+  "partner": null,
+  "address": "Sos Mangaliei nr 181",
+  "county_code": "CT",
+  "lat": 44.141477,
+  "lon": 28.622841,
+  "context_type": "urban",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10025-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10025-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10025-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10026",
+  "name": "[PPC] Statie Electrica Drajna",
+  "partner": null,
+  "address": "Strada Soarelui 95",
+  "county_code": "CL",
+  "lat": 44.412702,
+  "lon": 27.374447,
+  "context_type": "urban",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10026-1",
+    "power_class": "DC_HPC",
+    "max_kw": 300.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10026-2",
+    "power_class": "DC_HPC",
+    "max_kw": 300.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10026-3",
+    "power_class": "DC_HPC",
+    "max_kw": 300.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10026-4",
+    "power_class": "DC_HPC",
+    "max_kw": 300.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10027",
+  "name": "Galati Shopping City - EnelX",
+  "partner": "mall",
+  "address": "Bulevardul George Coșbuc",
+  "county_code": "GL",
+  "lat": 45.454335,
+  "lon": 28.031441,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10027-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10027-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10027-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10028",
+  "name": "Enel X Shopping City Tg Jiu",
+  "partner": "mall",
+  "address": "Strada Termocentralei 10",
+  "county_code": "GJ",
+  "lat": 45.025444,
+  "lon": 23.26559,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10028-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10028-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10029",
+  "name": "Enel X Shopping City Deva",
+  "partner": "mall",
+  "address": "Calea Zarandului",
+  "county_code": "HD",
+  "lat": 45.861574,
+  "lon": 22.928747,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10029-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10029-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10029-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10029-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10029-5",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10030",
+  "name": "Penny Slobozia",
+  "partner": "penny",
+  "address": "Șoseaua Nordului 6",
+  "county_code": "IL",
+  "lat": 44.569499,
+  "lon": 27.360646,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10030-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10030-2",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10031",
+  "name": "Enel X Petrom Urziceni",
+  "partner": "fuel station",
+  "address": "Petrom Urziceni",
+  "county_code": "IL",
+  "lat": 44.709347,
+  "lon": 26.623015,
+  "context_type": "highway",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10031-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10031-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10031-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10032",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "IF",
+  "lat": 44.375867,
+  "lon": 26.156068,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10032-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10032-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10033",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "IF",
+  "lat": 44.381482,
+  "lon": 26.153598,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10033-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10033-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10034",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "IF",
+  "lat": 44.366353,
+  "lon": 26.154628,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10034-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10034-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10035",
+  "name": "PPC Blue",
+  "partner": null,
+  "address": null,
+  "county_code": "IF",
+  "lat": 44.535496,
+  "lon": 26.060965,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10035-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10035-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10036",
+  "name": "Enel X Mega Image Muzelor",
+  "partner": "mega image",
+  "address": "Strada Muzelor",
+  "county_code": "IF",
+  "lat": 44.384182,
+  "lon": 26.004296,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10036-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10036-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10036-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10037",
+  "name": "Hilton Garden Inn Bucharest Airport Hotel",
+  "partner": null,
+  "address": "Bulevardul Aeroportului 13 ",
+  "county_code": "IF",
+  "lat": 44.573804,
+  "lon": 26.076218,
+  "context_type": "airport",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10037-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10037-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10037-3",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10038",
+  "name": "Mega Image",
+  "partner": "mega image",
+  "address": "Șoseaua Olteniței",
+  "county_code": "IF",
+  "lat": 44.380417,
+  "lon": 26.168138,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10038-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10038-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10039",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "MM",
+  "lat": 47.664017,
+  "lon": 23.583122,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10039-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10039-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10039-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10039-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10040",
+  "name": "Enel X",
+  "partner": null,
+  "address": "Bulevardul Aluniș 43",
+  "county_code": "MH",
+  "lat": 44.638505,
+  "lon": 22.633828,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10040-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10040-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10041",
+  "name": "Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "OT",
+  "lat": 44.431571,
+  "lon": 24.360399,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10041-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10041-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10042",
+  "name": "PPC",
+  "partner": null,
+  "address": null,
+  "county_code": "PH",
+  "lat": 45.175777,
+  "lon": 25.670909,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10042-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10042-2",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10043",
+  "name": "ppc blue Shopping City Satu Mare",
+  "partner": "mall",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.785461,
+  "lon": 22.870343,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10043-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10043-2",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10044",
+  "name": "ppc blue Hotel Dana Satu Mare",
+  "partner": null,
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.78375,
+  "lon": 22.83384,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10044-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10044-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10045",
+  "name": "ppc blue Penny Satu Mare",
+  "partner": "penny",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.789195,
+  "lon": 22.890229,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10045-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10045-2",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10046",
+  "name": "ppc blue Penny Păulești",
+  "partner": "penny",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.776706,
+  "lon": 22.89665,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10046-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10046-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10046-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10047",
+  "name": "ppc blue Romstal Satu Mare",
+  "partner": "romstal",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.781244,
+  "lon": 22.885188,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10047-1",
+    "power_class": "DC_HPC",
+    "max_kw": 90.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10047-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10047-3",
+    "power_class": "DC_HPC",
+    "max_kw": 90.0,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10048",
+  "name": "ppc blue Shopping Plaza Satu Mare",
+  "partner": "mall",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.791395,
+  "lon": 22.868164,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10048-1",
+    "power_class": "DC_HPC",
+    "max_kw": 75.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10048-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10049",
+  "name": "KFC Selimbar",
+  "partner": null,
+  "address": "Strada Sibiului, 5, Șelimbăr",
+  "county_code": "SB",
+  "lat": 45.77879,
+  "lon": 24.169112,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10049-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10049-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10049-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10049-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10050",
+  "name": "Enel X Promenada Mall Sibiu",
+  "partner": "mall",
+  "address": "Bulevardul Corneliu Coposu",
+  "county_code": "SB",
+  "lat": 45.797599,
+  "lon": 24.163017,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10050-1",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10050-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10050-3",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10050-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10050-5",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10050-6",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10050-7",
+    "power_class": "DC_50",
+    "max_kw": 60.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10051",
+  "name": "Enel",
+  "partner": null,
+  "address": null,
+  "county_code": "TR",
+  "lat": 44.12162,
+  "lon": 24.984245,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10051-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10051-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10052",
+  "name": "Enel",
+  "partner": null,
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.75124,
+  "lon": 21.226253,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10052-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10053",
+  "name": "Enel",
+  "partner": null,
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.738352,
+  "lon": 21.210098,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10053-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10053-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10054",
+  "name": "ppc blue",
+  "partner": null,
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.724443,
+  "lon": 21.198678,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10054-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10054-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10055",
+  "name": "ppc blue",
+  "partner": null,
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.790616,
+  "lon": 21.22811,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10055-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10055-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10056",
+  "name": "ppc blue",
+  "partner": null,
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.746621,
+  "lon": 21.226844,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10056-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10056-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10057",
+  "name": "PPC Blue",
+  "partner": null,
+  "address": null,
+  "county_code": "TL",
+  "lat": 45.14674,
+  "lon": 28.218228,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10057-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10057-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10058",
+  "name": "Enel X",
+  "partner": null,
+  "address": null,
+  "county_code": "VN",
+  "lat": 45.704429,
+  "lon": 27.171394,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10058-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10058-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10059",
+  "name": "Enel X",
+  "partner": null,
+  "address": "Calea Moldovei",
+  "county_code": "VN",
+  "lat": 45.696909,
+  "lon": 27.203423,
+  "context_type": "urban",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10059-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10059-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10060",
+  "name": "Enel X Shopping City Ramnicu Valcea",
+  "partner": "mall",
+  "address": "Strada Ferdinand",
+  "county_code": "VL",
+  "lat": 45.111493,
+  "lon": 24.38164,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "high",
+  "charge_points": [
+   {
+    "cp_id": "L10060-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10060-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10060-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10060-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10061",
+  "name": "Charger near Dedeman",
+  "partner": "dedeman",
+  "address": null,
+  "county_code": "AR",
+  "lat": 46.174672,
+  "lon": 21.373176,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10061-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10061-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10062",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "AG",
+  "lat": 44.866569,
+  "lon": 24.884688,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10062-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10062-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10062-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10063",
+  "name": "Penny Market Pitesti",
+  "partner": "penny",
+  "address": "Bulevardul Bălcescu Nicolae",
+  "county_code": "AG",
+  "lat": 44.878513,
+  "lon": 24.842048,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10063-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10063-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10063-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10064",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "BC",
+  "lat": 46.539002,
+  "lon": 26.909136,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10064-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10064-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10065",
+  "name": "Carrefour Bacau",
+  "partner": "carrefour",
+  "address": "str. Milcov nr. 2-4",
+  "county_code": "BC",
+  "lat": 46.561946,
+  "lon": 26.922591,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10065-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10065-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10066",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "BH",
+  "lat": 47.514196,
+  "lon": 22.141193,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10066-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10066-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10067",
+  "name": "Selgros Brasov",
+  "partner": "selgros",
+  "address": "Calea București 231",
+  "county_code": "BV",
+  "lat": 45.625107,
+  "lon": 25.644841,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10067-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10067-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10067-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10067-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10067-5",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10067-6",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10067-7",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10067-8",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10067-9",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10068",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "B",
+  "lat": 44.477063,
+  "lon": 26.0445,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10068-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10069",
+  "name": "Charger near Dedeman",
+  "partner": "dedeman",
+  "address": null,
+  "county_code": "B",
+  "lat": 44.42434,
+  "lon": 25.998255,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10069-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10069-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10070",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "B",
+  "lat": 44.480329,
+  "lon": 26.041804,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10070-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10070-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10070-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10070-4",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10071",
+  "name": "Charger near Carrefour",
+  "partner": "carrefour",
+  "address": null,
+  "county_code": "B",
+  "lat": 44.492992,
+  "lon": 26.014226,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10071-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10071-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10072",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "B",
+  "lat": 44.495796,
+  "lon": 26.031589,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10072-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10072-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10073",
+  "name": "Dedeman Ghencea",
+  "partner": "dedeman",
+  "address": "B-dul Ghencea, nr. 91C",
+  "county_code": "B",
+  "lat": 44.40839,
+  "lon": 26.033386,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10073-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-3",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-4",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-5",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-6",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-7",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10073-8",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10074",
+  "name": "Penny Pallady",
+  "partner": "penny",
+  "address": "Penny",
+  "county_code": "B",
+  "lat": 44.410262,
+  "lon": 26.181792,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10074-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10074-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10074-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10075",
+  "name": "Mega Image Băneasa",
+  "partner": "mega image",
+  "address": "Șoseaua București-Ploiești 85-87",
+  "county_code": "B",
+  "lat": 44.505425,
+  "lon": 26.080642,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10075-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10076",
+  "name": "Penny Fizicienilor",
+  "partner": "penny",
+  "address": "Strada Fizicienilor",
+  "county_code": "B",
+  "lat": 44.41113,
+  "lon": 26.147705,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10076-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10076-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10076-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10077",
+  "name": "Carrefour Pantelimon",
+  "partner": "carrefour",
+  "address": "Șos. Vergului 20",
+  "county_code": "B",
+  "lat": 44.438333,
+  "lon": 26.186111,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10077-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10077-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10078",
+  "name": "Charger near Carrefour",
+  "partner": "carrefour",
+  "address": "Strada Progresului 126",
+  "county_code": "B",
+  "lat": 44.418587,
+  "lon": 26.073687,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10078-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-4",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-5",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-6",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-7",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-8",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-9",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-10",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-11",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10078-12",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10079",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.773172,
+  "lon": 23.594066,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10079-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-4",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-5",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-6",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-7",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-8",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-9",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10079-10",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10080",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.799609,
+  "lon": 23.610538,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10080-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10080-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10081",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.773145,
+  "lon": 23.589552,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10081-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10081-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10081-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10081-4",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10081-5",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10082",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.579143,
+  "lon": 23.778887,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10082-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10082-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10083",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.772331,
+  "lon": 23.629525,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10083-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10083-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10084",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.770786,
+  "lon": 23.592808,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10084-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10084-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10085",
+  "name": "Charger near Mega Image",
+  "partner": "mega image",
+  "address": null,
+  "county_code": "CJ",
+  "lat": 46.781487,
+  "lon": 23.622868,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10085-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10085-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10086",
+  "name": "Carrefour Cluj 1",
+  "partner": "carrefour",
+  "address": "Bulevardul 1 Decembrie 1918 142",
+  "county_code": "CJ",
+  "lat": 46.757933,
+  "lon": 23.539869,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10086-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10087",
+  "name": "Statie incarcare Penny Agigea",
+  "partner": "penny",
+  "address": null,
+  "county_code": "CT",
+  "lat": 44.089954,
+  "lon": 28.610887,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10087-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10087-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10088",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "CT",
+  "lat": 44.26565,
+  "lon": 28.261039,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10088-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10088-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10089",
+  "name": "(Statie pe Autostart, conectati cablul pentru a porni incarcarea.)Carrefour Constanta",
+  "partner": "carrefour",
+  "address": "Strada Cumpenei 2",
+  "county_code": "CT",
+  "lat": 44.169509,
+  "lon": 28.610335,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10089-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10089-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10090",
+  "name": "Penny Market",
+  "partner": "penny",
+  "address": "Strada Ion Luca Caragiale",
+  "county_code": "CT",
+  "lat": 44.176645,
+  "lon": 28.623859,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10090-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10090-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10090-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10091",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "DB",
+  "lat": 44.925606,
+  "lon": 25.462474,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10091-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10091-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10092",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "DB",
+  "lat": 44.923096,
+  "lon": 25.464081,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10092-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10092-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10093",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "GL",
+  "lat": 45.42472,
+  "lon": 28.040601,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10093-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10093-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10094",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "GL",
+  "lat": 45.433297,
+  "lon": 28.030884,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10094-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10094-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10095",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "HD",
+  "lat": 45.418599,
+  "lon": 23.36909,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10095-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10095-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10096",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "HD",
+  "lat": 45.38441,
+  "lon": 23.371349,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10096-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10096-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10097",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "HD",
+  "lat": 46.11934,
+  "lon": 22.788478,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10097-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10097-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10098",
+  "name": "Dedeman Hunedoara",
+  "partner": "dedeman",
+  "address": "Strada Ecaterina Varga 9",
+  "county_code": "HD",
+  "lat": 45.766898,
+  "lon": 22.903661,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10098-1",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10098-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10099",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "IS",
+  "lat": 47.150794,
+  "lon": 27.573063,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10099-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10099-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10100",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "IF",
+  "lat": 44.366896,
+  "lon": 26.145009,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10100-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10101",
+  "name": "Penny Bragadiru",
+  "partner": "penny",
+  "address": "Strada Cristalului",
+  "county_code": "IF",
+  "lat": 44.388492,
+  "lon": 26.010474,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10101-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10101-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10101-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10102",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "MH",
+  "lat": 44.638015,
+  "lon": 22.639073,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10102-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10102-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10103",
+  "name": "Selgros Tg.Mures",
+  "partner": "selgros",
+  "address": "Strada Gheorghe Doja 62",
+  "county_code": "MS",
+  "lat": 46.531662,
+  "lon": 24.549501,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10103-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10103-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10104",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "NT",
+  "lat": 46.934313,
+  "lon": 26.348648,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10104-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10104-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10105",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "NT",
+  "lat": 46.929668,
+  "lon": 26.359308,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10105-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10105-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10106",
+  "name": "Charger near Carrefour",
+  "partner": "carrefour",
+  "address": null,
+  "county_code": "PH",
+  "lat": 44.92839,
+  "lon": 26.036669,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10106-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10106-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10107",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.776411,
+  "lon": 22.884218,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10107-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10107-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10108",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "SM",
+  "lat": 47.479688,
+  "lon": 22.58516,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10108-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10108-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10108-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10108-4",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10109",
+  "name": "Penny Sibiu",
+  "partner": "penny",
+  "address": "Calea Gușteriței nr 21",
+  "county_code": "SB",
+  "lat": 45.801908,
+  "lon": 24.16969,
+  "context_type": "retail",
+  "primary_source": "ocm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10109-1",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10109-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   },
+   {
+    "cp_id": "L10109-3",
+    "power_class": "DC_50",
+    "max_kw": 50.0,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10110",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "TR",
+  "lat": 43.756592,
+  "lon": 24.875335,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10110-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10110-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10111",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.854017,
+  "lon": 22.177841,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10111-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10111-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10111-3",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10112",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.722668,
+  "lon": 21.299311,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10112-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10112-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10113",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "TM",
+  "lat": 45.777036,
+  "lon": 21.220568,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10113-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10113-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10114",
+  "name": "Charger near Altex",
+  "partner": "altex",
+  "address": null,
+  "county_code": "VN",
+  "lat": 45.68966,
+  "lon": 27.195104,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10114-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10114-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10115",
+  "name": "Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "VL",
+  "lat": 45.341039,
+  "lon": 24.246679,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10115-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [
+     "CCS2",
+     "CHAdeMO"
+    ],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10115-2",
+    "power_class": "AC_22",
+    "max_kw": 22.0,
+    "connectors": [
+     "Type2"
+    ],
+    "current_type": "AC"
+   }
+  ]
+ },
+ {
+  "location_id": "L10116",
+  "name": "Charger near Penny",
+  "partner": "penny",
+  "address": null,
+  "county_code": "VL",
+  "lat": 45.144272,
+  "lon": 23.997428,
+  "context_type": "retail",
+  "primary_source": "osm",
+  "confidence": "low",
+  "charge_points": [
+   {
+    "cp_id": "L10116-1",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   },
+   {
+    "cp_id": "L10116-2",
+    "power_class": "DC_50",
+    "max_kw": null,
+    "connectors": [],
+    "current_type": "DC"
+   }
+  ]
+ }
+]

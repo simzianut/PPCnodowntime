@@ -8,8 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T10] M4 sim engine core on fixtures: slots, state transitions, sibling handover, wait + energy accounting, metrics, always_on + naive baselines; ChargePointEnv gym wrapper ASAP for M2 (spec 04 §1–4) | owner: tudor-claude | branch: tudor-claude/T10-sim-engine | depends: T2
-- [T19] M4 API fixture mode (split from T12): API_FIXTURES=1 serves every route from fixtures/api/, incl. a playable recorded day over WS (spec 04 §6) | owner: tudor-claude | branch: tudor-claude/T19-api-fixtures | depends: T2
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
@@ -20,11 +18,12 @@ Add notes as indented sub-bullets.
 
 - [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6
 
-## To do
-- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
+- [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T7
+- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
   - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
   - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
-- [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: - | branch: - | depends: T7
+
+## To do
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
 - [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: - | branch: - | depends: T10, T13
@@ -33,6 +32,10 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T19] M4 API fixture mode (split from T12): API_FIXTURES=1 serves every route from fixtures/api/, incl. a playable recorded day over WS (spec 04 §6) | owner: tudor-claude | branch: tudor-claude/T19-api-fixtures | depends: T2
+  - Merged in #2. api/: fixture mode for every CONTRACTS route + playable recorded day over WS (fixtures/api, `python -m api.fixtures_gen`); decision 0036. Test: `API_FIXTURES=1 make api`, `uv run pytest api`. T12 regenerates fixtures from the engine.
+- [T10] M4 sim engine core on fixtures: slots, state transitions, sibling handover, wait + energy accounting, metrics, always_on + naive baselines; ChargePointEnv gym wrapper ASAP for M2 (spec 04 §1–4) | owner: tudor-claude | branch: tudor-claude/T10-sim-engine | depends: T2
+  - Merged in #1. sim/: engine (slots, transitions, handover, waits, energy, RECOMMEND, timelines), metrics, always_on + naive baselines, obs builder, PrecomputedForecaster, ChargePointEnv, seeded synthetic data; decisions 0017–0026, 0034, 0035, 0037. Test: `uv run pytest sim tests`.
 - [T4] M3 station importer (spec 03 §1–2) | owner: vlad-claude | branch: vlad-claude/T4-station-import | depends: T2
   - AmpWhere snapshot as primary PPC list (0029): 445 locations, 671 CPs (physical units), 1,364 connectors; HPC >= 100 kW; context rules; 5,563 other-operator chargers as context (0033). Writes data/processed/{locations,charge_points,source_refs,other_chargers}.parquet; DB upsert waits for T5. Test: `uv run python -m stations` then `uv run pytest stations`.
 - [T13] M2 demand forecaster (LightGBM, calibrated) + RandomPolicy/ConstantForecaster stubs on day one + cost_rule policy (spec 02 §1–3) | owner: edy-antigravity | branch: edy-antigravity/T13-demand-forecaster | depends: T8
