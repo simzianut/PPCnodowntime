@@ -16,9 +16,7 @@ Add notes as indented sub-bullets.
 - [T20] M1 real traffic: TomTom live traffic index + Mapbox typical hour-of-week traffic per location → traffic_typical.parquet (decision 0028) | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
   - Needs TOMTOM_API_KEY and MAPBOX_TOKEN in a local .env (vlad). Can start on stations_open.csv / fixture locations before T4.
 
-- [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6
 
-- [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T7
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
   - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
   - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
@@ -32,6 +30,10 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T8] M1 signal generator → signals.parquet | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T7
+  - 43.9M rows / 218 MB in ~30 s: intents as events, traffic + ICE hourly, EV counts non-zero only; intent share 0.600 (0039). Rerun after traffic: `uv run python -m dataset.signals`. Data shared privately as zips (not in git).
+- [T7] M1 donor mapping → sessions.parquet + context.parquet | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6
+  - 981,486 sessions on 671 CPs, de-cloned, cp_active_days marks donor-less days (exclude them!); RO weather per county (0038). Test: `uv run python -m dataset.mapping` / `dataset.context`, `uv run pytest dataset`.
 - [T19] M4 API fixture mode (split from T12): API_FIXTURES=1 serves every route from fixtures/api/, incl. a playable recorded day over WS (spec 04 §6) | owner: tudor-claude | branch: tudor-claude/T19-api-fixtures | depends: T2
   - Merged in #2. api/: fixture mode for every CONTRACTS route + playable recorded day over WS (fixtures/api, `python -m api.fixtures_gen`); decision 0036. Test: `API_FIXTURES=1 make api`, `uv run pytest api`. T12 regenerates fixtures from the engine.
 - [T10] M4 sim engine core on fixtures: slots, state transitions, sibling handover, wait + energy accounting, metrics, always_on + naive baselines; ChargePointEnv gym wrapper ASAP for M2 (spec 04 §1–4) | owner: tudor-claude | branch: tudor-claude/T10-sim-engine | depends: T2

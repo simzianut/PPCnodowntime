@@ -78,7 +78,9 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | File | Columns |
 |---|---|
 | `sessions.parquet` | `session_id str, cp_id str, location_id str, arrival_ts ts[UTC], departure_ts ts[UTC], energy_kwh float, donor_charger_id str, split {train,test}` |
-| `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)` |
+| `signals.parquet` | `ts ts[UTC], location_id str, signal Signal, value float, eta_ts ts[UTC]?, session_id str? (eval only, never a feature)`. Resolution (decision 0039): intents are events; `maps_traffic_index` and `maps_ice_count` are hourly (use the latest value at or before t); `maps_ev_count` is 5-min, non-zero rows only (a missing row means 0) |
+| `cp_donor_map.parquet` | `cp_id, power_class, demand, demand_quantile, donor_charger_id, donor_fallback bool, second_donor_id, target_rate, donor_rate, ratio, capped bool, active_from ts[UTC], active_to ts[UTC]` (decision 0038) |
+| `cp_active_days.parquet` | `cp_id, date (local), active bool`. On inactive days the donor did not exist: treat them as unknown and exclude them from training and evaluation (decision 0038) |
 | `context.parquet` | `ts_hour ts[UTC], county_code str, temp_c float, precip_mm float, wind_kmh float, is_holiday bool` |
 | `forecasts.parquet` (M2 writes, M4 reads; decision 0021) | `ts ts[UTC] (slot start), cp_id str, p_arrival_15 float, p_arrival_30 float, p_arrival_60 float, expected_arrivals_60 float` |
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |

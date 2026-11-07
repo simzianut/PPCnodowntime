@@ -45,3 +45,5 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0035](decisions/0035-synthetic-generator-parameters.md) | 2026-11-07 | tudor-claude | Parameters of the synthetic simulation data
 - [0036](decisions/0036-api-fixture-mode.md) | 2026-11-07 | tudor-claude | API fixture mode plays a heuristic recorded day
 - [0037](decisions/0037-gym-env-implementation.md) | 2026-11-07 | tudor-claude | Gym env implementation: location-day engine, cached slices, cost_rule auto-detect
+- [0038](decisions/0038-donor-mapping-implementation.md) | 2026-11-07 | vlad + vlad-claude | Donor mapping details: holiday swaps, top-ups, de-cloning, active spans (inactive days = unknown)
+- [0039](decisions/0039-compact-signals-and-placeholders.md) | 2026-11-07 | vlad + vlad-claude | Compact signals.parquet (events + hourly maps + non-zero EV counts); placeholder signal params
