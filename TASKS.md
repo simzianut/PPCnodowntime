@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T32] GPU-server package for forecaster training (F0/F1/F2 + ablation): writable data/interim mount in docker-compose.train.yml, docker/train_forecasters.sh (preflight, build+verify, GPU smoke, suites, results pack), .env.train.example, docs/TRAINING_GPU.md | owner: vlad-claude | branch: main (small) | depends: T25, T26
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
   - Tudor picked D (live actions) + B's swipe slider; PR #7 open (decision 0063). Test: `cd frontend && npm test`, `make api` + `make web`.
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
