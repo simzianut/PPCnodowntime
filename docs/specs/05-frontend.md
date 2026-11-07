@@ -5,7 +5,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 ## 1. Stack
 - React 18 + TypeScript + Vite, dev server on `:5173`.
 - MapLibre GL JS with the OpenFreeMap "positron" style (no key needed).
-- Recharts for the charts. Plain CSS variables for theming; light and dark themes.
+- Recharts for the charts. Plain CSS variables for the white-only PPC theme.
 - API base from `VITE_API_URL` (default `http://localhost:8000`).
 - Develop against `API_FIXTURES=1` on the backend, or against an MSW mock built from `fixtures/`.
 
@@ -27,7 +27,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 ├───────────────────────────────────────────────────────────────┴──────────────────────┤
 │ Replay bar: date ▾ · ▶/❚❚ · speed 1×…288× · timeline scrubber · sim clock             │
 └───────────────────────────────────────────────────────────────────────────────────────┘
-Station detail: right-side drawer over the KPI panel when a location is clicked.
+Header: PPC logo left, SmartHack logo right. A 32% left sidebar contains overview statistics, policy analysis, recommendations, autonomy, and replay controls; the 68% right side is the interactive map. Selecting a station replaces the overview in the sidebar, keeps replay controls visible, and centers the map on that station.
 ```
 
 On phone width the panels stack under the map, and the replay bar stays pinned to the bottom.
@@ -36,7 +36,8 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 
 ### 3.1 Romania map with charge-point states
 - Each **location** is one marker. Its colour shows the state of its CPs, split by share when the CPs are in mixed states.
-- State colours and legend: CHARGING green, IDLE blue, WAKING amber, STANDBY light grey, DEEP_SLEEP dark grey, OFFLINE red.
+- State colours and legend: CHARGING `#22C55E`, IDLE `#06B6D4`, STANDBY `#F59E0B`, WAKING `#F97316`, DEEP_SLEEP `#6366F1`, OFFLINE `#EF4444`.
+- Markers expose status shares on hover and a black ring when selected. The map remains interactive while the sidebar changes between overview and station details.
 - Clusters form below zoom level 8. A cluster's badge shows how many CPs are asleep.
 - Tick updates arrive as diffs. Apply them to an in-memory `cpState` map and update the GeoJSON source without re-creating layers. Target: 60 fps panning while a replay runs at 288×.
 - Locations with `confidence = low` get a dashed outline.
@@ -60,6 +61,7 @@ Opens when a location is clicked (`GET /api/runs/{run_id}/cp/{cp_id}/timeline` f
 - Per CP: power class, connectors, and a **state timeline bar** for the day.
 - A chart of the forecast `p30` as a line against actual arrivals as ticks, with route-intent markers.
 - The list of the agent's commands for this location, each with its reason and status.
+- Run summary metrics from `GET /api/runs/{run_id}/locations/{location_id}/summary`: current metered kW, expected wait in minutes, and a unitless anomaly score. Null or unavailable fields display as “Unavailable”; rated `max_kw` is never used as current output.
 
 ## 4. State management
 - One WebSocket per run, with auto-reconnect. On reconnect, call `GET /api/runs/{id}` to resync.
@@ -71,7 +73,7 @@ Opens when a location is clicked (`GET /api/runs/{run_id}/cp/{cp_id}/timeline` f
 | Must-have | Stretch |
 |---|---|
 | The 4 features above, on fixtures, then on the real API | "Explain" button on a command (LLM explainer from M2) |
-| Light and dark themes, phone-width layout | 1,400-CP annual extrapolation card |
+| White PPC theme, phone-width layout | 1,400-CP annual extrapolation card |
 | | Heatmap layer of predicted demand |
 
 ## 6. Acceptance criteria

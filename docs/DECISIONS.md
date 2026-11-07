@@ -84,4 +84,6 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0037](decisions/0037-gym-env-implementation.md) | 2026-11-07 | tudor-claude | Gym env implementation: location-day engine, cached slices, cost_rule auto-detect
 - [0038](decisions/0038-donor-mapping-implementation.md) | 2026-11-07 | vlad + vlad-claude | Donor mapping details: holiday swaps, top-ups, de-cloning, active spans (inactive days = unknown)
 - [0039](decisions/0039-compact-signals-and-placeholders.md) | 2026-11-07 | vlad + vlad-claude | Compact signals.parquet (events + hourly maps + non-zero EV counts); placeholder signal params
-- [0040](decisions/0040-station-run-summary-contract.md) | 2026-11-07 | teodora | Run-scoped station summary with nullable live/model metrics`n- [0041](decisions/0041-frontend-seed-demo.md) | 2026-11-07 | teodora | Seed-data demo adapter for frontend work before the API exists`n
+- [0040](decisions/0040-station-run-summary-contract.md) | 2026-11-07 | teodora | Run-scoped station summary with nullable live/model metrics
+- [0041](decisions/0041-frontend-seed-demo.md) | 2026-11-07 | teodora | Seed-data demo adapter for frontend work before the API exists
+- [0042](decisions/0042-frontend-map-first-white-theme.md) | 2026-11-07 | teodora | Map-first split, white-only theme, station summary presentation and status markers

@@ -119,10 +119,12 @@ export const POLICY_LABELS: Record<PolicyName, string> = {
   rl_ppo: 'RL agent',
 }
 export const STATE_COLORS: Record<State, string> = {
-  CHARGING: '#23a883',
-  IDLE: '#4388ea',
-  WAKING: '#eaa83f',
-  STANDBY: '#bbc3ce',
-  DEEP_SLEEP: '#465263',
-  OFFLINE: '#dd5d63',
+  CHARGING: '#22C55E',
+  IDLE: '#06B6D4',
+  WAKING: '#F97316',
+  STANDBY: '#F59E0B',
+  DEEP_SLEEP: '#6366F1',
+  OFFLINE: '#EF4444',
 }
+
+export type StationRunSummary = { location_id: string; current_kw: number | null; expected_wait_min: number | null; anomaly_score: number | null }

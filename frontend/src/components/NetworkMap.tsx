@@ -191,10 +191,18 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
       entry.element.style.background = gradientFor(location, cpState)
       entry.element.classList.toggle('is-selected', location.location_id === selectedLocationId)
       entry.element.classList.toggle('is-low-confidence', location.confidence === 'low')
-      entry.element.title = `${location.name} · ${location.charge_points.length} charge points`
+      const counts = new Map<State, number>()
+      location.charge_points.forEach((cp) => { const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'; counts.set(state, (counts.get(state) ?? 0) + 1) })
+      entry.element.title = `${location.name} · ${[...counts].map(([state, count]) => `${state.replace('_', ' ')} ${Math.round(count / location.charge_points.length * 100)}%`).join(' · ')}`
       entry.element.style.display = zoom >= 7.8 ? 'block' : 'none'
     }
   }, [locations, cpState, zoom, mapReady, selectedLocationId])
+
+  useEffect(() => {
+    if (!selectedLocationId) return
+    const location = locations.find((item) => item.location_id === selectedLocationId)
+    if (location) mapRef.current?.flyTo({ center: [location.lon, location.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 })
+  }, [selectedLocationId, locations])
 
   function zoomBy(delta: number) { mapRef.current?.easeTo({ zoom: Math.max(4.5, Math.min(15, (mapRef.current?.getZoom() ?? 6) + delta)), duration: 260 }) }
 

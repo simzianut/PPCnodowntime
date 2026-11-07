@@ -1,4 +1,4 @@
-import type { Autonomy, CpTimeline, EvalData, Location, Recommendation, Run, RunRequest } from './types'
+import type { Autonomy, CpTimeline, EvalData, Location, Recommendation, Run, RunRequest, StationRunSummary } from './types'
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -22,6 +22,7 @@ export const api = {
   recommendations: (runId: string) => request<Recommendation[]>(`/api/recommendations?run_id=${encodeURIComponent(runId)}&status=pending`),
   decideRecommendation: (id: number, decision: 'approve' | 'reject') => request<Recommendation>(`/api/recommendations/${id}`, { method: 'POST', body: JSON.stringify({ decision }) }),
   timeline: (runId: string, cpId: string) => request<CpTimeline>(`/api/runs/${runId}/cp/${encodeURIComponent(cpId)}/timeline`),
+  stationSummary: (runId: string, locationId: string) => request<StationRunSummary>(`/api/runs/${runId}/locations/${encodeURIComponent(locationId)}/summary`),
 }
 
 export function runSocketUrl(runId: string) {

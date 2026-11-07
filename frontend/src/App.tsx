@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Area, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis,
 } from 'recharts'
-import { Activity, ArrowDownRight, ArrowUpRight, BatteryCharging, Check, ChevronDown, Clock3, Command, Cpu, Gauge, Moon, Play, Radio, Sun, Zap, Pause, X, MapPinned, WifiOff } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowUpRight, BatteryCharging, Check, ChevronDown, Clock3, Command, Cpu, Gauge, Moon, Play, Radio, Zap, Pause, X, MapPinned, WifiOff } from 'lucide-react'
 import { NetworkMap } from './components/NetworkMap'
 import { useDashboard } from './state/useDashboard'
+import { api } from './api/client'
 import { POLICY_LABELS, POLICIES, STATE_COLORS, type Location, type PolicyName, type Recommendation, type Run, type State } from './api/types'
 import './App.css'
 
@@ -67,7 +68,9 @@ function StateTrack({ states }: { states: Array<{ from: string; to: string; stat
   })}</div>
 }
 
-function StationDetail({ location, timelines, cpState, onClose }: { location: Location; timelines: ReturnType<typeof useDashboard>['timelineByCp']; cpState: Record<string, State>; onClose: () => void }) {
+function StationDetail({ location, timelines, cpState, runId, onClose }: { location: Location; timelines: ReturnType<typeof useDashboard>['timelineByCp']; cpState: Record<string, State>; runId?: string; onClose: () => void }) {
+  const [summary, setSummary] = useState<{ current_kw: number | null; expected_wait_min: number | null; anomaly_score: number | null } | null>(null)
+  useEffect(() => { let live = true; setSummary(null); if (runId) void api.stationSummary(runId, location.location_id).then((data) => { if (live) setSummary(data) }).catch(() => { if (live) setSummary({ current_kw: null, expected_wait_min: null, anomaly_score: null }) }); return () => { live = false } }, [runId, location.location_id])
   const [expanded, setExpanded] = useState(location.charge_points[0]?.cp_id ?? '')
   const primaryTimeline = timelines[expanded]
   const chartData = useMemo(() => {
@@ -92,6 +95,7 @@ function StationDetail({ location, timelines, cpState, onClose }: { location: Lo
         <div><span>Confidence</span><strong className={`confidence confidence-${location.confidence}`}>{location.confidence}</strong></div>
         <div><span>Charging</span><strong>{activeStateCount} / {location.charge_points.length} active</strong></div>
       </div>
+      <div className="station-metrics"><div><span>Current output</span><strong>{summary?.current_kw == null ? 'Unavailable' : `${format(summary.current_kw)} kW`}</strong></div><div><span>Expected wait</span><strong>{summary?.expected_wait_min == null ? 'Unavailable' : `${format(summary.expected_wait_min)} min`}</strong></div><div><span>Anomaly score</span><strong>{summary?.anomaly_score == null ? 'Unavailable' : format(summary.anomaly_score, 3)}</strong></div></div>
       <div className="detail-section-title"><span>Charge points</span><small>{location.charge_points.length} connectors</small></div>
       <div className="charge-point-list">{location.charge_points.map((cp) => {
         const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'
@@ -180,21 +184,20 @@ function ReplayBar({ dashboard }: { dashboard: ReturnType<typeof useDashboard> }
 
 function App() {
   const dashboard = useDashboard()
-  const { locations, cpState, selectedLocation, timelineByCp, openStation, run, theme, toggleTheme, autonomy, changeAutonomy, connectionMode, connected, error, setError } = dashboard
+  const { locations, cpState, selectedLocation, timelineByCp, openStation, run, autonomy, changeAutonomy, connectionMode, connected, error, setError } = dashboard
   const cpTotal = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
   const activeCp = Object.values(cpState).filter((state) => state === 'CHARGING').length
   const sleepingCp = Object.values(cpState).filter((state) => state === 'DEEP_SLEEP' || state === 'STANDBY').length
   const modeLabel = connectionMode === 'connecting' ? 'Connecting' : connectionMode === 'demo' ? 'Seed demo' : 'API connected'
   const isBusy = connectionMode === 'connecting'
 
-  return <div className={`app-shell theme-${theme}`}>
+  return <div className="app-shell theme-light">
     <header className="topbar">
-      <div className="brand-lockup"><div className="brand-mark"><Zap size={17} fill="currentColor" /></div><div><strong>PPC<span>nodowntime</span></strong><small>CHARGING NETWORK CONTROL</small></div></div>
+      <div className="brand-lockup"><img className="ppc-logo" src="/brand/ppc-logo.svg" alt="PPC" /><div className="brand-divider"/><div className="brand-title"><strong>Network control</strong><small>CHARGING INTELLIGENCE</small></div></div>
       <div className="header-center"><div className="network-pill"><span className="live-dot" /> Romania<span className="pill-divider" />{locations.length} sites</div><div className={`connection-pill ${connected ? 'connected' : ''}`}><span />{modeLabel}</div></div>
       <div className="header-actions">
         <label className="autonomy-control"><span className="autonomy-label">Autonomy</span><div className="segmented"><button className={autonomy === 'ACT' ? 'active act' : ''} onClick={() => void changeAutonomy('ACT')}><Zap size={12} /> ACT</button><button className={autonomy === 'RECOMMEND' ? 'active recommend' : ''} onClick={() => void changeAutonomy('RECOMMEND')}><Command size={12} /> Review</button></div></label>
-        <button className="theme-toggle" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`} onClick={toggleTheme}>{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</button>
-        <button className="avatar" title="Network operator">T</button>
+        <img className="smarthack-logo" src="/brand/smarthack.png" alt="SmartHack" />
       </div>
     </header>
     <main className="workspace">
@@ -205,11 +208,9 @@ function App() {
           <NetworkMap locations={locations} cpState={cpState} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
           <div className="map-hint"><span><Activity size={13} /> {run?.status === 'running' ? 'Replay is running' : run?.status === 'done' ? 'Replay complete' : run?.paused_reason === 'recommendations' ? 'Paused for review' : 'Replay paused'}</span><i /> Select a location to inspect charge points</div>
         </div>
-        <RightPanel dashboard={dashboard} />
-        {selectedLocation && <div className="detail-overlay"><StationDetail key={selectedLocation.location_id} location={selectedLocation} timelines={timelineByCp} cpState={cpState} onClose={() => void openStation(null)} /></div>}
+        <div className="sidebar"><div className="sidebar-scroll">{selectedLocation ? <StationDetail key={selectedLocation.location_id} location={selectedLocation} timelines={timelineByCp} cpState={cpState} runId={run?.run_id} onClose={() => void openStation(null)} /> : <><div className="overview-heading"><span className="eyebrow">Network overview</span><h1>Charging intelligence</h1><p>Romania · {locations.length} locations · {cpTotal} charge points</p><div className="overview-stats"><span><b>{activeCp}</b> charging</span><span><b>{sleepingCp}</b> asleep</span></div></div><RightPanel dashboard={dashboard} /></>}</div><ReplayBar dashboard={dashboard} /></div>
       </div>
     </main>
-    <ReplayBar dashboard={dashboard} />
     {isBusy && <div className="loading-overlay"><div className="loading-mark"><Zap size={19} fill="currentColor" /></div><strong>Starting network view</strong><span>Connecting to the run service…</span></div>}
   </div>
 }
