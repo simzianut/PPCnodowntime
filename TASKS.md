@@ -15,8 +15,6 @@ Add notes as indented sub-bullets.
   - Decision 0052. Writes forecasts.parquet per run (CONTRACTS schema) so T11 can evaluate the cost rule with any forecaster.
 - [T27] M2 RL agents: MaskablePPO (sb3-contrib) and Double DQN with action masking on ChargePointEnv, hindsight oracle bound policy, env-level evaluation on held-out days for model selection | owner: vlad-claude | branch: vlad-claude/T27-rl-agents | depends: T25
   - Decision 0053. Edy's plain PPO (model/train_rl.py) stays untouched for comparison. Wake cost comes from config/power_profiles.yaml wake_extra_wh (M3 will set it).
-- [T28] Research-paper figures in TikZ → PDF + SVG: system overview, forecaster architectures, RL loop (MaskablePPO + DDQN), reproducible training pipeline, experiment design; docker/tex.Dockerfile + `make figures` | owner: vlad-claude | branch: vlad-claude/T28-figures | depends: -
-  - Decision 0054.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
@@ -34,6 +32,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T28] Research-paper figures in TikZ → PDF + SVG: system overview, forecaster architectures, RL loop (MaskablePPO + DDQN), reproducible training pipeline, experiment design; docker/tex.Dockerfile + `make figures` | owner: vlad-claude | branch: vlad-claude/T28-figures | depends: -
+  - docs/figures/src/fig1–fig5 TikZ + style.tex; built PDF/SVG/PNG committed in docs/figures/build; build.sh (pdflatex + dvisvgm, no Ghostscript), docker/tex.Dockerfile; .gitattributes keeps *.sh LF; decision 0054. Test: `make figures-local` (MiKTeX/TeX Live) or `make figures` (Docker).
 - [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
   - model.experiments CLI (run/suite/promote), runs/<name>-<sha8>-s<seed>/ with manifest, model/repro.py, docker/train.Dockerfile (CUDA 12.4.1, torch 2.6.0+cu124, GPU-free verify stage), docker-compose.train.yml with GPU_ID; decisions 0051, 0058. Image NOT built yet (laptop RAM): first build on the GPU server. Test: `uv run --extra rl --extra train pytest model/tests/test_experiments.py`; on the server `make train-image-verify`, then `make train-docker CONFIG=config/train/smoke.yaml GPU_ID=0`.
 - [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
