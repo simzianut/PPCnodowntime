@@ -11,9 +11,10 @@ from typing import Sequence
 
 import pandas as pd
 
+from model import rl_select
 from model.cost_rule import CostRulePolicy
 from model.forecaster import DemandForecaster
-from model.rl_agent import RLPolicy
+from model.oracle import HindsightOraclePolicy
 from model.types import Forecaster, Policy, SimState
 from sim.baselines import AlwaysOn, NaiveQuietHours
 from sim.config import CONFIG_DIR, ROOT, sim_config
@@ -97,9 +98,9 @@ def evaluate(
     data = data or load_default()
     test_days = list(days) if days is not None else _resolve_test_days(data, None, cfg.eval_days)
     grid = list(lambdas) if lambdas is not None else list(cfg.lambda_grid)
+    log.info("rl_ppo served by %s", rl_select.resolve_rl_agent())  # bad RL_AGENT raises
     fc = _build_forecaster(data)
     naive = NaiveQuietHours(data.sessions, data.cps)
-    ppo_path = ROOT / "artifacts" / "ppo_policy.zip"
 
     runs: list[tuple[str, str, float | None, Policy]] = [
         ("always_on", "always_on", None, AlwaysOn()),
@@ -112,9 +113,17 @@ def evaluate(
             sim_config_path=CONFIG_DIR / "sim.yaml",
         )
         runs.append((f"cost_rule_{lam}", "cost_rule", lam, cr))
-        if ppo_path.exists():
-            rl = RLPolicy(model_path=ppo_path, forecaster=fc, lambda_wait=lam)
-            runs.append((f"rl_ppo_{lam}", "rl_ppo", lam, rl))
+        try:
+            runs.append((f"rl_ppo_{lam}", "rl_ppo", lam, rl_select.load_policy(
+                "rl_ppo", forecaster=fc, lam=lam)))  # fmt: skip
+        except rl_select.PolicyUnavailable as e:
+            log.info("rl_ppo skipped: %s", e)
+    for extra in ("rl_maskppo", "rl_ddqn"):
+        try:
+            runs.append((extra, extra, None, rl_select.load_policy(extra)))
+        except rl_select.PolicyUnavailable as e:
+            log.info("%s skipped: %s", extra, e)
+    runs.append(("oracle", "oracle", None, HindsightOraclePolicy(data.sessions, cfg.slot_s)))
 
     engine_policies = [_PolicyWrapper(p, key) for key, _, _, p in runs]
     acc: dict[str, PolicyMetrics] = {key: PolicyMetrics() for key, _, _, _ in runs}

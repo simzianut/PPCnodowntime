@@ -70,6 +70,9 @@ class PolicyName(StrEnum):
     naive_quiet_hours = "naive_quiet_hours"
     cost_rule = "cost_rule"
     rl_ppo = "rl_ppo"
+    rl_maskppo = "rl_maskppo"
+    rl_ddqn = "rl_ddqn"
+    oracle = "oracle"
     # Uppercase aliases, used by model/ (T13).
     ALWAYS_ON = "always_on"
     NAIVE_QUIET_HOURS = "naive_quiet_hours"
