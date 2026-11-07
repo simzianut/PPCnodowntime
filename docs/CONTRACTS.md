@@ -2,7 +2,7 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
-Version: v0.3, 2026-11-07 (engine-backed API replay mode, shared station loader; decision 0047). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run history in the DB; decision 0049). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
 
 ## Services and ports
 | Service | Port | Owner | Notes |
@@ -54,7 +54,7 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 ## Config files
 | File | Owner | Keys |
 |---|---|---|
-| `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh` |
+| `config/power_profiles.yaml` | M3 | per `PowerClass`: `idle_w, standby_w, deep_sleep_w, standby_wake_s, deep_sleep_wake_s`; top-level `wake_extra_wh`. Per-CP watts come from `stations.store.get_power_profile(power_class, max_kw)` (capacity table, decision 0048); the sim uses that (decision 0049) |
 | `config/signals.yaml` | M1 | `p_app, intent_lead_min: [10,40], eta_sd_min, false_positive_rate, ev_tag_rate, w_ice, background_ev, ice_base, rain_boost, traffic_noise_sd, seed, context_multiplier{ContextType: float}` (0039) |
 | `config/live.yaml` | M1 | `poll_s, min_request_gap_s, request_timeout_s, backoff{initial_s, factor, max_s, max_retries}, max_consecutive_failures, status_map{raw_word: LiveStatus}, ampwhere{snapshot_url, delta_url, resync_s, ppc_provider_id, user_agent}` |
 | `config/traffic.yaml` | M1 | `tomtom{flow_url, zoom, poll_s, max_live_locations, request_gap_s, timeout_s}, mapbox{directions_url, free_flow_url, route_len_m, min_snap_m, request_gap_s, timeout_s, workers, max_rps, sample_every_h}, index_clip: [0, 1]` (0043) |
@@ -100,6 +100,7 @@ Module: `sim/types.py` (M4 owns, decision 0017). `model/` imports these types an
 class CpView:            # one charge point, as a policy sees it
     cp_id: str; location_id: str; power_class: PowerClass; connectors: list[str]
     state: State; seconds_in_state: int
+    max_kw: float | None = None     # for per-CP power via stations.store.get_power_profile (decision 0049)
 
 @dataclass
 class SimState:
@@ -155,6 +156,7 @@ Observation: `sim.obs.build_obs(state: SimState, cp_ids: list[str]) -> np.ndarra
   "test_days": ["2024-03-12", "..."],
   "results": [
     {"policy": "rl_ppo", "lambda": 0.1, "overhead_kwh": 0, "saved_kwh": 0, "saved_pct": 0,
+     "overhead_ron": 0, "saved_ron": 0,
      "wait_min_total": 0, "wait_min_mean": 0, "wait_min_p95": 0, "sessions": 0, "waited_sessions": 0, "sleep_share": 0}
   ]
 }
@@ -173,11 +175,13 @@ type Location = { location_id: string; name: string; partner: string|null; addre
 type ChargePoint = { cp_id: string; power_class: PowerClass; max_kw: number|null;
   connectors: string[]; current_type: "AC"|"DC"; state?: State };
 type Kpis = { overhead_kwh: number; saved_kwh: number; saved_pct: number;
+  overhead_ron: number; saved_ron: number;
   wait_min_total: number; wait_min_mean: number; wait_min_p95: number;
   sessions: number; waited_sessions: number; sleep_share: number };
 type StationRunSummary = { location_id: string; current_kw: number|null;
   expected_wait_min: number|null; anomaly_score: number|null };
 // saved_pct is a percentage (0–100) of always_on's overhead in the same run; sleep_share is a fraction (0–1) of all CP time.
+// *_ron = the matching *_kwh × the net B2B tariff from stations.store.get_energy_tariffs() (1.15 RON/kWh, decision 0049).
 type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyName;
   from_state: State; target_state: TargetState; reason: string; status: CommandStatus; expires_at: string };
 ```
@@ -195,7 +199,9 @@ Response 200: `Location`. Errors: 404.
 Response 200: `[{"name": "rl_ppo", "lambdas": [0.1], "available": true}, ...]`
 
 ### GET /api/settings/autonomy · PUT /api/settings/autonomy
-Body / response: `{"mode": "ACT" | "RECOMMEND"}`
+Body / response: `{"mode": "ACT" | "RECOMMEND"}`. Stored through `stations.store` (the `settings` table when the DB is up).
+
+Run history (decision 0049): when the DB is reachable, each engine run writes its focus policy's commands (at their final status) and state changes to `commands` and `state_events` with its `run_id`, through `stations.store.record_run_history`. Without a DB nothing is written.
 
 ### POST /api/runs
 Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
