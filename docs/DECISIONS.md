@@ -23,4 +23,17 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0013](decisions/0013-repo-scaffold.md) | 2026-11-07 | tudor-claude | Repo scaffold: packaging, entry points, tests, migrations
 - [0014](decisions/0014-station-list-from-open-sources.md) | 2026-11-07 | tudor-claude | Station list from free online sources only; commit the openly licensed subset (supersedes 0004)
 - [0015](decisions/0015-synthetic-m1-fixtures.md) | 2026-11-07 | vlad-claude | M1 fixtures are synthetic, on placeholder locations L00001–L00005
-- [0016](decisions/0016-live-collector-design.md) | 2026-11-07 | vlad-claude | Live collector writes JSONL first, DB when T5 lands; AmpWhere request from a human capture
+- [0016](decisions/0016-live-collector-design.md) | 2026-11-07 | vlad-claude | Live collector writes JSONL first, DB when T5 lands; AmpWhere via snapshot + delta endpoints
+- [0017](decisions/0017-shared-sim-types.md) | 2026-11-07 | tudor-claude | Shared simulation types live in sim/types.py; M4 owns the RL observation builder
+- [0018](decisions/0018-engine-transition-rules.md) | 2026-11-07 | tudor-claude | Engine transition rules that fill the gaps in spec 03 §4
+- [0019](decisions/0019-arrival-handling-and-wait.md) | 2026-11-07 | tudor-claude | Arrival handling: compatibility fallback, waking a sleeping sibling, queueing not counted
+- [0020](decisions/0020-lambda-unit-and-reward.md) | 2026-11-07 | tudor-claude | λ is kWh per minute of added wait; the reward is normalised by always-on overhead
+- [0021](decisions/0021-precomputed-forecasts.md) | 2026-11-07 | tudor-claude | Training and evaluation use a precomputed forecast table; SimState.signals holds the last 60 minutes
+- [0022](decisions/0022-naive-baseline-window.md) | 2026-11-07 | tudor-claude | Naive baseline sleeps one contiguous window per weekday
+- [0023](decisions/0023-gym-env-defaults.md) | 2026-11-07 | tudor-claude | Gym env: naive siblings until cost_rule exists, optional days list; min_awake is a policy rule
+- [0024](decisions/0024-synthetic-sim-data.md) | 2026-11-07 | tudor-claude | Seeded synthetic data in sim/ until M1 and M3 deliver; provisional location IDs in fixtures
+- [0025](decisions/0025-recommend-in-replay.md) | 2026-11-07 | tudor-claude | In replay, RECOMMEND applies to the focus policy only, and the run pauses when new recommendations appear
+- [0026](decisions/0026-engine-run-defaults.md) | 2026-11-07 | tudor-claude | Engine run defaults: always_on runs in every run, day boundaries, sleep_share, speed target
+- [0027](decisions/0027-dundee-cleaning-and-lanes.md) | 2026-11-07 | vlad + vlad-claude | Dundee cleaning rules, 2-lane split of chargers, donor utilisation
+- [0028](decisions/0028-real-traffic-tomtom-mapbox.md) | 2026-11-07 | vlad + vlad-claude | Real traffic index: TomTom live, Mapbox typical travel times for training/replay; Google not used
+- [0029](decisions/0029-ampwhere-ppc-station-list.md) | 2026-11-07 | vlad + vlad-claude | AmpWhere snapshot is the main PPC Blue station list (local only)
