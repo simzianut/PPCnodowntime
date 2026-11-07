@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
 - [T34] M5 de-slop the frontend: remove generic AI-dashboard tropes, 3 competing visual versions (branches tudor-claude/T34-deslop-a|b|c, ports 5174–5176) for Tudor to pick | owner: tudor-claude | branch: tudor-claude/T34-deslop-* | depends: T33
 - [T33] M5 left sidebar simplified: only Always on + RL agent, no map-view dropdown, wait time charted on its own (no energy-vs-wait trade-off), easier replay controls | owner: tudor-claude | branch: tudor-claude/T33-sidebar-simplify | depends: T30
   - PR #8 open (stacked on #7, decision 0065). Test: `cd frontend && npm test && npm run build`, `make api` + `make web`.
