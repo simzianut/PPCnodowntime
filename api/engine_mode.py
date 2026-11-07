@@ -34,6 +34,8 @@ from api.models import (
     RunStatus,
     Timeline,
 )
+from model import rl_select
+from model.oracle import HindsightOraclePolicy
 from sim.config import CONFIG_DIR, ROOT, TZ, sim_config
 from sim.data import SimData
 from sim.engine import Engine
@@ -43,14 +45,13 @@ from stations import store
 log = logging.getLogger("uvicorn.error")
 ZONE = ZoneInfo(TZ)
 EVAL_PATH = ROOT / "artifacts" / "eval_results.json"
-PPO_PATH = ROOT / "artifacts" / "ppo_policy.zip"
-PPO_META_PATH = ROOT / "artifacts" / "ppo_meta.json"
 MAX_RUNS = 10
 PENDING = CommandStatus.pending.value
 EXPIRED = CommandStatus.expired.value
 APPLIED = CommandStatus.applied.value
 HISTORY_FLUSH_TICKS = 12
 LIVE_DETAIL = "live mode comes with T12; only replay runs are available"
+ORACLE_LIVE_DETAIL = "oracle is replay-only (it reads the true sessions); live runs cannot use it"
 
 
 def _dumps(msg: dict) -> str:
@@ -463,9 +464,8 @@ class EngineManager:
         self.rl_lambdas: list[float] = []
         self.forecaster = None
         self._naive = None
+        self._sessions = None
         self._cost_rule_cls = None
-        self._rl_cls = None
-        self._ppo_model = None
         self._ready_lock: asyncio.Lock | None = None
         self._bg: set[asyncio.Task] = set()
 
@@ -490,6 +490,7 @@ class EngineManager:
         fc = data.forecasts
         self.forecaster = PrecomputedForecaster(fc) if fc is not None else None
         self._naive = NaiveQuietHours(data.sessions, data.cps)
+        self._sessions = data.sessions
         self._probe_policies()
         self.data = data
         log.info(
@@ -507,19 +508,17 @@ class EngineManager:
             self._cost_rule_cls = CostRulePolicy
         except Exception as e:  # lightgbm can fail with OSError, not only ImportError
             self.unavailable["cost_rule"] = f"model.cost_rule failed to import ({_short_error(e)})"
-        try:
-            from model.rl_agent import RLPolicy
-
-            if not PPO_PATH.exists():
-                raise FileNotFoundError(f"{PPO_PATH.relative_to(ROOT)} is missing")
-            self._rl_cls = RLPolicy
-        except Exception as e:
-            self.unavailable["rl_ppo"] = f"rl_ppo unavailable ({_short_error(e)})"
-        if PPO_META_PATH.exists():
+        for name in ("rl_ppo", "rl_maskppo", "rl_ddqn"):
             try:
-                self.rl_lambdas = [float(json.loads(PPO_META_PATH.read_text())["lambda_wait"])]
-            except (KeyError, TypeError, ValueError):
-                pass
+                rl_select.check(name)
+            except rl_select.PolicyUnavailable as e:
+                self.unavailable[name] = f"{name} unavailable ({e})"
+        self.rl_lambdas = rl_select.lambdas("rl_ppo") if "rl_ppo" not in self.unavailable else (
+            self.rl_lambdas)  # fmt: skip
+        try:
+            log.info("rl_ppo served by %s", rl_select.resolve_rl_agent())
+        except ValueError as e:
+            log.warning("%s", e)
 
     async def ready(self) -> SimData:
         if self.data is None:
@@ -571,6 +570,8 @@ class EngineManager:
     # ---- policies
     def policy_infos(self) -> list[dict]:
         lambdas = {"cost_rule": list(sim_config().lambda_grid), "rl_ppo": self.rl_lambdas}
+        for n in ("rl_maskppo", "rl_ddqn"):
+            lambdas[n] = rl_select.lambdas(n) if n not in self.unavailable else []
         return [
             {"name": p.value, "lambdas": lambdas.get(p.value, []),
              "available": p.value not in self.unavailable}
@@ -580,7 +581,7 @@ class EngineManager:
     def make_policies(self, names: list[str], lam: float) -> list:
         from sim.baselines import AlwaysOn
 
-        out = []
+        out: list = []
         for n in names:
             if n == "always_on":
                 out.append(AlwaysOn())
@@ -591,22 +592,18 @@ class EngineManager:
                     lambda_wait=lam, power_profiles_path=CONFIG_DIR / "power_profiles.yaml",
                     sim_config_path=CONFIG_DIR / "sim.yaml",
                 ))  # fmt: skip
-            elif n == "rl_ppo":
-                if self._ppo_model is None:
-                    pol = self._rl_cls(model_path=PPO_PATH, forecaster=self.forecaster,
-                                       lambda_wait=lam)  # fmt: skip
-                    self._ppo_model = pol.model
-                else:
-                    pol = self._rl_cls(model=self._ppo_model, forecaster=self.forecaster,
-                                       lambda_wait=lam)  # fmt: skip
-                out.append(pol)
+            elif n in ("rl_ppo", "rl_maskppo", "rl_ddqn"):
+                out.append(rl_select.load_policy(n, forecaster=self.forecaster, lam=lam))
+            elif n == "oracle":
+                out.append(HindsightOraclePolicy(self._sessions, sim_config().slot_s))
         return out
 
     # ---- runs
     async def create_run(self, body: RunCreate) -> EngineRun:
         data = await self.ready()
         if body.mode == "live":
-            raise HTTPException(400, LIVE_DETAIL)
+            raise HTTPException(
+                400, ORACLE_LIVE_DETAIL if PolicyName.oracle in body.policies else LIVE_DETAIL)
         names = list(dict.fromkeys(p.value for p in body.policies))
         bad = {n: self.unavailable[n] for n in names if n in self.unavailable}
         if bad:
