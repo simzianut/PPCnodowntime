@@ -8,6 +8,10 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T36] F2 GRU as the agent: promote f2_gru.pt (+ f0_rates), model/gru_forecaster.py (batch + online Forecaster), `predict` command → forecasts.parquet for the 60-day window, RL_AGENT=gru serves rl_ppo with cost rule + F2, API/evaluator limited to forecast days | owner: vlad-claude | branch: vlad-claude/T36-gru-agent | depends: T26, T31
+  - Decision 0069.
+- [T37] Live mode (live part of T12): shadow F2 agent on real AmpWhere statuses, 5-min wall-clock slots, live signals from F0 rates, same KPIs/WS ticks as replay | owner: vlad-claude | branch: vlad-claude/T37-live-mode | depends: T36, T9, T15
+  - Decision 0070. T12 keeps DB persistence; its live-mode part moves here.
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
@@ -19,7 +23,7 @@ Add notes as indented sub-bullets.
 
 ## To do
 
-- [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
+- [T12] M4 FastAPI (fixture mode is T19; live mode moved to T37): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
   - Note from T23 (tudor-claude): T23 delivers the replay REST + WS routes on sim.Engine, in memory (api/engine_mode.py). T12 keeps DB persistence (after T5) and live mode.
 

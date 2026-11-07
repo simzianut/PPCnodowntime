@@ -27,7 +27,7 @@ Compose service names carry a `ppc-` prefix (`ppc-db`, `ppc-migrate`, `ppc-seed`
 | `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 | `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
-| `RL_AGENT` | M4 API, evaluator | `auto` | Which trained agent serves `rl_ppo`: `ppo` (edy's PPO), `maskppo`, `ddqn`, or `auto` = maskppo if `artifacts/maskppo_policy.zip` exists, else ppo (decision 0061) |
+| `RL_AGENT` | M4 API, evaluator | `auto` | Which agent serves `rl_ppo`: `gru` (cost rule driven by F2 GRU forecasts, decision 0069), `ppo`, `maskppo`, `ddqn`, or `auto` = gru if `artifacts/f2_gru.pt` exists, else ppo |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 | `POSTGRES_PASSWORD` | compose | `ppc` | Password for `ppc-db`; the compose `DATABASE_URL` is built from it. Must be a real secret on the server (decision 0066). Never commit |
 | `HTTP_PORT` | compose | `8080` | Host port of `ppc-web` locally. Not used on the server |
@@ -81,7 +81,7 @@ Confidence   = high | medium | low
 Autonomy     = ACT | RECOMMEND
 CommandStatus= applied | pending | approved | rejected | expired
 PolicyName   = always_on | naive_quiet_hours | cost_rule | rl_ppo | rl_maskppo | rl_ddqn | oracle
-               # rl_ppo is served by the agent RL_AGENT picks (decision 0061); oracle is replay-only (uses true future arrivals)
+               # rl_ppo is the agent RL_AGENT picks: F2 GRU + cost rule by default (decisions 0061, 0069); oracle is replay-only
 LiveStatus   = CHARGING | AVAILABLE | OFFLINE | UNKNOWN
 Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traffic_index
 ```
@@ -241,9 +241,9 @@ Run history (decision 0049): when the DB is reachable, each engine run writes it
 
 ### POST /api/runs
 Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
-Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a test day, `live` before T12).
+Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a covered test day, `oracle` in a live run, live without a running collector feed).
 `date: null` in a replay means the first test day.
-Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
+Replay `date` must be a test day covered by `data/processed/forecasts.parquet` when that file exists (the 60-day F2 window, decision 0069). Live runs (decision 0070) step once per wall-clock 5-minute slot on real statuses; KPIs and WS ticks have the replay shapes and are shadow estimates. Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
 
 ### GET /api/runs/{run_id}
 Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
