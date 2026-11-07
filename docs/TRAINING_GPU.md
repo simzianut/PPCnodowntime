@@ -1,0 +1,46 @@
+# Training the forecasters on the GPU server
+
+Covers F0 seasonal, F1 LightGBM, F2 GRU and the feature ablation (decisions 0051, 0052, 0058, 0059). RL training is separate.
+
+## Requirements on the server
+- Docker with Compose v2 and the NVIDIA Container Toolkit (`docker info` lists an `nvidia` runtime).
+- NVIDIA driver ≥ 550, needed by the CUDA 12.4 image.
+- Internet access for the first image build: CUDA base image, uv, PyPI, the PyTorch wheel index.
+- Disk: about 15 GB for the image, 0.7 GB for data, about 6 GB for the feature cache (3 signals files), plus runs.
+- RAM: 16 GB is enough. One run peaks at about 6 GB.
+
+## Steps
+```bash
+# on your laptop
+scp ppc_forecasters_<sha>.tar user@server:~/
+# on the server
+tar -xf ppc_forecasters_<sha>.tar && cd ppc_forecasters
+cat .env                                # GPU_ID is the nvidia-smi index; check it
+docker/train_forecasters.sh preflight   # shows the chosen GPU, checks the driver and data checksums
+docker/train_forecasters.sh build       # image + verify stage (imports, CUDA 12.4 torch, tests)
+docker/train_forecasters.sh gpu-check   # 1-minute smoke model on the GPU
+docker/train_forecasters.sh smoke       # small F0/F1/F2 runs on real data, about 5 min
+# long stages: run inside tmux/screen or with nohup
+nohup docker/train_forecasters.sh main     > logs/main.log 2>&1 &   # F0/F1/F2 × 3 seeds, about 3–4 h
+nohup docker/train_forecasters.sh ablation > logs/ablation.log 2>&1 &   # F1 ladder + sensitivity, about 6–9 h
+docker/train_forecasters.sh status      # one line per run: status, duration, GPU
+docker/train_forecasters.sh chown       # outputs back to your user (containers run as root)
+docker/train_forecasters.sh pack        # forecaster_results_<date>.tar.gz, copy back with scp
+```
+Run `main` and `ablation` one after the other, not at the same time. They build the same feature cache.
+The stage times above are estimates from smoke runs, not measurements.
+
+## What it writes
+- `runs/<name>-<sha8>-s<seed>/`: `config.yaml`, `manifest.json`, `metrics.json`, `timing.json`, `model/`, `forecasts.parquet` (test sample), `train.log`.
+- `runs/suites/<suite>-<sha8>/summary.md` and `summary.csv`: one row per run with AUC, PR-AUC, Brier per horizon.
+- `data/interim/forecast_cache/`: the shared feature cache. Safe to delete; it is rebuilt when needed.
+
+## If something fails
+- **A suite stops on an error:** fix it and rerun the same command. Finished runs (status `ok`) are skipped.
+- **F2 raises a determinism error on CUDA:** rerun with `--set deterministic=false`. The manifest records it. Report the op, so a decision file can cover it.
+- **Out of GPU memory** (the A100 is shared): lower `params.batch_size` for F2, e.g. `--set params.batch_size=1024`. F2 needs well under 4 GB at the default.
+- **Wrong GPU:** `GPU_ID` is the `nvidia-smi` index. `preflight` prints the bus id; compare it with `nvidia-smi`. Compose also accepts the GPU UUID (`nvidia-smi -L`) as `GPU_ID`.
+
+## After training
+Copy the results back. The best F1 run's `forecasts.parquet` feeds the RL runs (`--set data.forecasts=<abs path>`).
+Promote a forecaster into `artifacts/` only by decision: `python -m model.experiments promote runs/<run_id>`.
