@@ -71,7 +71,8 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 | `context.parquet` | `ts_hour ts[UTC], county_code str, temp_c float, precip_mm float, wind_kmh float, is_holiday bool` |
 | `forecasts.parquet` (M2 writes, M4 reads; decision 0021) | `ts ts[UTC] (slot start), cp_id str, p_arrival_15 float, p_arrival_30 float, p_arrival_60 float, expected_arrivals_60 float` |
 | `donor_sessions.parquet` | `donor_session_id, donor_charger_id, arrival_ts, departure_ts, energy_kwh, temp_c, precip_mm, wind_kmh, is_holiday_gb, split` |
-| `donor_chargers.parquet` | `donor_charger_id, site, power_class, sessions_per_day, util_quantile` |
+| `donor_chargers.parquet` | `donor_charger_id (<cp>#<lane>), site, power_class, sessions_per_day, util_quantile`, plus `base_cp_id, lane, n_sessions_train, active_days_train, first_ts, last_ts, util_basis {train,test}` (decision 0027) |
+| `donor_occupancy.parquet` | `donor_charger_id, hour_of_week int 0..167 (local, Mon 00h = 0), occupancy_share float` |
 | `data/seed/county_ev_stats.csv` | `county_code, county_name, ev_count, population, ev_per_1000` |
 | `data/raw/live/statuses-YYYYMMDD.jsonl` (gitignored, decision 0016) | one JSON object per status: `ts ISO UTC, source, source_location_id, source_cp_id?, connector?, raw_status, status LiveStatus, cp_id? (null until matched), name?, lat?, lon?, operator?` |
 
