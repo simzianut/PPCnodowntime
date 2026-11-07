@@ -1,7 +1,7 @@
 import type { ChargePoint, PowerClass, State } from '../api/types'
 
 /** Mirrors config/power_profiles.yaml (decision 0055). */
-const PROFILES: Record<PowerClass, { idle_w: number; standby_w: number; deep_sleep_w: number | null }> = {
+export const PROFILES: Record<PowerClass, { idle_w: number; standby_w: number; deep_sleep_w: number | null }> = {
   AC_22: { idle_w: 25, standby_w: 9, deep_sleep_w: null },
   DC_50: { idle_w: 105, standby_w: 35, deep_sleep_w: 20 },
   DC_HPC: { idle_w: 165, standby_w: 50, deep_sleep_w: 25.5 },
@@ -11,6 +11,15 @@ function savedW(cp: ChargePoint, state: State) {
   const p = PROFILES[cp.power_class] ?? PROFILES.DC_50
   if (state === 'STANDBY') return p.idle_w - p.standby_w
   if (state === 'DEEP_SLEEP') return p.idle_w - (p.deep_sleep_w ?? p.standby_w)
+  return 0
+}
+
+/** Current draw in watts of a non-charging CP in this state (CHARGING/OFFLINE count as 0 overhead). */
+export function overheadW(cp: ChargePoint, state: State): number {
+  const p = PROFILES[cp.power_class] ?? PROFILES.DC_50
+  if (state === 'IDLE' || state === 'WAKING') return p.idle_w
+  if (state === 'STANDBY') return p.standby_w
+  if (state === 'DEEP_SLEEP') return p.deep_sleep_w ?? p.standby_w
   return 0
 }
 
