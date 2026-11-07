@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 # model name -> "module:function". Imported only when that model runs.
 MODULES: dict[str, str] = {
     "smoke": "model.experiments.smoke:train",
+    "f0_seasonal": "model.experiments.f0_seasonal:train",
+    "f1_lgbm": "model.experiments.f1_lgbm:train",
+    "f2_gru": "model.experiments.f2_gru:train",
 }
 
 

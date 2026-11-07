@@ -1,0 +1,23 @@
+name: f0_seasonal
+kind: forecaster
+model: f0_seasonal
+seed: 0
+device: cpu
+deterministic: true
+data:
+  sessions: sessions.parquet
+  charge_points: charge_points.parquet
+  locations: locations.parquet
+  cp_active_days: cp_active_days.parquet
+  context: context.parquet
+  signals: signals.parquet
+  county_ev: ../seed/county_ev_stats.csv
+params:
+  sample_seed: 20260101
+  n_train_cpdays: 40000
+  n_val_cpdays: 10000
+  n_test_cpdays: 20000
+  max_cps: null
+  feature_groups: [calendar_history, traffic, ev_flow, intents]
+  prior_strength: 100.0
+  group_strength: 24.0

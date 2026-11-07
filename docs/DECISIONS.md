@@ -66,3 +66,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0056](decisions/0056-ampwhere-calibration-check.md) | 2026-11-07 | vlad + vlad-claude | Calibration vs real PPC activity (3 h, Sat evening): HPC ~2x overstated, all within range; report, no rescale yet
 - [0057](decisions/0057-live-mode-signal-sampling-and-validation.md) | 2026-11-07 | edy-antigravity | Live-mode signal sampling and live validation report
 - [0058](decisions/0058-training-infra-implementation.md) | 2026-11-07 | vlad + vlad-claude | Training infra details: pins (CUDA 12.4.1, torch 2.6.0, uv 0.11.26, sb3 2.8.0), venv at /opt/venv, GPU-free verify stage, strict deterministic mode, trainer registry
+- [0059](decisions/0059-forecaster-training-implementation.md) | 2026-11-07 | vlad + vlad-claude | Forecaster training implementation: shared seeded CP-day sample, vectorised feature builder + cache, monotone horizons, F0/F1/F2 settings
