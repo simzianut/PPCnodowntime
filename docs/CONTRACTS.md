@@ -2,7 +2,7 @@
 
 The source of truth for every interface between parts of the project. Change it on `main` in its own commit **before** or together with the code that implements the change, and mention it in your task note.
 
-Version: v0.1, 2026-11-07 (sim types, forecasts table, observation layout, λ unit, run pause; decisions 0017–0025). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
+Version: v0.2, 2026-11-07 (station run summary; decision 0040). Specs: `docs/specs/`. Every contract below has a sample in `fixtures/`, committed by the module that produces it.
 
 ## Services and ports
 | Service | Port | Owner | Notes |
@@ -173,6 +173,8 @@ type ChargePoint = { cp_id: string; power_class: PowerClass; max_kw: number|null
 type Kpis = { overhead_kwh: number; saved_kwh: number; saved_pct: number;
   wait_min_total: number; wait_min_mean: number; wait_min_p95: number;
   sessions: number; waited_sessions: number; sleep_share: number };
+type StationRunSummary = { location_id: string; current_kw: number|null;
+  expected_wait_min: number|null; anomaly_score: number|null };
 // saved_pct is a percentage (0–100) of always_on's overhead in the same run; sleep_share is a fraction (0–1) of all CP time.
 type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyName;
   from_state: State; target_state: TargetState; reason: string; status: CommandStatus; expires_at: string };
@@ -202,6 +204,10 @@ Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the
 Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
 
 In RECOMMEND mode only `focus_policy`'s commands become recommendations; other policies act. A replay pauses itself with `paused_reason: "recommendations"` when new pending recommendations appear; `play` resumes it. Recommendations expire after `recommendation_ttl_slots` of sim time. Approved commands apply at the start of the next slot (decision 0025).
+
+### GET /api/runs/{run_id}/locations/{location_id}/summary
+Response 200: `StationRunSummary`. Errors: 404 (run or location not found).
+`current_kw` is measured charging output, never charger `max_kw`; it is null without a metered value. `expected_wait_min` is in minutes. `anomaly_score` is a unitless model score with no client-side thresholds. Either model-backed field is null until its producer supplies a value.
 
 ### POST /api/runs/{run_id}/control
 Request: `{"action": "play"|"pause"|"speed"|"seek"|"focus", "value": number|string|null}`. Response 200: same body as GET run.
