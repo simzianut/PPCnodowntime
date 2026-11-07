@@ -156,6 +156,7 @@ type ChargePoint = { cp_id: string; power_class: PowerClass; max_kw: number|null
 type Kpis = { overhead_kwh: number; saved_kwh: number; saved_pct: number;
   wait_min_total: number; wait_min_mean: number; wait_min_p95: number;
   sessions: number; waited_sessions: number; sleep_share: number };
+// saved_pct is a percentage (0–100) of always_on's overhead in the same run; sleep_share is a fraction (0–1) of all CP time.
 type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyName;
   from_state: State; target_state: TargetState; reason: string; status: CommandStatus; expires_at: string };
 ```
@@ -194,7 +195,8 @@ The server sends one message per engine step:
  "kpis": {"always_on": {}, "naive_quiet_hours": {}, "cost_rule": {}, "rl_ppo": {}},
  "focus_policy": "rl_ppo",
  "changes": [{"cp_id": "L00012-1", "state": "STANDBY"}],
- "events": [{"type": "arrival", "cp_id": "L00012-2", "wait_min": 3.0}],
+ "events": [{"type": "arrival", "cp_id": "L00012-2", "ts": "ISO", "wait_min": 3.0, "moved_from": null, "queued": false},
+            {"type": "departure", "cp_id": "L00012-1", "ts": "ISO"}],
  "recommendations": [/* Recommendation, only new or changed ones */]}
 ```
 The first message after connecting is `{"type": "snapshot", ...}`: the same as a tick, but `changes` lists every CP. The last message is `{"type": "done", "kpis": {...}}`.
