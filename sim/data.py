@@ -71,3 +71,52 @@ def load_default(seed: int = 0) -> SimData:
     from sim.synthetic import generate
 
     return generate(seed=seed)
+
+
+def load_m1_fixtures(base: Path | None = None) -> SimData:
+    """M1's committed samples (decision 0015) as a small SimData with oracle forecasts."""
+    from sim.stations_seed import CP_COLUMNS, LOCATION_COLUMNS
+    from sim.synthetic import oracle_forecasts
+
+    f = base or ROOT / "fixtures"
+    sessions = pd.read_parquet(f / "sessions_sample.parquet")
+    meta = pd.read_csv(f / "locations_sample_m1.csv", dtype=str)
+    max_kw = {"AC_22": 22.0, "DC_50": 50.0, "DC_HPC": 150.0}
+    cps = pd.DataFrame(
+        {
+            "cp_id": meta["cp_id"],
+            "location_id": meta["location_id"],
+            "power_class": meta["power_class"],
+            "max_kw": meta["power_class"].map(max_kw).astype("float64"),
+            "connectors": [[] for _ in range(len(meta))],
+            "current_type": meta["power_class"].map(lambda pc: "AC" if pc == "AC_22" else "DC"),
+            "county_code": meta["county_code"],
+            "context_type": meta["context_type"],
+        },
+        columns=CP_COLUMNS,
+    )
+    loc = meta.drop_duplicates("location_id").reset_index(drop=True)
+    locations = pd.DataFrame(
+        {
+            "location_id": loc["location_id"],
+            "name": loc["location_id"],
+            "partner": None,
+            "address": None,
+            "county_code": loc["county_code"],
+            "lat": None,
+            "lon": None,
+            "context_type": loc["context_type"],
+            "primary_source": "fixture",
+            "confidence": "low",
+        },
+        columns=LOCATION_COLUMNS,
+    )
+    data = SimData(
+        locations=locations,
+        cps=cps,
+        sessions=sessions,
+        signals=pd.read_parquet(f / "signals_sample.parquet"),
+        context=pd.read_parquet(f / "context_sample.parquet"),
+    )
+    data.forecasts = oracle_forecasts(sessions, cps, data.days())
+    return data
