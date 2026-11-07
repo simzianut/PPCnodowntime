@@ -12,13 +12,14 @@ Add notes as indented sub-bullets.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
+- [T9] M1 live-status collector: adapter interface, AmpWhere (human-enabled) + file adapters, live_status table writes; start ASAP and keep running (spec 01 §8) | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
+  - Starts before T5: writes JSONL under data/raw/live/ now, DB table once T5 lands. A human (vlad) runs the AmpWhere poller, per decision 0003.
 
 ## To do
 - [T4] M3 station importer: load data/seed/stations_open.csv (or the local merged file), dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: - | branch: - | depends: T2
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: - | branch: - | depends: T2
 - [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: - | branch: - | depends: T4, T6
 - [T8] M1 mocked signal generator → signals.parquet, config/signals.yaml (spec 01 §5) | owner: - | branch: - | depends: T7
-- [T9] M1 live-status collector: adapter interface, AmpWhere (human-enabled) + file adapters, live_status table writes; start ASAP and keep running (spec 01 §8) | owner: - | branch: - | depends: T5
 - [T10] M4 sim engine core on fixtures: slots, state transitions, sibling handover, wait + energy accounting, metrics, always_on + naive baselines; ChargePointEnv gym wrapper ASAP for M2 (spec 04 §1–4) | owner: - | branch: - | depends: T2
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
 - [T12] M4 FastAPI: fixture mode first, then REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10
