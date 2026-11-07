@@ -51,3 +51,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0041](decisions/0041-frontend-seed-demo.md) | 2026-11-07 | teodora | Seed-data demo adapter for frontend work before the API exists
 - [0042](decisions/0042-frontend-map-first-white-theme.md) | 2026-11-07 | teodora | Map-first split, white-only theme, station summary presentation and status markers
 - [0043](decisions/0043-traffic-build-details.md) | 2026-11-07 | vlad + vlad-claude | Traffic build: Mapbox 2-hourly + interpolation, free-flow baseline, TomTom quality filter
+- [0044](decisions/0044-ppo-agent-training-and-architecture.md) | 2026-11-07 | edy-antigravity | PPO decision agent architecture, vectorized action masking, and artifact generation

@@ -16,6 +16,13 @@ from model.types import (
     TargetState,
 )
 
+try:
+    from model.rl_agent import RLPolicy
+    from model.train_rl import train_ppo
+except ImportError:
+    RLPolicy = None  # type: ignore
+    train_ppo = None  # type: ignore
+
 __all__ = [
     "Command",
     "ConstantForecaster",
@@ -27,8 +34,10 @@ __all__ = [
     "PolicyName",
     "PowerClass",
     "RandomPolicy",
+    "RLPolicy",
     "SimState",
     "State",
     "TargetState",
     "train_pipeline",
+    "train_ppo",
 ]
