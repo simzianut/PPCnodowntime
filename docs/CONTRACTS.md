@@ -66,6 +66,14 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 ### DB tables (M3 owns; full DDL in spec 03 §3)
 `locations`, `charge_points`, `source_refs`, `cp_state`, `state_events`, `commands`, `settings`, `live_status` (written by M1).
 
+### Station files (M3, T4, under `data/processed/`, decision 0031; mirror the DB tables until T5 lands)
+| File | Columns |
+|---|---|
+| `locations.parquet` | `location_id str, name, operator, partner?, address?, county_code, lat float, lon float, context_type ContextType, primary_source, confidence Confidence, cp_count_estimated bool` |
+| `charge_points.parquet` | `cp_id str (<location_id>-<n>), location_id, power_class PowerClass, max_kw float, connectors list[str], current_type AC|DC, cp_count_estimated bool`. One row per physical unit. |
+| `source_refs.parquet` | `source (ampwhere|osm|ocm), source_id, location_id, cp_id?`. AmpWhere connector rows use `source_id = "<uid>|<charger id>"`, which matches live JSONL `source_location_id|source_cp_id`. |
+| `other_chargers.parquet` | `uid, provider_id int, operator, name, lat, lon, county_code, n_connectors int, max_kw float, power_class` (non-PPC operators, context only) |
+
 ### Parquet files (M1 owns, under `data/processed/`)
 | File | Columns |
 |---|---|

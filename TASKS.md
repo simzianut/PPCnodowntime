@@ -22,9 +22,6 @@ Add notes as indented sub-bullets.
 - [T20] M1 real traffic: TomTom live traffic index + Mapbox typical hour-of-week traffic per location → traffic_typical.parquet (decision 0028) | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
   - Needs TOMTOM_API_KEY and MAPBOX_TOKEN in a local .env (vlad). Can start on stations_open.csv / fixture locations before T4.
 
-- [T4] M3 station importer: load data/seed/stations_open.csv (or the local merged file), dedupe, counties, context, CP expansion, coverage report (spec 03 §1–2) | owner: vlad-claude | branch: vlad-claude/T4-station-import | depends: T2
-  - Note from vlad-claude (decision 0029): use data/raw/live/ampwhere_snapshot_latest.json.gz as the primary PPC Blue list when present (provider_id 5: 445 locations, 1,364 CPs), with source_refs (ampwhere, uid, charger id); treat "DC <=22 kW" as AC_22. Fall back to stations_open.csv.
-  - Note from T10/T19 (tudor-claude): fixtures/api uses provisional location IDs `L1` + 4-digit row number of stations_open.csv (`L10001`…, decision 0024). Once T4 assigns real IDs, tell M4 to regenerate fixtures/api.
 - [T7] M1 donor mapping onto RO charge points → sessions.parquet, plus RO context.parquet (spec 01 §4, §6) | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6
 
 ## To do
@@ -40,6 +37,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T4] M3 station importer (spec 03 §1–2) | owner: vlad-claude | branch: vlad-claude/T4-station-import | depends: T2
+  - AmpWhere snapshot as primary PPC list (0029): 445 locations, 671 CPs (physical units), 1,364 connectors; HPC >= 100 kW; context rules; 5,563 other-operator chargers as context (0031). Writes data/processed/{locations,charge_points,source_refs,other_chargers}.parquet; DB upsert waits for T5. Test: `uv run python -m stations` then `uv run pytest stations`.
 - [T6] M1 Dundee ingest + Open-Meteo weather at Dundee + GB-SCT holidays + county_ev_stats.csv; commit fixtures early | owner: vlad-claude | branch: vlad-claude/T6-dundee-ingest | depends: T2
   - Fixtures (0015); Dundee download + cleaning + 2-lane donors + weather/holidays → donor_sessions/chargers/occupancy (0027); county_ev_stats.csv with B+IF pooled (0030). Test: `uv run python -m dataset` then `uv run pytest dataset`.
 - [T3] Collect the full PPC Blue station list from open online sources (no PPC feed, no Geolocet); output a merged station file for the M3 importer | owner: tudor-claude | branch: tudor-claude/T3-station-list | depends: -
