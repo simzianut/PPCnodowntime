@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from dataset import county_stats, dundee
+from dataset import context, county_stats, dundee, mapping, signals
 
 
 def step_dundee_download() -> dict:
@@ -21,11 +21,27 @@ def step_county_stats() -> dict:
     return county_stats.build()
 
 
-# Append later steps here: mapping, signals, context.
+def step_mapping() -> dict:
+    rep = mapping.build()
+    keys = ["sessions_total", "sessions_by_class_split", "donor_fallback_count", "capped_count"]
+    return {k: rep[k] for k in keys}
+
+
+def step_context() -> dict:
+    return context.build()
+
+
+def step_signals() -> dict:
+    return signals.build()
+
+
 STEPS = [
     ("dundee.download", step_dundee_download),
     ("dundee.build", step_dundee_build),
     ("county_stats", step_county_stats),
+    ("mapping", step_mapping),
+    ("context", step_context),
+    ("signals", step_signals),
 ]
 
 
