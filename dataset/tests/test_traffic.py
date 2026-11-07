@@ -179,13 +179,14 @@ def test_rate_limiter_spaces_calls():
 
 
 def test_rate_limiter_threads():
-    rl = t.RateLimiter(200)
+    rl = t.RateLimiter(100)
     from concurrent.futures import ThreadPoolExecutor
 
     start = t.time.monotonic()
     with ThreadPoolExecutor(4) as ex:
         list(ex.map(lambda _: rl.wait(), range(21)))
-    assert t.time.monotonic() - start >= 0.095  # 20 gaps x 5 ms
+    # 20 gaps x 10 ms; allow one coarse Windows clock tick (~16 ms)
+    assert t.time.monotonic() - start >= 0.18
     assert rl.count == 21
 
 

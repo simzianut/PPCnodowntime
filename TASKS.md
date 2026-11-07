@@ -15,10 +15,6 @@ Add notes as indented sub-bullets.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
-- [T9] M1 live-status collector: adapter interface, AmpWhere (human-enabled) + file adapters, live_status table writes; start ASAP and keep running (spec 01 §8) | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
-  - Starts before T5: writes JSONL under data/raw/live/ now, DB table once T5 lands. A human (vlad) runs the AmpWhere poller, per decision 0003.
-- [T20] M1 real traffic: TomTom live traffic index + Mapbox typical hour-of-week traffic per location → traffic_typical.parquet (decision 0028) | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
-  - Needs TOMTOM_API_KEY and MAPBOX_TOKEN in a local .env (vlad). Can start on stations_open.csv / fixture locations before T4.
 
 
 - [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
@@ -35,6 +31,10 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T20] M1 real traffic: Mapbox typical + TomTom live | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4
+  - traffic_typical.parquet for all 445 locations from Mapbox (10,875 requests); TomTom live_index with quality filter (0028, 0043). Test: `uv run python -m dataset.traffic live --n 3`, `uv run pytest dataset/tests/test_traffic.py`.
+- [T9] M1 live-status collector | owner: vlad-claude | branch: vlad-claude/T9-live-collector | depends: T5
+  - AmpWhere snapshot + delta collector running since 17:15Z with 0 failures (0016); JSONL in data/raw/live/, latest snapshot feeds T4 (0029). A human starts it: C:\fac\smarthack\run_ampwhere_collector.cmd. DB writes wait for T5.
 - [T8] M1 signal generator → signals.parquet | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T7
   - 43.9M rows / 218 MB in ~30 s: intents as events, traffic + ICE hourly, EV counts non-zero only; intent share 0.600 (0039). Rerun after traffic: `uv run python -m dataset.signals`. Data shared privately as zips (not in git).
 - [T7] M1 donor mapping → sessions.parquet + context.parquet | owner: vlad-claude | branch: vlad-claude/T7-donor-mapping | depends: T4, T6

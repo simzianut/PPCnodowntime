@@ -1,4 +1,4 @@
-# 0040: Traffic build details: Mapbox 2-hourly sampling with interpolation, free-flow baseline, TomTom quality filter
+# 0043: Traffic build details: Mapbox 2-hourly sampling with interpolation, free-flow baseline, TomTom quality filter
 
 - Date: 2026-11-07
 - Who: vlad + vlad-claude
