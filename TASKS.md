@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
 - [T24] Integrate T5 station data into the sim: per-CP power from the capacity table, RON KPIs (net B2B tariff), API autonomy + run history through stations.store | owner: tudor-claude | branch: tudor-claude/T24-t5-into-sim | depends: T5, T23
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
@@ -17,7 +18,7 @@ Add notes as indented sub-bullets.
 
 
 ## To do
-- [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
+
 - [T12] M4 FastAPI (fixture mode is T19): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
   - Note from T23 (tudor-claude): T23 delivers the replay REST + WS routes on sim.Engine, in memory (api/engine_mode.py). T12 keeps DB persistence (after T5) and live mode.
