@@ -1,5 +1,5 @@
 import time as _time
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import numpy as np
 import pandas as pd
@@ -347,8 +347,90 @@ def test_session_spanning_midnight_starts_charging():
     assert e.kpis()["rl_ppo"]["sessions"] == 0
     tl = e.timeline("rl_ppo", "L00001-1")
     assert [(s["from"][11:19], s["state"]) for s in tl["states"]] == [
-        ("00:00:00", "CHARGING"), ("01:00:00", "IDLE"), ("01:05:00", "STANDBY"),
+        ("00:00:00", "CHARGING"), ("01:00:00", "STANDBY"),
     ]  # fmt: skip
+
+
+@pytest.mark.parametrize("day,n_slots", [(date(2024, 3, 31), 276), (date(2024, 10, 27), 300)])
+def test_dst_days_cover_the_local_day(day, n_slots):
+    from sim.synthetic import slot_starts
+
+    nxt = day + timedelta(days=1)
+    sessions = [
+        ("L00001-1", at(23, 30, day=day), at(23, 40, day=day)),
+        ("L00001-1", at(0, 30, day=nxt), at(0, 40, day=nxt)),
+    ]
+    data = make_data(DC1, sessions)
+    e = Engine(data, day, [AlwaysOnP()], sim_cfg=CFG, profiles=profiles())
+    assert e.n_slots == n_slots
+    starts = [pd.Timestamp(e._slot_dt[k]) for k in range(e.n_slots)]
+    assert starts == list(slot_starts([day]))
+    assert e.run()["always_on"]["sessions"] == 1
+    assert e.t == datetime.combine(nxt, time(0), tzinfo=e.t.tzinfo)
+    assert e.metrics["always_on"].overhead_wh == pytest.approx(150 * (n_slots * SLOT - 600) / 3600)
+    e2 = Engine(data, nxt, [AlwaysOnP()], sim_cfg=CFG, profiles=profiles())
+    assert e2.n_slots == 288 and e2.run()["always_on"]["sessions"] == 1
+
+
+def test_dst_wait_cut_uses_local_day_end():
+    day = date(2024, 10, 27)
+    data = make_data(DC1, [("L00001-1", at(23, 59, day=day), at(23, 59, 30, day=day))])
+    pol = Scripted("rl_ppo", every=[("L00001-1", "DEEP_SLEEP")])
+    e = Engine(data, day, [pol], sim_cfg=CFG, profiles=profiles())
+    assert e.run()["rl_ppo"]["wait_min_total"] == 1.0
+
+
+def test_departure_at_slot_start_is_seen_by_policy():
+    data = make_data(DC1, [("L00001-1", at(0, 7), at(0, 17))])  # waits 3 min, frees at 00:20
+    pol = Scripted("rl_ppo", every=[("L00001-1", "DEEP_SLEEP")])
+    e = engine(data, AlwaysOnP(), pol, profiles=profiles(extra_wh=1.0))
+    steps = run_all(e)
+    assert pol.seen[4].cps[0].state == State.IDLE
+    assert steps[4].events["rl_ppo"] == [
+        {"type": "departure", "cp_id": "L00001-1", "ts": "2024-03-12T00:20:00+02:00"}
+    ]
+    want = (5 * 420 + 150 * 180 + 5 * (86400 - 1200)) / 3600 + 1.0
+    assert e.metrics["rl_ppo"].overhead_wh == pytest.approx(want)
+    assert e.kpis()["rl_ppo"]["sleep_share"] == round((86400 - 780) / 86400, 4)
+    tl = e.timeline("rl_ppo", "L00001-1")["states"]
+    assert [(s["from"][11:19], s["state"]) for s in tl] == [
+        ("00:00:00", "DEEP_SLEEP"), ("00:07:00", "WAKING"), ("00:10:00", "CHARGING"),
+        ("00:20:00", "DEEP_SLEEP"),
+    ]  # fmt: skip
+
+
+def test_wake_end_at_slot_start_is_seen_by_policy():
+    data = make_data(DC1, [("L00001-1", at(0, 2), at(0, 32))])  # wake ends at 00:05
+    pol = Scripted("rl_ppo", {0: [("L00001-1", "DEEP_SLEEP")]})
+    e = engine(data, pol)
+    e.run_to(2)
+    cp = pol.seen[1].cps[0]
+    assert (cp.state, cp.seconds_in_state) == (State.CHARGING, 0)
+
+
+def test_policies_cannot_change_shared_inputs():
+    signals = [(at(0), "L00001", "maps_ev_count", pd.NaT)]
+    data = make_data(DC1, signals=signals, context=[(at(0), "B", 10.0)])
+
+    class Mutator:
+        name = "cost_rule"
+
+        def decide(self, s):
+            s.context["B"]["temp_c"] = -99.0
+            s.context["CJ"] = {}
+            s.signals.loc[:, "value"] = 42.0
+            s.cps[0].connectors.append("CHAdeMO")
+            return []
+
+    peek = Scripted("rl_ppo")
+    e = engine(data, Mutator(), peek)
+    e.run_to(2)
+    for s in peek.seen:
+        assert s.context == {
+            "B": {"temp_c": 10.0, "precip_mm": 0.0, "wind_kmh": 5.0, "is_holiday": False}
+        }
+        assert s.signals["value"].tolist() == [1.0] and s.cps[0].connectors == ["CCS2"]
+    assert e.sim_state("cost_rule").signals["value"].tolist() == [1.0]
 
 
 # ---- recommendations --------------------------------------------------------------------------
@@ -380,7 +462,8 @@ def test_recommend_focus_pending_others_act_and_approve_applies_next_slot():
     r1 = e.step()
     assert e.states("rl_ppo")[0] == STANDBY
     assert r1.changes["rl_ppo"] == [("L00001-1", State.STANDBY)]
-    assert r1.new_recommendations == []
+    assert [(x["id"], x["status"]) for x in r1.new_recommendations] == [(1, "approved")]
+    assert e.step().new_recommendations == []
     tl = e.timeline("rl_ppo", "L00001-1")
     assert tl["commands"] == [
         {"ts": "2024-03-12T00:00:00+02:00", "target_state": "STANDBY",
@@ -395,6 +478,15 @@ def test_recommend_focus_pending_others_act_and_approve_applies_next_slot():
         e.decide_recommendation(99, approve=True)
 
 
+def test_reject_is_reported_in_next_step():
+    e = rec_engine({0: [("L00001-1", "STANDBY")]})
+    e.step()
+    assert e.decide_recommendation(1, approve=False)["status"] == "rejected"
+    r = e.step()
+    assert [(x["id"], x["status"]) for x in r.new_recommendations] == [(1, "rejected")]
+    assert e.states("rl_ppo")[0] == IDLE
+
+
 def test_recommendation_expires_after_ttl():
     e = rec_engine({0: [("L00001-1", "STANDBY")]})
     e.run_to(2)
@@ -404,7 +496,6 @@ def test_recommendation_expires_after_ttl():
 
     e = rec_engine({0: [("L00001-1", "STANDBY")]})
     e.run_to(3)
-    assert e.recommendations("pending")[0]["id"] == 1
     r = e.step()
     assert [(x["id"], x["status"]) for x in r.new_recommendations] == [(1, "expired")]
     assert e.states("rl_ppo")[0] == IDLE
@@ -414,6 +505,18 @@ def test_recommendation_expires_after_ttl():
     with pytest.raises(ValueError):
         e.decide_recommendation(1, approve=True)
     assert [(x["id"], x["status"]) for x in e.step().new_recommendations] == [(1, "expired")]
+
+
+def test_listing_never_offers_an_expired_recommendation():
+    e = rec_engine({0: [("L00001-1", "STANDBY")]})
+    e.run_to(3)  # self.t == expires_at
+    assert e.recommendations("pending") == []
+    assert [(x["id"], x["status"]) for x in e.recommendations()] == [(1, "expired")]
+    with pytest.raises(ValueError):
+        e.decide_recommendation(1, approve=True)
+    r = e.step()
+    assert [(x["id"], x["status"]) for x in r.new_recommendations] == [(1, "expired")]
+    assert e.step().new_recommendations == []
 
 
 def test_one_pending_per_cp():

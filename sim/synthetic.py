@@ -87,9 +87,11 @@ def _local_midnights_ns(days: Sequence[date]) -> np.ndarray:
 
 
 def slot_starts(days: Sequence[date]) -> pd.DatetimeIndex:
-    """UTC slot starts: 288 five-minute slots from each day's local midnight."""
+    """UTC slot starts from each day's local midnight to the next (276/288/300 on DST days)."""
     mid = _local_midnights_ns(days)
-    ns = (mid[:, None] + np.arange(SLOTS_PER_DAY, dtype=np.int64)[None, :] * _SLOT_NS).ravel()
+    nxt = _local_midnights_ns([d + timedelta(days=1) for d in days])
+    parts = [np.arange(a, b, _SLOT_NS, dtype=np.int64) for a, b in zip(mid, nxt, strict=True)]
+    ns = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
     return pd.DatetimeIndex(ns.astype("datetime64[ns]")).tz_localize("UTC")
 
 
@@ -193,28 +195,43 @@ def _sessions(
     )
 
 
+def _hours(days: Sequence[date]) -> tuple[np.ndarray, np.ndarray]:
+    """UTC hour starts of each local day (23/24/25 on DST days) and their day index."""
+    mid = _local_midnights_ns(days)
+    nxt = _local_midnights_ns([d + timedelta(days=1) for d in days])
+    parts = [np.arange(a, b, 3600 * _NS, dtype=np.int64) for a, b in zip(mid, nxt, strict=True)]
+    if not parts:
+        return np.empty(0, dtype=np.int64), np.empty(0, dtype=int)
+    return np.concatenate(parts), np.repeat(np.arange(len(days)), [len(x) for x in parts])
+
+
+def _local_hour(ts_ns: np.ndarray) -> np.ndarray:
+    local = pd.DatetimeIndex(ts_ns.astype("datetime64[ns]")).tz_localize("UTC").tz_convert(TZ)
+    return (local.hour + local.minute / 60.0).to_numpy(dtype=float)
+
+
 def _context(
     rng: np.random.Generator, counties: list[str], days: list[date], hol: set[date]
 ) -> pd.DataFrame:
     n_c, n_d = len(counties), len(days)
-    mid = _local_midnights_ns(days)
-    hours = np.arange(24)
-    ts = (mid[:, None] + hours[None, :] * 3600 * _NS).ravel()
+    ts, d_of = _hours(days)
+    n_h = ts.size
+    hours = _local_hour(ts)
     doy = np.array([d.timetuple().tm_yday for d in days], dtype=float)
     season = 11.0 - 13.0 * np.cos(2 * np.pi * (doy - 20) / 365.25)
     diurnal = 4.5 * np.sin(2 * np.pi * (hours - 9) / 24)
-    day_noise = rng.normal(0, 3.0, (n_c, n_d, 1))
-    temp = season[None, :, None] + diurnal[None, None, :] + day_noise
+    day_noise = rng.normal(0, 3.0, (n_c, n_d))[:, d_of]
+    temp = season[d_of][None, :] + diurnal[None, :] + day_noise
     temp = temp + rng.normal(0, 0.8, temp.shape)
-    wet_day = rng.random((n_c, n_d, 1)) < 0.3
-    rain = (rng.random((n_c, n_d, 24)) < 0.35) & wet_day
+    wet_day = (rng.random((n_c, n_d)) < 0.3)[:, d_of]
+    rain = (rng.random((n_c, n_h)) < 0.35) & wet_day
     precip = np.where(rain, rng.exponential(1.2, rain.shape), 0.0)
-    wind = rng.gamma(2.5, 4.0, (n_c, n_d, 1)) + rng.gamma(1.5, 2.0, (n_c, n_d, 24))
-    is_hol = np.repeat(np.array([d in hol for d in days]), 24)
+    wind = rng.gamma(2.5, 4.0, (n_c, n_d))[:, d_of] + rng.gamma(1.5, 2.0, (n_c, n_h))
+    is_hol = np.array([d in hol for d in days], dtype=bool)[d_of]
     return pd.DataFrame(
         {
             "ts_hour": _ts(np.tile(ts, n_c)),
-            "county_code": _str(np.repeat(np.asarray(counties, dtype=object), n_d * 24)),
+            "county_code": _str(np.repeat(np.asarray(counties, dtype=object), n_h)),
             "temp_c": np.round(temp.ravel(), 1),
             "precip_mm": np.round(precip.ravel(), 1),
             "wind_kmh": np.round(wind.ravel(), 1),
@@ -242,8 +259,9 @@ def _intents(
     fp_eta = eta[src] + (shift * _MIN_NS).astype(np.int64) if n_fp else np.zeros(0, np.int64)
     fp_ts = fp_eta - (rng.uniform(lo, hi, n_fp) * _MIN_NS).astype(np.int64)
     mid = _local_midnights_ns(days)
+    nxt = _local_midnights_ns([d + timedelta(days=1) for d in days])
     d_idx = np.searchsorted(mid, fp_eta, side="right") - 1
-    in_days = (d_idx >= 0) & (fp_eta < mid[np.maximum(d_idx, 0)] + 86400 * _NS)
+    in_days = (d_idx >= 0) & (fp_eta < nxt[np.maximum(d_idx, 0)])
     fp_eta, fp_ts, fp_loc = fp_eta[in_days], fp_ts[in_days], loc[src][in_days]
     k = fp_eta.size
     return pd.DataFrame(
@@ -266,15 +284,17 @@ def _maps(
     cfg: dict,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return (ts_ns, loc_idx, signal_code, value) for the three per-slot map series."""
-    n_l, n_s = len(locations), len(days) * SLOTS_PER_DAY
     slots = slot_starts(days).asi8
-    hour = (np.arange(n_s) % SLOTS_PER_DAY) * SLOT_S / 3600.0
+    n_l, n_s = len(locations), slots.size
+    hour = _local_hour(slots)
     highway = (locations["context_type"].to_numpy(dtype=object) == "highway")[:, None]
     curve = np.where(highway, _traffic_curve(hour, True), _traffic_curve(hour, False))
     counties = list(dict.fromkeys(context["county_code"].tolist()))
     c_idx = np.array([counties.index(c) for c in locations["county_code"]], dtype=int)
     precip = context["precip_mm"].to_numpy().reshape(len(counties), -1)
-    wet = precip[c_idx][:, np.arange(n_s) // 12] if n_l else np.zeros((0, n_s))
+    h_ts, _ = _hours(days)
+    h_idx = np.clip(np.searchsorted(h_ts, slots, side="right") - 1, 0, max(h_ts.size - 1, 0))
+    wet = precip[c_idx][:, h_idx] if n_l else np.zeros((0, n_s))
     weather = np.where(wet > 0.5, 0.85, 1.0)
     traffic = np.clip(curve * weather * rng.lognormal(0, 0.12, (n_l, n_s)), 0, 1)
 

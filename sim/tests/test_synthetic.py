@@ -168,3 +168,23 @@ def test_load_m1_fixtures():
     assert d.days() == [date(2024, 3, 12), date(2024, 3, 13)]
     assert d.forecasts is not None
     assert len(d.forecasts) == len(d.cps) * SLOTS_PER_DAY * 2
+
+
+def test_generate_on_dst_days():
+    locs, _ = load_seed_stations()
+    d = generate(
+        seed=1, train_days=2, test_days=2, train_start=date(2023, 10, 28),
+        test_start=date(2024, 3, 30), locations=locs.iloc[:3],
+    )  # fmt: skip
+    per_day = (
+        d.signals[d.signals["signal"] == "maps_traffic_index"]
+        .groupby(d.signals["ts"].dt.tz_convert("Europe/Bucharest").dt.date)["location_id"]
+        .size()
+        // 3
+    )
+    assert per_day.to_dict() == {
+        date(2023, 10, 28): 288, date(2023, 10, 29): 300,
+        date(2024, 3, 30): 288, date(2024, 3, 31): 276,
+    }  # fmt: skip
+    ctx = d.context.groupby(d.context["ts_hour"].dt.tz_convert("Europe/Bucharest").dt.date).size()
+    assert ctx[date(2023, 10, 29)] == 25 * d.context["county_code"].nunique()

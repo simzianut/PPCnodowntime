@@ -10,15 +10,19 @@
 Decisions 0018, 0019, 0025 and 0026 set the engine rules. Building it raised smaller questions those decisions don't answer.
 
 ## Decision
+- **Day length:** a day runs from local midnight to the next local midnight in Europe/Bucharest: 288 slots, 276 on the spring DST day, 300 on the autumn one. A fixed 288 would lose or double-count sessions around those days.
+- **Slot boundaries:** departures and wake completions at exactly a slot start are processed before the policies observe, so a CP that frees up on the boundary can be put to sleep in that slot.
+- **Isolation:** each policy gets its own copy of the context and the signals window, so a policy can't change another's inputs.
 - **Event order within a second:** departures, then wake completions, then arrivals. A driver arriving the second a CP frees up or finishes waking gets it with wait 0. Arrivals are ordered by (arrival_ts, session_id); ties between CPs by position in `engine.cp_ids` (the `data.cps` order).
 - **Commands:**
   - If a policy sends several commands for one CP in a slot, the last one wins. Commands for CPs outside the run are ignored.
   - Dropped commands (same state, busy, waking, offline) are not recorded: `CommandStatus` has no "dropped" value.
   - An AC DEEP_SLEEP command is recorded with its effective target, STANDBY.
 - **Recommendations:**
+  - A pending recommendation past `expires_at` is marked expired as soon as it is listed, so the feed never offers one that can't be approved. Approve, reject and expiry changes all appear in the next step's `new_recommendations`.
   - Created only for commands that would apply now. At most one pending per (policy, CP). A different target from the focus policy expires the pending one, even if the new command is itself a no-op.
   - Approved ones apply at the start of the next slot, before the policies observe, and keep status `approved` even if the transition rules drop them then.
-  - Approving at or after `expires_at` is refused (expired). Anything still pending at the end of the day expires.
+  - Anything still pending at the end of the day expires.
 - **Arrivals:** a CP that is WAKING to serve a waiting driver counts as busy. A queued driver is assigned at arrival to the compatible CP that frees up first (ties to their own CP) and starts the moment it frees.
 - **Midnight:** sessions spanning midnight start as CHARGING and are not counted in `sessions` (they arrived the day before). Waits are cut at the end of the day: an arrival at 23:59 at a deep-sleeping CP waits 1 minute.
 - **Attribution:** an arrival belongs to the CP that served the driver (events also carry `moved_from` and `queued`). Added wait is attributed to the CP the driver waited on.

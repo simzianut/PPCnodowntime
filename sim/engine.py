@@ -7,7 +7,7 @@ import itertools
 from collections import deque
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -165,10 +165,11 @@ class Engine:
         self.seed = seed
         self.forecaster = forecaster
         self.slot_s = int(cfg.slot_s)
-        self.n_slots = 86400 // self.slot_s
-        self._end = float(self.n_slots * self.slot_s)
         self._ttl_s = float(cfg.recommendation_ttl_slots * self.slot_s)
         self._t0 = datetime.combine(day, time(0), tzinfo=ZONE).timestamp()
+        next_t0 = datetime.combine(day + timedelta(days=1), time(0), tzinfo=ZONE).timestamp()
+        self.n_slots = int(next_t0 - self._t0) // self.slot_s  # 276 / 288 / 300 on DST days
+        self._end = float(self.n_slots * self.slot_s)
         self._slot_dt = [
             datetime.fromtimestamp(self._t0 + k * self.slot_s, ZONE)
             for k in range(self.n_slots + 1)
@@ -357,6 +358,7 @@ class Engine:
             ps.slot_sleep_s = 0.0
             ps.wait = np.zeros(n)
             ps.events = []
+            self._events(ps, np.nextafter(s0, np.inf), 0, 0)  # departures/wakes at exactly s0
         changed, self._rec_changed = self._rec_changed, []
         self._expire(s0, changed)
         self._apply_approved(s0)
@@ -379,8 +381,9 @@ class Engine:
                 self._apply(ps, idx, tgt, reasons, s0, record=True)
 
         changes: dict[str, list[tuple[str, State]]] = {}
+        a, b = int(self._arr_bounds[k]), int(self._arr_bounds[k + 1])
         for ps in self._sims.values():
-            self._events(ps, k, s1)
+            self._events(ps, s1, a, b)
             self._close_slot(ps, s1)
             if not ps.hidden:
                 diff = np.flatnonzero(ps.state != ps.prev_state)
@@ -426,6 +429,8 @@ class Engine:
         return self._observe(self._sims[policy], self.slot)
 
     def recommendations(self, status: str | None = None) -> list[dict]:
+        """Recommendation dicts in id order; pending ones past `expires_at` become expired."""
+        self._expire(float(self.slot * self.slot_s), self._rec_changed)
         return [
             self._rec_dict(r)
             for r in self._recs.values()
@@ -435,13 +440,12 @@ class Engine:
     def decide_recommendation(self, rec_id: int, approve: bool) -> dict:
         """Approve (applied at the start of the next slot) or reject a pending recommendation."""
         rec = self._recs[int(rec_id)]
-        if rec.status == _PENDING and rec.expires <= self.slot * self.slot_s:
-            self._expire_one(rec)
-            self._rec_changed.append(rec)
+        self._expire(float(self.slot * self.slot_s), self._rec_changed)
         if rec.status != _PENDING:
             raise ValueError(f"recommendation {rec_id} is {rec.status}")
         del self._pending[(rec.policy, rec.cp)]
         rec.status = (CommandStatus.approved if approve else CommandStatus.rejected).value
+        self._rec_changed.append(rec)
         if approve:
             self._approved.append(rec)
         return self._rec_dict(rec)
@@ -519,11 +523,12 @@ class Engine:
         return self._obs_cache[1], self._obs_cache[2]
 
     def _observe(self, ps: _PolicySim, k: int) -> SimState:
+        """A SimState with its own copies of the shared inputs, so policies can't affect others."""
         sig, ctx = self._shared_obs(k)
         secs = (k * self.slot_s - ps.since).astype(np.int64).tolist()
         cps = [
-            CpView(*row)
-            for row in zip(
+            CpView(cp, loc, pc, list(conns), st, sec)
+            for cp, loc, pc, conns, st, sec in zip(
                 self.cp_ids,
                 self._locs,
                 self._pcs,
@@ -533,7 +538,13 @@ class Engine:
                 strict=True,
             )
         ]
-        state = SimState(t=self._slot_dt[k], cps=cps, signals=sig, context=ctx, forecast=None)
+        state = SimState(
+            t=self._slot_dt[k],
+            cps=cps,
+            signals=sig.copy(),
+            context={c: dict(v) for c, v in ctx.items()},
+            forecast=None,
+        )
         if self.forecaster is not None:
             state.forecast = self.forecaster.predict(state)
         return state
@@ -678,14 +689,14 @@ class Engine:
     def _push(self, heap: list, t: float, kind: int, x: int) -> None:
         heapq.heappush(heap, (t, kind, next(self._seq), x))
 
-    def _events(self, ps: _PolicySim, k: int, s1: float) -> None:
+    def _events(self, ps: _PolicySim, s1: float, a: int, b: int) -> None:
+        """Process departures and wake ends before `s1`, plus arrivals a..b-1, in time order."""
         heap: list[tuple[float, int, int, int]] = []
         for c in np.flatnonzero((ps.dep_at < s1) | (ps.wake_end < s1)).tolist():
             if ps.state[c] == CHARGING and ps.dep_at[c] < s1:
                 heap.append((float(ps.dep_at[c]), _DEP, next(self._seq), c))
             elif ps.state[c] == WAKING and ps.wake_end[c] < s1:
                 heap.append((float(ps.wake_end[c]), _WAKE, next(self._seq), c))
-        a, b = int(self._arr_bounds[k]), int(self._arr_bounds[k + 1])
         heap.extend((float(self._arr[j]), _ARR, next(self._seq), j) for j in range(a, b))
         heapq.heapify(heap)
         while heap:

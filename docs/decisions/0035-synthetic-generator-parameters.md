@@ -19,7 +19,7 @@ All values are placeholders, used only by `sim.synthetic` (never by M1's pipelin
 - Signals: spec 01 §5 with `config/signals.yaml`; `background_ev` 2.0 and `ice_base` 40.0 while the config is null (as decision 0015). False-positive intents copy a true intent's location, shifted ±2–6 h.
 - Weather: seasonal sinusoid with a daily cycle, rain on ~30% of days, gamma wind.
 - Oracle forecast: `p_H = 0.7·truth + 0.3·(1 − e^(−rate·H)) + N(0, 0.03)`, clipped to [0.001, 0.999] and monotone across horizons; `expected_arrivals_60 = 0.7·count + 0.3·hourly rate + N(0, 0.15)`.
-- Each day is 288 slots of absolute time from local midnight, the same as the engine.
+- Each day runs from local midnight to the next local midnight: 288 slots, or 276/300 on DST-change days, the same as the engine (decision 0034).
 
 ## Alternatives considered
 - Use M1's fixtures only: 5 invented locations × 2 days, too little for gym training or a national map.

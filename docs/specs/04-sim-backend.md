@@ -15,7 +15,7 @@ Decisions: [0011](../decisions/0011-shared-slot-engine.md), [0017](../decisions/
   - sessions, signals and context for the chosen date range, from M1's Parquet files or the fixtures
   - one or more `Policy` objects from M2
   - an autonomy mode
-- **Time:** 5-minute slots in `Europe/Bucharest`. Each slot runs in this order:
+- **Time:** 5-minute slots in `Europe/Bucharest`, from local midnight to the next local midnight (288 slots; 276 or 300 on DST-change days, decision [0034](../decisions/0034-engine-implementation-details.md)). Each slot runs in this order:
   1. **Observe:** build a `SimState`: the time, each CP's state and time in state, signals with `ts` in `(t − 60 min, t]`, and the forecaster's output (from the precomputed `forecasts.parquet` in training and replay, decision 0021).
   2. **Decide:** each policy's `decide(SimState)` returns `Command`s. In RECOMMEND mode, `focus_policy`'s commands become pending recommendations; other policies act. They are applied at the next slot once approved, through the API, and expire after the TTL in sim time. A replay pauses itself when new recommendations appear (decision 0025).
   3. **Apply:** apply the commands, following the transition rules in spec 03 §4 and decision 0018 (`sim/transitions.py`).
@@ -55,6 +55,7 @@ Drivers are never lost (decision 0006).
 `ChargePointEnv`:
 - Episode = one CP × one day, sampled from a split.
 - The CP's siblings follow a policy you pass in (default `naive_quiet_hours` until `cost_rule` exists, decision 0023). `days=` restricts sampling to given dates.
+- If `model.cost_rule` is importable it is the default sibling policy; `env.sibling_policy_name` says which one is used. Implementation: [0037](../decisions/0037-gym-env-implementation.md).
 - Data comes from `sim.data.SimData`: `data/processed/` when present, else the seeded generator in `sim/synthetic.py` (decision 0024).
 - Observation and action spaces are exactly those in spec 02 §4, with action masking.
 - Reward is as in spec 02 §4, with λ in kWh per wait-minute (decision 0020). Pass `lambda_wait` in, so the training loop can sweep it.
