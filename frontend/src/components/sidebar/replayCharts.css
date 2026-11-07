@@ -1,0 +1,11 @@
+.day-card .day-summary { margin: 4px 0 0; font-size: 10px; color: var(--muted); line-height: 1.35; }
+.day-card .day-summary strong { color: var(--text); font-weight: 700; }
+.day-chart { height: 130px; margin: 4px -2px 0; }
+.energy-totals { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.energy-totals > div { display: flex; flex-direction: column; }
+.energy-totals span { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.energy-totals strong { font-size: 17px; font-weight: 700; }
+.energy-totals .is-before strong { color: #6b7280; }
+.energy-totals .is-after strong { color: #8369df; }
+.energy-arrow { font-size: 15px !important; color: var(--muted); }
+.energy-cut { margin-left: auto; background: #dcfce7; color: #15803d; font-size: 11px; padding: 3px 8px; border-radius: 999px; }

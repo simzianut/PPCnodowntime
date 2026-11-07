@@ -145,6 +145,13 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
     }
   }, [run?.run_id, run?.focus_policy])
 
+  const lastSlot = useRef(0)
+  useEffect(() => {
+    const slot = run?.slot ?? 0
+    if (slot < lastSlot.current) { setCounts({ sleeps: 0, wakes: 0 }); setActions([]); prevRef.current = null }
+    lastSlot.current = slot
+  }, [run?.slot])
+
   useEffect(() => {
     const prev = prevRef.current
     prevRef.current = cpState

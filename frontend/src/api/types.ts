@@ -113,7 +113,7 @@ export interface CpTimeline {
   commands: Array<{ ts: string; target_state: TargetState; reason: string; status: CommandStatus }>
 }
 
-export const POLICIES: PolicyName[] = ['always_on', 'naive_quiet_hours', 'cost_rule', 'rl_ppo']
+export const POLICIES: PolicyName[] = ['always_on', 'rl_ppo']
 export const POLICY_LABELS: Record<PolicyName, string> = {
   always_on: 'Always on',
   naive_quiet_hours: 'Quiet hours',

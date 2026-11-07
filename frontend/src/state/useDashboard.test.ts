@@ -33,6 +33,6 @@ describe('useDashboard API mode', () => {
     await waitFor(() => expect(result.current.run?.run_id).toBe('r1'))
     expect(result.current.connectionMode).toBe('api')
     expect(result.current.evaluation).toEqual({ generated_at: '', test_days: [], results: [] })
-    expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ mode: 'replay', date: null }))
+    expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ mode: 'replay', date: null, policies: ['always_on', 'rl_ppo'], focus_policy: 'rl_ppo' }))
   })
 })

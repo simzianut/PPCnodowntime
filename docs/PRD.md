@@ -52,6 +52,8 @@ Policies compared:
 
 Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent and one for the cost rule, each traced by sweeping λ, the weight on waiting time. The two baselines appear as single points.
 
+> Update: the app no longer shows this curve. It shows idle energy at night and by day, before (Always on) vs after (RL agent) as a bar chart, and added wait only as the RL agent's average wait per charge; the λ curve stays in `GET /api/eval`. See [decision 0065](decisions/0065-sidebar-two-policies-separate-wait.md).
+
 ## 5. Scope
 
 ### In scope (must-have)
@@ -85,7 +87,7 @@ Pitch chart: **energy saved vs added wait**. It plots one curve for the RL agent
 4. Open a station: forecast arrivals vs actual arrivals, its state over time, and the agent's decisions.
 5. Flip the switch to RECOMMEND and approve a couple of recommendations as an operator.
 6. Switch to live mode: the agent acts on real statuses collected today.
-7. Show the energy-vs-wait curve, then extrapolate the savings to all 1,400+ points per year.
+7. Show the energy-vs-wait curve, then extrapolate the savings to all 1,400+ points per year. (Now the before/after energy bars and the average wait per charge, see [decision 0065](decisions/0065-sidebar-two-policies-separate-wait.md).)
 
 ## 7. Data sources (summary)
 
