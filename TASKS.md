@@ -8,10 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T22] M5 map view on the T21 SVG map: replace MapLibre with an interactive SVG map (pan, wheel/pinch zoom, clusters, selectable stations) using the app's locations | owner: tudor-claude | branch: tudor-claude/T22-svg-map | depends: T21, T16
-  - Replaces frontend/src/components/NetworkMap.tsx from T16 at tudor's request. Teodora: same props, App.tsx untouched.
-- [T21] M5 map view assets: SVG base map of Romania in PPC Blue map style, swappable station marker symbol, layer for hand-drawn lines; placeholder stations from data/seed/stations_open.csv | owner: tudor-claude | branch: tudor-claude/T21-map-assets | depends: -
-  - Assets only, under frontend/public/map/ (no T16 code touched). Teodora: the map view may switch from MapLibre to this SVG; decision follows on the branch.
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
@@ -30,6 +26,10 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T22] M5 map view on the T21 SVG map: replace MapLibre with an interactive SVG map (pan, wheel/pinch zoom, clusters, selectable stations) using the app's locations | owner: tudor-claude | branch: tudor-claude/T22-svg-map | depends: T21, T16
+  - NetworkMap.tsx now inlines frontend/public/map/romania.svg: drag/wheel/pinch/keyboard zoom, PPC-style clusters with asleep badge, spiderfy, selection; maplibre-gl removed; decision 0046. Same props, App.tsx untouched (Teodora: T16 map replaced). Test: `cd frontend && npm test && npm run dev`, open :5173.
+- [T21] M5 map view assets: SVG base map of Romania in PPC Blue map style, swappable station marker symbol, layer for hand-drawn lines | owner: tudor-claude | branch: tudor-claude/T21-map-assets | depends: -
+  - frontend/public/map/romania.svg from Natural Earth (Web Mercator), styled after the live PPC map; swap `#station-icon`, draw in `#lines`; decision 0045. Rebuild: put Natural Earth geojson in data/raw/naturalearth/, then `.venv/bin/python frontend/tools/build_map_svg.py`.
 - [T14] M2 PPO agent training on ChargePointEnv, λ sweep if time allows, artifacts/ppo_policy.zip (spec 02 §4) | owner: edy-antigravity | branch: edy-antigravity/T14-ppo-agent | depends: T10, T13
   - Shipped RLPolicy, vectorized action masking, sub-15ms 1500-CP decide(), artifacts/ppo_policy.zip (173KB) + meta.json, and train_rl.py; decision 0044. Test: uv run pytest model/tests/test_rl_agent.py.
 - [T20] M1 real traffic: Mapbox typical + TomTom live | owner: vlad-claude | branch: vlad-claude/T20-traffic | depends: T4

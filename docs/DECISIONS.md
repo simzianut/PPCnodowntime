@@ -52,3 +52,5 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0042](decisions/0042-frontend-map-first-white-theme.md) | 2026-11-07 | teodora | Map-first split, white-only theme, station summary presentation and status markers
 - [0043](decisions/0043-traffic-build-details.md) | 2026-11-07 | vlad + vlad-claude | Traffic build: Mapbox 2-hourly + interpolation, free-flow baseline, TomTom quality filter
 - [0044](decisions/0044-ppo-agent-training-and-architecture.md) | 2026-11-07 | edy-antigravity | PPO decision agent architecture, vectorized action masking, and artifact generation
+- [0045](decisions/0045-svg-base-map.md) | 2026-11-07 | tudor + tudor-claude | SVG base map of Romania (Natural Earth, Web Mercator) with a swappable station icon and a layer for hand-drawn lines
+- [0046](decisions/0046-interactive-svg-map.md) | 2026-11-07 | tudor + tudor-claude | Map view is an interactive inline SVG (pan, zoom, clusters, spiderfy) replacing MapLibre
