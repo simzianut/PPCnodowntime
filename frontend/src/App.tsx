@@ -207,7 +207,7 @@ function App() {
       {error && <div className="error-banner"><WifiOff size={14} /><span>{error}</span><button onClick={() => setError(null)} aria-label="Dismiss error"><X size={14} /></button></div>}
       <div className="dashboard-grid">
         <div className="map-column">
-          <NetworkMap locations={locations} cpState={cpState} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
+          <NetworkMap locations={locations} cpState={cpState} run={run} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
           <div className="map-hint"><span><Activity size={13} /> {run?.status === 'running' ? 'Replay is running' : run?.status === 'done' ? 'Replay complete' : run?.paused_reason === 'recommendations' ? 'Paused for review' : 'Replay paused'}</span><i /> Select a location to inspect charge points</div>
         </div>
         <div className="sidebar"><div className="sidebar-scroll">{selectedLocation ? <StationDetail key={selectedLocation.location_id} location={selectedLocation} timelines={timelineByCp} cpState={cpState} runId={run?.run_id} onClose={() => void openStation(null)} /> : <><div className="overview-heading"><span className="eyebrow">Network overview</span><h1>Charging intelligence</h1><p>Romania · {locations.length} locations · {cpTotal} charge points</p><div className="overview-stats"><span><b>{activeCp}</b> charging</span><span><b>{sleepingCp}</b> asleep</span></div></div><RightPanel dashboard={dashboard} /></>}</div><ReplayBar dashboard={dashboard} /></div>
