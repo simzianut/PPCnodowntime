@@ -1,4 +1,4 @@
-# 0063: Map clusters are energy-saved colour blobs, not numbered bubbles
+# 0067: Map clusters are energy-saved colour blobs, not numbered bubbles
 
 - Date: 2026-11-07
 - Who: tudor + tudor-claude
