@@ -34,4 +34,5 @@ make train-local CONFIG=config/train/smoke.yaml    # no Docker (CPU or local GPU
 - Data is mounted read-only from `./data`. Runs go to `./runs/<run_id>/` (gitignored): config, manifest, metrics, log, model. Suites write `runs/suites/<name>-<hash>/summary.{csv,md}`.
 - Nothing reaches `artifacts/` until `promote`. Promote also writes `<name>_provenance.json`.
 - Same config, seed, data and image give the same `metrics.json` on the same GPU model and driver (the manifest records both).
+- Demo forecasts (decision 0069): `python -m model.experiments predict <run_dir_or_f2_gru.pt> --start 2025-02-28 --end 2025-04-29 --out data/processed/forecasts.parquet` (UTC days; 2025-02-28 is needed so local day 2025-03-01 is fully covered; `--data-dir`, `--chunk-days` optional; also `python -m model.gru_forecaster`). When that file exists the API and evaluator offer only the days it fully covers.
 - Add a trainer: write `train(ctx: RunContext) -> dict` with `@register("f2_gru", kind="forecaster", promote={...})` and add one line `"f2_gru": "model.experiments.f2_gru:train"` to `MODULES` in `model/experiments/registry.py`.

@@ -20,7 +20,7 @@ from sim.baselines import AlwaysOn, NaiveQuietHours
 from sim.config import CONFIG_DIR, ROOT, sim_config
 from sim.data import SimData, load_default
 from sim.engine import ALWAYS_ON, Engine
-from sim.forecast import PrecomputedForecaster
+from sim.forecast import PrecomputedForecaster, covered_days
 from sim.metrics import PolicyMetrics
 
 log = logging.getLogger("sim.evaluate")
@@ -59,6 +59,9 @@ def _resolve_test_days(data: SimData, days_arg: str | None, cfg_eval: str | list
     all_test = data.days("test")
     if not all_test:
         all_test = data.days()
+    if data.forecasts is not None and not data.forecasts.empty:  # decision 0069
+        cov = set(covered_days(data.forecasts))
+        all_test = [d for d in all_test if d in cov]
     if days_arg:
         if days_arg.lower() == "all":
             return all_test

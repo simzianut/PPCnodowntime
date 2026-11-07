@@ -488,6 +488,12 @@ class EngineManager:
         self.loc_ids = {s["location_id"] for s in self.stations}
         self.test_days = data.days("test")
         fc = data.forecasts
+        self.covered: list[date] | None = None
+        if fc is not None and not fc.empty:  # replay only the days the forecasts cover (0069)
+            from sim.forecast import covered_days
+
+            self.covered = covered_days(fc)
+            self.test_days = [d for d in self.test_days if d in set(self.covered)]
         self.forecaster = PrecomputedForecaster(fc) if fc is not None else None
         self._naive = NaiveQuietHours(data.sessions, data.cps)
         self._sessions = data.sessions
@@ -617,6 +623,11 @@ class EngineManager:
         day = self.test_days[0] if body.date is None else body.date
         if day not in self.test_days:
             days = [d.isoformat() for d in self.test_days]
+            if self.covered is not None:
+                rng = f"{days[0]}..{days[-1]}" if days else "none"
+                raise HTTPException(
+                    400, f"date must be a test day covered by forecasts.parquet ({rng}): {days}"
+                )
             raise HTTPException(400, f"date must be one of the test days {days}")
         lam = body.lambda_ or sim_config().default_lambda
         await self.load_autonomy()

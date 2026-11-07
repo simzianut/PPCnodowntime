@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from model import rl_select
+from sim.config import sim_config
 from sim.obs import OBS_DIM
 from sim.types import PolicyName
 
@@ -41,8 +42,10 @@ def test_resolve(tmp_path):
     assert rl_select.resolve_rl_agent(tmp_path, env="auto") == "ppo"
     assert rl_select.resolve_rl_agent(tmp_path, env="") == "ppo"
     make_artifacts(tmp_path, ("maskppo",))
-    assert rl_select.resolve_rl_agent(tmp_path, env="auto") == "maskppo"
-    for v in ("ppo", "maskppo", "ddqn"):
+    assert rl_select.resolve_rl_agent(tmp_path, env="auto") == "ppo"  # maskppo no longer wins
+    (tmp_path / "f2_gru.pt").write_bytes(b"x")
+    assert rl_select.resolve_rl_agent(tmp_path, env="auto") == "gru"
+    for v in ("gru", "ppo", "maskppo", "ddqn"):
         assert rl_select.resolve_rl_agent(tmp_path, env=v) == v
     with pytest.raises(ValueError, match="RL_AGENT"):
         rl_select.resolve_rl_agent(tmp_path, env="nope")
@@ -57,8 +60,11 @@ def test_load_and_names(tmp_path):
     make_artifacts(tmp_path)
     assert rl_select.load_policy("rl_maskppo", tmp_path).name == "rl_maskppo"
     assert rl_select.load_policy("rl_ddqn", tmp_path).name == "rl_ddqn"
-    # auto picks maskppo for the rl_ppo slot, but the recorded name stays rl_ppo
-    assert rl_select.load_policy("rl_ppo", tmp_path).name == "rl_ppo"
+    (tmp_path / "f2_gru.pt").write_bytes(b"x")  # auto -> gru: rl_ppo is a cost rule
+    pol = rl_select.load_policy("rl_ppo", tmp_path, lam=0.3)
+    assert pol.name == "rl_ppo" and type(pol).__name__ == "CostRulePolicy"
+    assert pol.lambda_wait == 0.3
+    assert rl_select.lambdas("rl_ppo", tmp_path) == list(sim_config().lambda_grid)
     assert rl_select.lambdas("rl_ddqn", tmp_path) == [0.3]
     assert len(rl_select.lambdas("rl_maskppo", tmp_path)) == 1  # default_lambda
 

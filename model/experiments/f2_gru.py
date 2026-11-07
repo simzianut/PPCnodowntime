@@ -122,6 +122,13 @@ def _prep(X, names):
     return dyn_names, dyn, stat
 
 
+def apply_norm(dyn, stat, norm: dict):
+    """Standardise dynamic columns and the non-categorical static ones (shared with inference)."""
+    stat = stat.copy()
+    stat[:, 2:] = (stat[:, 2:] - norm["static_mu"]) / norm["static_sd"]
+    return (dyn - norm["mu"]) / norm["sd"], stat
+
+
 def _loss(net, batch, dev, w_pois):
     x, valid, stat, bucket, n60 = (t.to(dev, non_blocking=True) for t in batch)
     logits, lograte = net(x, valid, stat)
@@ -166,12 +173,11 @@ def train(ctx: RunContext) -> dict:
     sd = prep["train"][1].std(0) + 1e-6
     smu = prep["train"][2][:, 2:].mean(0)
     ssd = prep["train"][2][:, 2:].std(0) + 1e-6
+    norm = {"mu": mu, "sd": sd, "static_mu": smu, "static_sd": ssd}
     ds = {}
     for s in fd.SPLITS:
         _, dyn, stat = prep[s]
-        dyn = (dyn - mu) / sd
-        stat = stat.copy()
-        stat[:, 2:] = (stat[:, 2:] - smu) / ssd
+        dyn, stat = apply_norm(dyn, stat, norm)
         ds[s] = Windows(dyn, stat, data.bucket(s), data.n60(s), int(c["window_slots"]))
     del prep
     net = Net(len(dyn_names), 2, c).to(dev)
@@ -243,7 +249,7 @@ def train(ctx: RunContext) -> dict:
             "config": dict(c),
             "features": names,
             "dynamic_features": dyn_names,
-            "norm": {"mu": mu, "sd": sd, "static_mu": smu, "static_sd": ssd},
+            "norm": norm,
             "calibrators": {k: v.to_dict() for k, v in cals.items()},
         },
         ctx.path("model", "f2_gru.pt"),

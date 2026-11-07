@@ -20,6 +20,10 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--continue-on-error", action="store_true")
     p = sub.add_parser("promote", help="copy a run's model into artifacts/")
     p.add_argument("run_dir")
+    from model import gru_forecaster
+
+    q = sub.add_parser("predict", help="F2 forecasts.parquet for a range of days")
+    gru_forecaster.add_predict_args(q)
     a = ap.parse_args(argv)
 
     if a.cmd == "run":
@@ -29,6 +33,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"run dir: {d}")
     elif a.cmd == "suite":
         suite.run_suite(a.suite, a.continue_on_error)
+    elif a.cmd == "predict":
+        gru_forecaster.run_predict(a)
     else:
         for f in suite.promote(a.run_dir):
             print(f"promoted {f}")

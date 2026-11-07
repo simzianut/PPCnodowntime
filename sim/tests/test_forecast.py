@@ -77,3 +77,16 @@ def test_predict_is_fast():
     assert (time.perf_counter() - t0) / 100 < 0.005
     row = df[(df["ts"] == slots[100]) & (df["cp_id"] == "c7")]
     assert out.loc[7, "p_arrival_30"] == row["p_arrival_30"].iloc[0]
+
+
+def test_covered_days_needs_every_slot():
+    from datetime import date
+
+    from sim.forecast import covered_days
+
+    ts = pd.date_range("2025-03-01 00:00", "2025-03-04 23:55", freq="5min", tz="UTC")
+    df = pd.DataFrame({"ts": ts, "cp_id": "a"})
+    # local days start at 22:00Z (UTC+2): 03-02..03-04 are fully inside, 03-01 and 03-05 are not
+    assert covered_days(df) == [date(2025, 3, 2), date(2025, 3, 3), date(2025, 3, 4)]
+    assert covered_days(df.drop(index=500)) == [date(2025, 3, 3), date(2025, 3, 4)]
+    assert covered_days(None) == []

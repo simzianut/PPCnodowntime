@@ -51,8 +51,14 @@ def load_processed(base: Path | None = None) -> SimData:
     locations, cps = load_stations(base)
     forecasts = p / "forecasts.parquet"
     sig_path = p / "signals.parquet"
-    sig_start = os.environ.get("SIM_SIGNALS_START", "2023-10-01")
-    sig_end = os.environ.get("SIM_SIGNALS_END", "2023-12-31 23:59:59")
+    fc = pd.read_parquet(forecasts) if forecasts.exists() else None
+    sig_start, sig_end = "2023-10-01", "2023-12-31 23:59:59"
+    if fc is not None and not fc.empty:  # signals for the covered window (1 h lookback)
+        ts = pd.to_datetime(fc["ts"], utc=True)
+        sig_start = str(ts.min() - pd.Timedelta(hours=1))
+        sig_end = str(ts.max() + pd.Timedelta(minutes=5))
+    sig_start = os.environ.get("SIM_SIGNALS_START", sig_start)
+    sig_end = os.environ.get("SIM_SIGNALS_END", sig_end)
     import pyarrow.parquet as pq
 
     if sig_path.exists() and pq.read_metadata(sig_path).num_rows > 5_000_000:
@@ -73,7 +79,7 @@ def load_processed(base: Path | None = None) -> SimData:
         sessions=pd.read_parquet(p / "sessions.parquet"),
         signals=signals,
         context=pd.read_parquet(p / "context.parquet"),
-        forecasts=pd.read_parquet(forecasts) if forecasts.exists() else None,
+        forecasts=fc,
     )
 
 
