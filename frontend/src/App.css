@@ -69,6 +69,7 @@ h1, h2, h3, p { margin: 0; }
 .map-legend span { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 8px; white-space: nowrap; }
 .map-legend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .map-legend .legend-low i { width: 8px; height: 8px; background: transparent; border: 1px dashed #667489; }
+.map-legend .legend-saved i { width: 44px; height: 7px; border-radius: 4px; }
 .map-hint { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 9px; min-height: 16px; padding: 0 1px; }
 .map-hint > span { display: flex; align-items: center; gap: 5px; color: var(--text); font-weight: 600; }
 .map-hint > span svg { color: #4388ea; }
@@ -261,12 +262,10 @@ h1, h2, h3, p { margin: 0; }
 .svg-map .base-map #labels .city-dot { r: calc(2.6px / var(--s)); stroke-width: calc(1.2px / var(--s)); }
 .svg-map .base-map #lines path, .svg-map .base-map #lines line, .svg-map .base-map #lines polyline { vector-effect: non-scaling-stroke; }
 .map-marker { cursor: pointer; outline: none; }
-.map-marker:focus-visible .cluster-body, .map-marker:focus-visible .station-hit { stroke: #111; stroke-width: 2px; }
+.map-marker:focus-visible .cluster-hit, .map-marker:focus-visible .station-hit { stroke: #111; stroke-width: 2px; }
 .map-cluster .cluster-hit, .map-station .station-hit { fill: transparent; }
-.map-cluster .cluster-body { fill: #000; stroke: #fff; stroke-width: 1.5px; transition: transform .12s; }
-.map-cluster:hover .cluster-body { transform: scale(1.08); }
-.map-cluster .cluster-count { fill: #fff; font: 600 12px Manrope, Roboto, sans-serif; text-anchor: middle; pointer-events: none; }
-.map-cluster .cluster-asleep text { fill: #fff; font: 700 9px Manrope, Roboto, sans-serif; text-anchor: middle; pointer-events: none; }
+.map-cluster .cluster-blob { mix-blend-mode: multiply; transition: transform .15s ease-out; pointer-events: none; }
+.map-cluster:hover .cluster-blob { transform: scale(1.12); }
 .map-station .station-body { transition: transform .12s; }
 .map-station:hover .station-body, .map-station.is-selected .station-body { transform: scale(1.18); }
 .map-station .station-selected { fill: #fff; stroke: #111; stroke-width: 2.5px; }

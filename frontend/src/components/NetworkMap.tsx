@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { STATE_COLORS, type Location, type State } from '../api/types'
 import {
   MAX_K, centerOn, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
   type Cluster, type MapFrame, type Point, type View, type Viewport,
 } from '../map/geo'
+import { meanLevel, savedColor, stationSavedLevel } from '../map/energy'
 
 interface NetworkMapProps {
   locations: Location[]
@@ -104,6 +105,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
   const svgRef = useRef<SVGSVGElement>(null)
   const frame = base?.frame ?? null
   const { view, viewRef, setView, animateTo } = useAnimatedView()
+  const uid = useId().replace(/:/g, '')
 
   useEffect(() => {
     let live = true
@@ -331,7 +333,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
     </g>
   }
 
-  function renderCluster(cluster: Cluster, x: number, y: number) {
+  function renderCluster(cluster: Cluster, x: number, y: number, index: number) {
     if (view.k >= SPIDER_K && stuckAtMax(cluster)) {
       const ring = 20 + 4 * cluster.ids.length
       return <g key={`spider-${cluster.ids[0]}`}>
@@ -345,22 +347,21 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
     }
     const members = cluster.ids.map((id) => byId.get(id)).filter((item): item is Location => !!item)
     const cps = members.reduce((sum, location) => sum + location.charge_points.length, 0)
-    const asleep = members.reduce((sum, location) => {
-      const counts = stateCounts(location, cpState)
-      return sum + (counts.get('STANDBY') ?? 0) + (counts.get('DEEP_SLEEP') ?? 0)
-    }, 0)
-    const r = Math.min(24, 13 + Math.log2(cluster.ids.length) * 2.4)
-    const label = `${cluster.ids.length} locations, ${cps} charge points, ${asleep} asleep. Zoom in.`
+    const level = meanLevel(members.filter((location) => location.charge_points.length).map((location) => stationSavedLevel(location.charge_points, cpState)))
+    const color = savedColor(level)
+    const gradientId = `${uid}-blob-${index}`
+    const r = Math.min(34, 18 + Math.log2(cluster.ids.length) * 4)
+    const label = `${cluster.ids.length} locations, ${cps} charge points, average energy saved ${Math.round(level * 100)}%. Zoom in.`
     return <g key={cluster.ids[0]} className="map-marker map-cluster" transform={`translate(${x} ${y}) scale(${px})`} role="button" tabIndex={0} aria-label={label}
       onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
       <title>{label}</title>
-      <circle className="cluster-hit" r={r + 4} />
-      <circle className="cluster-body" r={r} />
-      <text className="cluster-count" dy="0.35em">{cluster.ids.length}</text>
-      {asleep > 0 && <g className="cluster-asleep" transform={`translate(${r * 0.72} ${-r * 0.72})`}>
-        <circle r={8.5} fill={STATE_COLORS.DEEP_SLEEP} />
-        <text dy="0.35em">{asleep}</text>
-      </g>}
+      <radialGradient id={gradientId}>
+        <stop offset="0" stopColor={color} stopOpacity={0.95} />
+        <stop offset="0.45" stopColor={color} stopOpacity={0.7} />
+        <stop offset="1" stopColor={color} stopOpacity={0} />
+      </radialGradient>
+      <circle className="cluster-hit" r={Math.max(19, r * 0.75)} />
+      <circle className="cluster-blob" r={r} fill={`url(#${gradientId})`} />
     </g>
   }
 
@@ -390,10 +391,10 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
             <g className="base-map" dangerouslySetInnerHTML={baseMarkup} />
           </g>
           <g className="map-markers">
-            {clusters.map((cluster) => {
+            {clusters.map((cluster, index) => {
               const x = cluster.x * view.k + view.tx
               const y = cluster.y * view.k + view.ty
-              return cluster.ids.length > 1 ? renderCluster(cluster, x, y) : renderStation(cluster.ids[0], x, y)
+              return cluster.ids.length > 1 ? renderCluster(cluster, x, y, index) : renderStation(cluster.ids[0], x, y)
             })}
           </g>
         </svg>}
@@ -407,6 +408,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect }:
       <div className="map-legend">
         {states.map((state) => <span key={state}><i style={{ background: STATE_COLORS[state] }} />{state === 'DEEP_SLEEP' ? 'Deep sleep' : state.charAt(0) + state.slice(1).toLowerCase()}</span>)}
         <span className="legend-low"><i /> Low confidence</span>
+        <span className="legend-saved">Cluster energy saved <i style={{ background: `linear-gradient(90deg, ${savedColor(0)}, ${savedColor(0.5)}, ${savedColor(1)})` }} /> low → high</span>
       </div>
     </section>
   )
