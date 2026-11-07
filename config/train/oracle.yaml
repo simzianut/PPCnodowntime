@@ -1,0 +1,18 @@
+name: oracle
+kind: bound
+model: oracle
+seed: 0
+device: cpu
+deterministic: true
+data:
+  sessions: sessions.parquet
+  signals: signals.parquet
+  context: context.parquet
+  cp_active_days: cp_active_days.parquet
+  # forecasts: /abs/path/runs/<t26_run_id>/forecasts.parquet   # absent = ZeroForecaster (warned)
+params:
+  lambda_wait: 0.1
+  dc_oversample: 3.0
+  n_val_days: 60
+  n_val_episodes: 400
+  eval_seed: 12345

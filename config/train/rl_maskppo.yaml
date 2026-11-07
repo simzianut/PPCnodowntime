@@ -1,0 +1,31 @@
+name: rl_maskppo
+kind: rl
+model: rl_maskppo
+seed: 0
+device: cpu
+deterministic: true
+total_timesteps: 1000000
+data:
+  sessions: sessions.parquet
+  signals: signals.parquet
+  context: context.parquet
+  cp_active_days: cp_active_days.parquet
+  # forecasts: /abs/path/runs/<t26_run_id>/forecasts.parquet   # absent = ZeroForecaster (warned)
+params:
+  lambda_wait: 0.1
+  n_envs: 16
+  vec_env: subproc
+  torch_threads: 1
+  net_arch: [64, 64]
+  n_steps: 256
+  batch_size: 512
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  ent_coef: 0.01
+  learning_rate: 0.0003
+  dc_oversample: 3.0
+  n_val_days: 60
+  n_val_episodes: 400
+  eval_seed: 12345
+  eval_every_steps: 250000
