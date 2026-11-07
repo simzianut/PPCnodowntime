@@ -3,6 +3,7 @@
 - Date: 2026-11-07
 - Who: tudor
 - Status: accepted
+- Superseded by: 0047 (power draw numbers)
 - Supersedes: —
 - Affects: spec 03, spec 02, spec 04, CONTRACTS
 

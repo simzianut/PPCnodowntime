@@ -63,8 +63,8 @@ Signal       = ppcblue_route_intent | maps_ev_count | maps_ice_count | maps_traf
 
 ## Data schemas / shared types
 
-### DB tables (M3 owns; full DDL in spec 03 §3)
-`locations`, `charge_points`, `source_refs`, `cp_state`, `state_events`, `commands`, `settings`, `live_status` (written by M1).
+### DB tables (M3 owns; full DDL in spec 03 §3 and `db/migrations/0001_stations_schema.sql`, decision 0047)
+`locations`, `charge_points`, `source_refs`, `cp_state`, `state_events`, `commands` (includes `expires_at timestamptz`), `settings`, `live_status` (includes nullable `source_location_id, source_cp_id, connector`, written by M1). Accessed via `stations.store`.
 
 ### Station files (M3, T4, under `data/processed/`, decision 0033; mirror the DB tables until T5 lands)
 | File | Columns |

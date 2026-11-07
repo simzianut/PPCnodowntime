@@ -11,6 +11,7 @@ import re
 import unicodedata
 import urllib.parse
 import urllib.request
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import pandas as pd
@@ -292,10 +293,66 @@ def match_open(seed_rows: list[dict], locs: list[dict], cfg: dict):
     return refs, unmatched
 
 
+_SOURCE_PRIORITY = {"ocm": 0, "hermes": 1, "osm": 2, "press": 3}
+
+
+def name_similarity(a: str | None, b: str | None) -> float:
+    """Normalized sequence similarity on accent-folded names."""
+    fa, fb = fold(a).strip(), fold(b).strip()
+    if not fa or not fb:
+        return 0.0
+    return SequenceMatcher(None, fa, fb).ratio()
+
+
+def _source_rank(row: dict) -> int:
+    first = ((row.get("sources") or "").split(";")[0]).strip().lower()
+    return _SOURCE_PRIORITY.get(first, 9)
+
+
+def _merge_seed_row(primary: dict, secondary: dict) -> dict:
+    merged = dict(primary)
+    for k, v in secondary.items():
+        if k in ("sources", "source_ids"):
+            existing = [x for x in (merged.get(k) or "").split(";") if x]
+            for item in (v or "").split(";"):
+                if item and item not in existing:
+                    existing.append(item)
+            merged[k] = ";".join(existing)
+        elif not merged.get(k) and v:
+            merged[k] = v
+    return merged
+
+
+def deduplicate_seed_rows(
+    rows: list[dict], close_m: float = 50.0, sim_m: float = 150.0, min_sim: float = 0.6
+) -> list[dict]:
+    """Deduplicate within 50 m, or within 150 m with name similarity >= 0.6 (spec 03 §2.2)."""
+    ordered = sorted(rows, key=_source_rank)
+    kept: list[dict] = []
+    kept_pts: list[Point] = []
+    for r in ordered:
+        pt = proj(float(r["lon"]), float(r["lat"]))
+        matched_idx = None
+        for idx, kpt in enumerate(kept_pts):
+            dist = pt.distance(kpt)
+            if dist < close_m or (
+                dist < sim_m and name_similarity(r.get("name"), kept[idx].get("name")) >= min_sim
+            ):
+                matched_idx = idx
+                break
+        if matched_idx is None:
+            kept.append(dict(r))
+            kept_pts.append(pt)
+        else:
+            kept[matched_idx] = _merge_seed_row(kept[matched_idx], r)
+    return kept
+
+
 def build_seed(rows: list[dict], cfg: dict, counties, clf):
-    """Fallback: open-data CSV, estimated 2 CPs per location when the count is unknown."""
+    """Fallback: open/merged CSV, deduplicated per §2.2, estimated 2 CPs when count is unknown."""
+    rows = deduplicate_seed_rows(rows)
     rows = [dict(r, _c=county_of(float(r["lat"]), float(r["lon"]), counties)) for r in rows]
-    rows.sort(key=lambda r: (r["_c"], r["name"], r["lat"], r["lon"]))
+    rows.sort(key=lambda r: (r["_c"], r["name"], float(r["lat"]), float(r["lon"])))
     locs, cps, refs = [], [], []
     for i, r in enumerate(rows, 1):
         lid, lat, lon = f"L{i:05d}", float(r["lat"]), float(r["lon"])
@@ -331,7 +388,8 @@ def upsert_db(locs, cps, refs, url: str) -> bool:
     from sqlalchemy import create_engine, inspect, text
 
     eng = create_engine(url)
-    if not {"locations", "charge_points", "source_refs"} <= set(inspect(eng).get_table_names()):
+    tables = set(inspect(eng).get_table_names())
+    if not {"locations", "charge_points", "source_refs"} <= tables:
         log.info("DB tables missing (T5 migrations), skipping DB upsert")
         return False
     loc_sql = (
@@ -357,6 +415,9 @@ def upsert_db(locs, cps, refs, url: str) -> bool:
         "(:source,:source_id,:location_id,:cp_id) ON CONFLICT (source,source_id) DO UPDATE "
         "SET location_id=EXCLUDED.location_id,cp_id=EXCLUDED.cp_id"
     )
+    state_sql = (
+        "INSERT INTO cp_state(cp_id,state) VALUES (:cp_id,'IDLE') ON CONFLICT (cp_id) DO NOTHING"
+    )
     cp_rows = [{k: v for k, v in r.items() if k != "cp_count_estimated"} for r in cps]
     ref_rows = [dict(zip(("source", "source_id", "location_id", "cp_id"), r, strict=True))
                 for r in refs]  # fmt: skip
@@ -364,6 +425,8 @@ def upsert_db(locs, cps, refs, url: str) -> bool:
         c.execute(text(loc_sql), locs)
         c.execute(text(cp_sql), cp_rows)
         c.execute(text(ref_sql), ref_rows)
+        if "cp_state" in tables and cp_rows:
+            c.execute(text(state_sql), [{"cp_id": r["cp_id"]} for r in cp_rows])
     return True
 
 
@@ -375,6 +438,7 @@ def run(data_dir: Path, cfg: dict | None = None, seed_dir: Path | None = None) -
     with open(seed_dir / "stations_open.csv", encoding="utf-8", newline="") as f:
         seed_rows = list(csv.DictReader(f))
     snap_path = data_dir / "raw" / "live" / "ampwhere_snapshot_latest.json.gz"
+    merged_path = data_dir / "raw" / "stations" / "ppc_stations_merged.csv"
     oth, unmatched, mode = [], [], "seed"
     if snap_path.exists():
         mode = "ampwhere"
@@ -385,6 +449,12 @@ def run(data_dir: Path, cfg: dict | None = None, seed_dir: Path | None = None) -
         extra, unmatched = match_open(seed_rows, locs, cfg)
         refs += extra
         log.info("open-data rows unmatched (not added): %d", len(unmatched))
+    elif merged_path.exists():
+        mode = "merged"
+        log.info("AmpWhere snapshot absent, using %s", merged_path)
+        with open(merged_path, encoding="utf-8", newline="") as f:
+            merged_rows = list(csv.DictReader(f))
+        locs, cps, refs = build_seed(merged_rows, cfg, counties, clf)
     else:
         log.info("AmpWhere snapshot absent, using data/seed/stations_open.csv")
         locs, cps, refs = build_seed(seed_rows, cfg, counties, clf)
