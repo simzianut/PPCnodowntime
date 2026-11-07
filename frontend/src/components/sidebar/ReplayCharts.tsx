@@ -1,47 +1,37 @@
-import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { POLICY_LABELS, POLICIES, type PolicyName } from '../../api/types'
+import { useMemo } from 'react'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { useDashboard } from '../../state/useDashboard'
-import { useKpiHistory, type KpiRow } from '../../state/useKpiHistory'
+import { hourlyEnergy, useKpiHistory } from '../../state/useKpiHistory'
 import { format, formatDate, policyColors } from './shared'
 import './replayCharts.css'
 
-const DAY_SLOTS = 288
-const clock = (slot: number) => `${String(Math.floor(slot * 5 / 60)).padStart(2, '0')}:${String(slot * 5 % 60).padStart(2, '0')}`
-
-function DayChart({ rows, unit, digits }: { rows: KpiRow[]; unit: string; digits: number }) {
-  const agent = (policy: PolicyName) => policy !== 'always_on'
-  return <div className="day-chart"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={rows} margin={{ top: 6, right: 14, bottom: 0, left: -24 }}>
-    <CartesianGrid strokeDasharray="3 4" vertical={false} stroke="var(--chart-grid)" />
-    <XAxis type="number" dataKey="slot" domain={[0, DAY_SLOTS]} ticks={[0, 72, 144, 216, 288]} tickFormatter={clock} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} />
-    <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} allowDecimals={false} />
-    <Tooltip labelFormatter={(slot) => clock(Number(slot))} formatter={(value) => `${format(Number(value), digits)} ${unit}`} />
-    {POLICIES.map((policy) => agent(policy)
-      ? <Area key={policy} type="monotone" dataKey={policy} name={POLICY_LABELS[policy]} stroke={policyColors[policy]} fill={policyColors[policy]} fillOpacity={0.12} strokeWidth={2} dot={false} isAnimationActive={false} />
-      : <Line key={policy} type="monotone" dataKey={policy} name={POLICY_LABELS[policy]} stroke={policyColors[policy]} strokeDasharray="4 3" strokeWidth={1.5} dot={false} isAnimationActive={false} />)}
-  </ComposedChart></ResponsiveContainer></div>
-}
-
-function Legend() {
-  return <div className="chart-legend">{POLICIES.map((policy) => <span key={policy}><i style={{ background: policyColors[policy] }} />{POLICY_LABELS[policy]}</span>)}</div>
-}
+const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`
+const BEFORE = 'Before · always on'
+const AFTER = 'After · RL agent'
 
 export function ReplayCharts({ dashboard }: { dashboard: ReturnType<typeof useDashboard> }) {
   const { run } = dashboard
   const history = useKpiHistory(run)
-  const rl = run?.kpis.rl_ppo
-  const eyebrow = `Replay · ${formatDate(run?.sim_time.slice(0, 10))}`
-  return <>
-    <section className="chart-card day-card">
-      <div className="chart-card-head"><div><span className="eyebrow">{eyebrow}</span><h3>Energy saved through the day</h3></div><span className="chart-unit">kWh</span></div>
-      <p className="day-summary">{rl ? <>RL agent saved <strong>{format(rl.saved_kwh)} kWh</strong> (≈ {format(rl.saved_ron, 0)} RON)</> : 'Start a replay to see savings'}</p>
-      <DayChart rows={history.saved} unit="kWh" digits={1} />
-      <Legend />
-    </section>
-    <section className="chart-card day-card">
-      <div className="chart-card-head"><div><span className="eyebrow">{eyebrow}</span><h3>Added wait through the day</h3></div><span className="chart-unit">min</span></div>
-      <p className="day-summary">{rl ? <><strong>+{format(rl.wait_min_total, 0)} min</strong> total wait · P95 {format(rl.wait_min_p95, 1)} min</> : 'Wait from waking chargers shows here'}</p>
-      <DayChart rows={history.wait} unit="min" digits={0} />
-      <Legend />
-    </section>
-  </>
+  const bars = useMemo(() => hourlyEnergy(history.rows), [history.rows])
+  const before = run?.kpis.always_on?.overhead_kwh ?? 0
+  const after = run?.kpis.rl_ppo?.overhead_kwh ?? 0
+  const cut = before > 0 ? Math.round((1 - after / before) * 100) : 0
+  return <section className="chart-card day-card">
+    <div className="chart-card-head"><div><span className="eyebrow">Replay · {formatDate(run?.sim_time.slice(0, 10))}</span><h3>Idle energy used, before vs after the agent</h3></div><span className="chart-unit">kWh / hour</span></div>
+    <div className="energy-totals">
+      <div className="is-before"><span>Before</span><strong>{format(before)} kWh</strong></div>
+      <span className="energy-arrow">→</span>
+      <div className="is-after"><span>After</span><strong>{format(after)} kWh</strong></div>
+      {before > 0 && <b className="energy-cut">−{cut}%</b>}
+    </div>
+    <div className="day-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={bars} margin={{ top: 6, right: 6, bottom: 0, left: -24 }} barGap={1} barCategoryGap="18%">
+      <CartesianGrid strokeDasharray="3 4" vertical={false} stroke="var(--chart-grid)" />
+      <XAxis dataKey="hour" type="number" domain={[-0.5, 23.5]} ticks={[0, 6, 12, 18, 23]} tickFormatter={hourLabel} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} />
+      <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} />
+      <Tooltip labelFormatter={(hour) => `${hourLabel(Number(hour))}–${hourLabel(Number(hour) + 1)}`} formatter={(value) => `${format(Number(value), 2)} kWh`} />
+      <Bar dataKey="always_on" name={BEFORE} fill={policyColors.always_on} isAnimationActive={false} radius={[2, 2, 0, 0]} />
+      <Bar dataKey="rl_ppo" name={AFTER} fill={policyColors.rl_ppo} isAnimationActive={false} radius={[2, 2, 0, 0]} />
+    </BarChart></ResponsiveContainer></div>
+    <div className="chart-legend"><span><i style={{ background: policyColors.always_on }} />{BEFORE}</span><span><i style={{ background: policyColors.rl_ppo }} />{AFTER}</span></div>
+  </section>
 }

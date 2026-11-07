@@ -18,9 +18,9 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 │                                                               │ KPI panel            │
 │                     Romania map                               │  Always on, RL agent:│
 │        (CP dots coloured by state of the RL agent)            │  energy saved kWh/%  │
-│                                                               │  added wait tot/p95  │
-│                                                               │  energy saved chart  │
-│                                                               │  added wait chart    │
+│                                                               │  avg wait per charge │
+│                                                               │  energy before/after │
+│                                                               │  bars per hour       │
 │                                                               ├──────────────────────┤
 │                                                               │ Recommendations feed │
 │                                                               │ (RECOMMEND mode)     │
@@ -47,10 +47,8 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 
 ### 3.2 Policy comparison KPIs
 Two policies only: Always on (baseline) and RL agent (`rl_ppo`). Runs request just these two; naive and cost rule stay in the backend and `GET /api/eval` but are not shown ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md)). Code: `frontend/src/components/sidebar/`.
-- One card per policy showing energy saved (kWh and %) and added wait (total and p95 minutes). The values update with every tick.
-- Two charts side by side, one line per policy:
-  - "Energy saved through the day": cumulative kWh over the simulated day.
-  - "Added wait through the day": cumulative `wait_min_total` per 5-min slot, built client-side from tick KPIs.
+- One card per policy showing energy saved (kWh and %), updated every tick. The RL agent card also shows added wait as one number, "Avg wait per charge" = `Kpis.wait_min_mean` (wait_min_total / sessions, zero waits included), e.g. "0.4 min". Always on is 0 by definition. No wait chart.
+- One bar chart, "Energy before vs after the agent": idle energy used per hour of the replayed day, two bars per hour. Before = Always on `overhead_kwh` (grey), after = RL agent `overhead_kwh` (purple), as hourly deltas of the cumulative KPI built client-side from ticks. The header gives totals, e.g. "41 kWh before → 11 kWh with RL agent (−73%)".
 - No energy-vs-wait trade-off curve and no map policy selector: `focus_policy` is always `rl_ppo`.
 
 ### 3.3 Replay controls + autonomy switch

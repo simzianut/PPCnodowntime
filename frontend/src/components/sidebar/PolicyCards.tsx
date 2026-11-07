@@ -13,7 +13,7 @@ function KpiCard({ policy, role, run }: { policy: PolicyName; role: string; run:
       <div className="h2h-ron">≈ {format(kpi?.saved_ron ?? 0, 0)} RON</div>
       <dl className="h2h-stats">
         <div><dt>Saved</dt><dd>{format(kpi?.saved_pct ?? 0)}%</dd></div>
-        <div><dt>Added wait</dt><dd>{format(kpi?.wait_min_total ?? 0, 0)} min</dd></div>
+        <div><dt>Avg wait per charge</dt><dd>{format(kpi?.wait_min_mean ?? 0, 2)} min</dd></div>
       </dl>
     </article>
   )
