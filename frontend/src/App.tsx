@@ -114,14 +114,14 @@ function RecommendationFeed({ dashboard }: { dashboard: ReturnType<typeof useDas
 
 function App() {
   const dashboard = useDashboard()
-  const { locations, cpState, selectedLocation, timelineByCp, openStation, run, autonomy, changeAutonomy, connectionMode, error, setError } = dashboard
+  const { locations, cpState, selectedLocation, timelineByCp, openStation, run, autonomy, changeAutonomy, connectionMode, connected, error, setError } = dashboard
   const cpTotal = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
-  const modeLabel = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Demo data' : 'Connected'
+  const connIssue = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Not connected · showing demo data' : connected ? null : 'Not connected'
 
   return <div className="app-shell">
     <header className="topbar">
       <div className="brand"><img className="ppc-logo" src="/brand/ppc-logo.svg" alt="PPC" /><span className="brand-name">Charging network</span></div>
-      <div className="topbar-status"><span>{locations.length} locations · {cpTotal} charge points</span><span className={`conn conn-${connectionMode}`}>{modeLabel}</span></div>
+      <div className="topbar-status"><span>{locations.length} locations · {cpTotal} charge points</span>{connIssue && <span className={`conn conn-${connectionMode === 'api' ? 'lost' : connectionMode}`}>{connIssue}</span>}</div>
       <div className="topbar-actions">
         <div className="autonomy" role="group" aria-label="Agent mode"><span>Agent mode</span><div className="seg">
           <button aria-pressed={autonomy === 'ACT'} className={autonomy === 'ACT' ? 'active' : ''} title="The agent applies its commands directly" onClick={() => void changeAutonomy('ACT')}>Act</button>

@@ -8,7 +8,7 @@ h1, h2, h3, p, dl, dd { margin: 0; }
 .brand-name { padding-left: 12px; border-left: 1px solid var(--line); font-weight: 600; font-size: 14px; white-space: nowrap; }
 .topbar-status { display: flex; align-items: center; gap: 16px; color: var(--muted); white-space: nowrap; }
 .conn::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--quiet); vertical-align: 1px; }
-.conn-api::before { background: #16a34a; }
+.conn-lost::before { background: #dc2626; }
 .conn-demo::before { background: #eab308; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 20px; }
 .autonomy { display: flex; align-items: center; gap: 8px; color: var(--muted); }

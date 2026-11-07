@@ -1,4 +1,1 @@
 .day-chart { height: 170px; }
-.chart-key { display: flex; gap: 16px; margin-top: 6px; color: var(--muted); font-size: 12px; }
-.chart-key span { display: flex; align-items: center; gap: 6px; }
-.chart-key i { width: 10px; height: 10px; display: inline-block; }
