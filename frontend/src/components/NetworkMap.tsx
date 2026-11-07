@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { POLICY_LABELS, type ChargePoint, type Location, type Run, type State } from '../api/types'
 import {
-  MAX_K, centerOn, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
+  MAX_K, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
   type Cluster, type MapFrame, type Point, type View, type Viewport,
 } from '../map/geo'
 import { MAP_COLORS, PROFILES, markerColor, overheadW, stateGroup, type StateGroup } from '../map/energy'
@@ -144,6 +144,13 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
       prevRef.current = null
     }
   }, [run?.run_id, run?.focus_policy])
+
+  const lastSlot = useRef(0)
+  useEffect(() => {
+    const slot = run?.slot ?? 0
+    if (slot < lastSlot.current) { setCounts({ sleeps: 0, wakes: 0 }); setActions([]); prevRef.current = null }
+    lastSlot.current = slot
+  }, [run?.slot])
 
   useEffect(() => {
     const prev = prevRef.current
