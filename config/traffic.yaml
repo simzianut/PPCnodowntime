@@ -1,0 +1,20 @@
+# Owner: M1. Real traffic (decision 0028). Secrets come from .env, never from here.
+tomtom:
+  flow_url: https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json
+  zoom: 10
+  poll_s: 900
+  max_live_locations: 50
+  request_gap_s: 0.25
+  timeout_s: 30
+mapbox:
+  directions_url: https://api.mapbox.com/directions/v5/mapbox/driving-traffic
+  free_flow_url: https://api.mapbox.com/directions/v5/mapbox/driving
+  route_len_m: 600
+  min_snap_m: 100
+  request_gap_s: 0.25  # fallback when max_rps is absent
+  max_rps: 4  # global across workers (Mapbox allows ~300/min)
+  workers: 4
+  sample_every_h: 2  # odd hours interpolated; cached hourly samples are kept
+  timeout_s: 30
+  profile_hours: [weekday, weekend]  # x 24 hours each = 24 samples + 1 driving call per location at sample_every_h 2
+index_clip: [0, 1]
