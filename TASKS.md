@@ -14,9 +14,6 @@ Add notes as indented sub-bullets.
 - [T18] M5 station detail panel (spec 05 §3.4) | owner: teodora | branch: teodora/frontend-spec05 | depends: T17
 
 
-- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
-  - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
-  - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
 
 ## To do
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: - | branch: - | depends: T10, T13
@@ -28,6 +25,10 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T5] M3 DB schema + migrations, state model + transition tests, power_profiles.yaml, stations.store API, autonomy setting (spec 03 §3–7) | owner: vlad-antigravity | branch: vlad-antigravity/T5-stations-store | depends: T2
+  - Request from T9 (vlad-claude): please add nullable `source_location_id text, source_cp_id text, connector text` to `live_status`, so collected rows can be matched to `cp_id` later (decision 0016).
+  - Note from T10 (tudor-claude): sim/transitions.py implements decision 0018 (spec 03 §4 gaps). The T5 transition test should check the same rules.
+  - Merged as PR #4 (by tudor-claude on request): db/migrations/0001_stations_schema.sql, stations.store API, state rules, engineering power profiles, coverage report; decision renumbered 0047 → 0048 (0047 was taken by T23). Test: `make db && uv run pytest stations`.
 - [T23] Link stations → sim → API → frontend: shared station loader (real 445-location list when present locally), engine-backed API replay mode in memory, frontend tolerates missing eval | owner: tudor-claude | branch: tudor-claude/T23-link-modules | depends: T4, T10, T13, T14, T19
   - sim.stations_seed.load_stations() feeds sim + API (real 445-location list from data/processed when present, else open seed); API_FIXTURES=0 now runs replays on sim.Engine in memory (api/engine_mode.py); frontend tolerates missing eval and requests only available policies; decision 0047. Test: copy ppc_locations.csv + ppc_charge_points.csv into data/processed/, `make api` + `make web`, open :5173; `uv run pytest api sim`. cost_rule/rl_ppo need libomp (macOS) + `--extra rl`.
 - [T22] M5 map view on the T21 SVG map: replace MapLibre with an interactive SVG map (pan, wheel/pinch zoom, clusters, selectable stations) using the app's locations | owner: tudor-claude | branch: tudor-claude/T22-svg-map | depends: T21, T16
