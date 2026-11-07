@@ -1,0 +1,65 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{style}
+\begin{document}
+\begin{tikzpicture}
+\tikzset{f/.style={box, text width=2.6cm, minimum height=0.62cm, font=\scriptsize, inner sep=2pt},
+  outb/.style={main, text width=1.3cm, minimum height=0.6cm, inner sep=2pt}}
+
+%% ---------------- (a) F0 ----------------
+\grp{a}{0,-2.9}{17.2,0}{(a) F0: seasonal hour-of-week baseline}
+\node[plain, text width=3.3cm, minimum height=1.3cm] (a1) at (2.2,-1.65) {\textbf{History}\\[1pt]\scriptsize arrivals per CP in the training period, shrunk to class mean};
+\node[plain, text width=1.9cm, minimum height=1.3cm] (a2) at (5.7,-1.65) {\textbf{Rate table}\\[1pt]\scriptsize $\lambda(w)$ per hour-of-week $w$};
+% schematic bars
+\foreach \i/\h in {1/0.15,2/0.12,3/0.1,4/0.2,5/0.45,6/0.7,7/0.85,8/0.6,9/0.55,10/0.65,11/0.8,12/0.7,13/0.5,14/0.35,15/0.25,16/0.18}
+  \fill[g3] ({8.1+0.17*\i},-2.35) rectangle ++(0.12,{0.9*\h+0.05});
+\draw[g2, line width=0.4pt] (8.2,-2.35) -- (11.0,-2.35);
+\node[font=\scriptsize, text=g1] at (9.65,-2.62) {schematic};
+\node[f, text width=3.4cm, minimum height=0.9cm] (a3) at (12.9,-1.65) {$p_H = 1-e^{-\lambda(w_t)\,H}$\\[0pt]\scriptsize $H\in\{15,30,60\}$ min};
+\node[outb, text width=2.0cm] (a4) at (16.05,-1.65) {$p_{15},p_{30},p_{60}$};
+\draw[arr] (a1) -- (a2);
+\draw[arr] (a2) -- (7.6,-1.65);\draw[arr] (a3) -- (a4);
+
+%% ---------------- (b) F1 ----------------
+\grp{b}{0,-8.4}{17.2,-3.2}{(b) F1: LightGBM heads with isotonic calibration}
+\foreach \y/\t in {-4.5/{Calendar (hour, weekday, holiday)}, -5.25/{Weather (Open-Meteo)}, -6.0/{History (lags, rolling counts)}, -6.75/{Station (power class, CPs)}, -7.5/{Signals (traffic, EV flow, intents)}}
+  { \node[f, text width=3.9cm] (fg) at (2.15,\y) {\t};
+    \draw[arr] (fg.east) -- (4.6,\y); }
+\node[plain, text width=0.6cm, minimum height=3.7cm] (xt) at (4.9,-6.0) {};
+\node[rotate=90, font=\small] at (xt) {feature vector $x_t$};
+\foreach \y/\n/\t in {-4.45/A/{$y_{15}$: binary}, -5.4/B/{$y_{30}$: binary}, -6.35/C/{$y_{60}$: binary}, -7.45/D/{$n_{60}$: Poisson}}
+  { \node[f, text width=2.0cm, minimum height=0.7cm] (h\n) at (8.2,\y) {\t};
+    \draw[arr] (5.3,\y) -- (h\n.west); }
+\node[main, text width=1.7cm, minimum height=3.2cm] (iso) at (11.6,-5.4) {\textbf{Isotonic}\\ (PAVA)\\[2pt]\scriptsize per-horizon calibration};
+\foreach \n/\y/\l in {A/-4.45/15,B/-5.4/30,C/-6.35/60}
+  { \draw[arr] (h\n.east) -- (iso.west |- h\n.east);
+    \node[outb] (o\n) at (14.6,\y) {$p_{\l}$};
+    \draw[arr] (iso.east |- h\n.east) -- (o\n); }
+\node[outb] (on) at (14.6,-7.45) {$\hat n_{60}$};
+\draw[arr] (hD.east) -- (on);
+
+%% ---------------- (c) F2 ----------------
+\grp{c}{0,-15.1}{17.2,-8.6}{(c) F2: GRU survival model over the last 36 slots (3 h)}
+\foreach \x/\n/\t in {1.3/1/{t-35}, 3.3/2/{t-34}, 6.2/3/{t-1}, 8.2/4/{t}} {
+  \node[plain, text width=0.9cm, minimum height=0.8cm] (g\n) at (\x,-12.3) {GRU};
+  \node[small, anchor=north] (x\n) at (\x,-13.6) {$x_{\t}$};
+  \draw[arr] (x\n.north) -- (g\n.south);
+}
+\node[font=\small] at (4.75,-12.3) {$\cdots$};
+\node[small, text=g1] at (4.75,-14.5) {slot features: arrivals, signals, traffic, calendar};
+\draw[arr] (0.4,-12.3) -- node[lbl,above=1pt]{$h_0$} (g1.west);
+\draw[arr] (g1.east) -- (g2.west);
+\draw[arr] (g2.east) -- (4.2,-12.3);
+\draw[arr] (5.3,-12.3) -- (g3.west);
+\draw[arr] (g3.east) -- (g4.west);
+\node[plain, text width=3.4cm, minimum height=1.3cm] (emb) at (9.2,-10.2) {\textbf{Static embeddings}\\[1pt]\scriptsize power class, context, county EV/1000, CPs at location};
+\node[draw=g1, circle, line width=\lw, inner sep=1pt, fill=white] (cat) at (10.4,-12.3) {$\oplus$};
+\draw[arr] (g4.east) -- node[lbl,above=1pt]{$h_t$} (cat);
+\draw[arr] (10.4,-10.85) -- (cat.north);
+\node[main, text width=2.1cm, minimum height=1.1cm] (haz) at (12.75,-11.6) {\textbf{Survival head}\\[1pt]\scriptsize hazards $h_1,\dots,h_{12}$ (5-min buckets)};
+\node[main, text width=2.1cm, minimum height=0.9cm] (poi) at (12.75,-13.4) {\textbf{Poisson head}\\[1pt]\scriptsize $\hat n_{60}$};
+\draw[arr] (cat) -- ++(0.55,0) |- (haz.west);
+\draw[arr] (cat) -- ++(0.55,0) |- (poi.west);
+\node[plain, text width=2.8cm, minimum height=2.2cm, align=left] (form) at (15.65,-12.3) {$S(k)=\prod_{j=1}^{k}(1-h_j)$\\[3pt] $p_{15}=1-S(3)$\\ $p_{30}=1-S(6)$\\ $p_{60}=1-S(12)$};
+\draw[arr] (haz.east) -- (haz.east -| form.west);
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,50 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{style}
+\begin{document}
+\begin{tikzpicture}
+\tikzset{stage/.style={main, text width=2.3cm, minimum height=2.2cm}, item/.style={text width=3.9cm, minimum height=0.62cm, font=\scriptsize, inner sep=2pt}}
+
+% ---- data sources ----
+\grp{src}{0,3.9}{4.5,10.3}{Data sources}
+\node[real,item] at (2.25,9.15)  {PPC Blue sessions (981\,486)\\ mapped from Dundee donors};
+\node[real,item] at (2.25,8.38) {Open-Meteo weather (per county)};
+\node[real,item] at (2.25,7.66) {Romanian public holidays};
+\node[real,item] at (2.25,6.94) {DRPCIV county EV density};
+\node[real,item] at (2.25,6.22) {Mapbox typical traffic};
+\node[mock,item] at (2.25,5.32) {PPC Blue route intents\\ (60\% of sessions, 10--40 min lead)};
+\node[mock,item] at (2.25,4.50) {Maps EV (25\% tagged) and\\ combustion counts (weight 0.05)};
+
+\grp{live}{0,0.8}{4.5,3.2}{Live mode}
+\node[real,item] at (2.25,2.1) {AmpWhere live CP statuses};
+\node[real,item] at (2.25,1.3) {TomTom live traffic};
+
+% ---- main pipeline ----
+\node[stage] (ds) at (6.5,7.1)  {\textbf{Dataset pipeline}\\[2pt]\scriptsize 5-min slot features\\ train $\le$ 2023-12-31\\ test 2024--2025};
+\node[stage] (fc) at (9.9,7.1)  {\textbf{Demand forecaster}\\[2pt]\scriptsize F0 seasonal\\ F1 LightGBM\\ F2 GRU survival};
+\node[stage] (ag) at (13.3,7.1) {\textbf{Decision agent}\\[2pt]\scriptsize cost rule\\ MaskablePPO\\ Double DQN};
+\node[main, text width=3.2cm, minimum height=1.0cm] (sw) at (13.3,4.9) {\textbf{Global autonomy switch}\\[1pt]\scriptsize ACT / RECOMMEND};
+\node[stage] (sim) at (6.5,1.7)  {\textbf{Simulator engine}\\[2pt]\scriptsize 5-min slots, CP state machine, replay or live};
+\node[stage] (api) at (9.9,1.7)  {\textbf{API}\\[2pt]\scriptsize state, KPIs,\\ recommendations};
+\node[stage] (fe) at (13.3,1.7)  {\textbf{Frontend}\\[2pt]\scriptsize Romania map\\ KPI panel\\ energy-vs-wait curve};
+\node[plain, text width=1.5cm, minimum height=1.0cm] (op) at (16.5,1.7) {\textbf{Operator}};
+
+% ---- arrows ----
+\draw[arr] (4.5,7.6) -- (5.3,7.6);
+\draw[arrm] (4.5,4.9) -| (4.9,6.5) -- (5.3,6.5);
+\draw[arr] (ds) -- node[lbl,above=1pt] {features} (fc);
+\draw[arr] (fc) -- node[lbl,above=1pt] {forecasts} (ag);
+\draw[arr] (ag) -- node[lbl,right=1pt] {action} (sw);
+\draw[arr] (sw.west) -- node[lbl,pos=0.25] {ACT: apply} (sw.west -| sim) -- (sim);
+\draw[arrm] (sw) -- node[lbl,right=1pt] {RECOMMEND} (fe);
+\draw[arr] (4.5,1.7) -- (sim);
+\draw[arr] (sim) -- (api);
+\draw[arr] (api) -- (fe);
+\draw[<->, line width=\lw, draw=g1] (fe) -- (op);
+\draw[arrm] (op.north) -- (op.north |- sw) -- node[lbl,above=1pt,pos=0.45] {set mode} (sw.east);
+
+% ---- legend ----
+\node[real, text width=1.9cm, minimum height=0.5cm, font=\scriptsize] at (16.2,9.3) {real data};
+\node[mock, text width=1.9cm, minimum height=0.5cm, font=\scriptsize] at (16.2,8.6) {mocked};
+\node[main, text width=1.9cm, minimum height=0.5cm, font=\scriptsize] at (16.2,7.9) {our component};
+\end{tikzpicture}
+\end{document}

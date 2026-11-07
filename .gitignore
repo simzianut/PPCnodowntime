@@ -27,3 +27,9 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# LaTeX figures: keep built outputs in docs/figures/build, ignore aux files
+!docs/figures/build/
+docs/figures/**/*.aux
+docs/figures/**/*.log
+docs/figures/**/*.dvi
