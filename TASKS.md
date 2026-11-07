@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T34] M5 de-slop the frontend: remove generic AI-dashboard tropes, 3 competing visual versions (branches tudor-claude/T34-deslop-a|b|c, ports 5174–5176) for Tudor to pick | owner: tudor-claude | branch: tudor-claude/T34-deslop-* | depends: T33
 - [T33] M5 left sidebar simplified: only Always on + RL agent, no map-view dropdown, wait time charted on its own (no energy-vs-wait trade-off), easier replay controls | owner: tudor-claude | branch: tudor-claude/T33-sidebar-simplify | depends: T30
   - PR #8 open (stacked on #7, decision 0065). Test: `cd frontend && npm test && npm run build`, `make api` + `make web`.
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
