@@ -8,8 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T36] F2 GRU as the agent: promote f2_gru.pt (+ f0_rates), model/gru_forecaster.py (batch + online Forecaster), `predict` command → forecasts.parquet for the 60-day window, RL_AGENT=gru serves rl_ppo with cost rule + F2, API/evaluator limited to forecast days | owner: vlad-claude | branch: vlad-claude/T36-gru-agent | depends: T26, T31
-  - Decision 0069.
 - [T37] Live mode (live part of T12): shadow F2 agent on real AmpWhere statuses, 5-min wall-clock slots, live signals from F0 rates, same KPIs/WS ticks as replay | owner: vlad-claude | branch: vlad-claude/T37-live-mode | depends: T36, T9, T15
   - Decision 0070. T12 keeps DB persistence; its live-mode part moves here.
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
@@ -31,6 +29,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T36] F2 GRU as the agent: promote f2_gru.pt (+ f0_rates), model/gru_forecaster.py (batch + online Forecaster), `predict` command → forecasts.parquet for the 60-day window, RL_AGENT=gru serves rl_ppo with cost rule + F2, API/evaluator limited to forecast days | owner: vlad-claude | branch: vlad-claude/T36-gru-agent | depends: T26, T31
+  - artifacts/f2_gru.pt (A100 run f2_gru-c75aafc1-s2, y30 PR-AUC 0.624) + f0_rates.parquet; model/gru_forecaster.py (predict_days + online GRUForecaster, parity < 1e-4); `python -m model.experiments predict`; RL_AGENT=gru (auto) → rl_ppo = cost rule on F2; replay/eval limited to forecast-covered days; decisions 0069, 0071. Agent on 2 real days: 55.1% saved, 0.04 min mean wait (oracle 78.5%). Forecasts file (private, share like data zips): `python -m model.experiments predict artifacts/f2_gru.pt --start 2025-02-28 --end 2025-04-29 --out data/processed/forecasts.parquet`.
 - [T34] M5 de-slop the frontend: remove generic AI-dashboard tropes, 3 competing visual versions (branches tudor-claude/T34-deslop-a|b|c, ports 5174–5176) for Tudor to pick | owner: tudor-claude | branch: tudor-claude/T34-deslop-* | depends: T33
   - Control-room style (version A of 3; B/C kept as branches), KPI table, 'Wasted energy on idle mode' bars, expandable agent-actions list, status only when not connected; decision 0068. Merged in #9. Test: `cd frontend && npm test && npm run build`, open :5173.
 - [T33] M5 left sidebar simplified: only Always on + RL agent, no map-view dropdown, wait time charted on its own (no energy-vs-wait trade-off), easier replay controls | owner: tudor-claude | branch: tudor-claude/T33-sidebar-simplify | depends: T30
