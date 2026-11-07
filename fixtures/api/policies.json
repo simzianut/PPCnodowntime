@@ -1,0 +1,30 @@
+[
+ {
+  "name": "always_on",
+  "lambdas": [],
+  "available": true
+ },
+ {
+  "name": "naive_quiet_hours",
+  "lambdas": [],
+  "available": true
+ },
+ {
+  "name": "cost_rule",
+  "lambdas": [
+   0.01,
+   0.03,
+   0.1,
+   0.3,
+   1.0
+  ],
+  "available": true
+ },
+ {
+  "name": "rl_ppo",
+  "lambdas": [
+   0.1
+  ],
+  "available": true
+ }
+]

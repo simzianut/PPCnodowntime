@@ -97,7 +97,7 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 - Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
 - Send ticks over the same WebSocket.
 
-**Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations.
+**Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations. Regenerate with `python -m api.fixtures_gen`; details in [0036](../decisions/0036-api-fixture-mode.md).
 
 ## 7. Config: `config/sim.yaml`
 

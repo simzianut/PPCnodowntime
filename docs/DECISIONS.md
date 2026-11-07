@@ -43,4 +43,5 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0033](decisions/0033-station-import-units-classes-context.md) | 2026-11-07 | vlad + vlad-claude | Station import: one CP per physical unit, HPC at 100 kW+, context rules, other operators as context layer
 - [0034](decisions/0034-engine-implementation-details.md) | 2026-11-07 | tudor-claude | Engine implementation details: event order, command handling, recommendations, midnight
 - [0035](decisions/0035-synthetic-generator-parameters.md) | 2026-11-07 | tudor-claude | Parameters of the synthetic simulation data
+- [0036](decisions/0036-api-fixture-mode.md) | 2026-11-07 | tudor-claude | API fixture mode plays a heuristic recorded day
 - [0037](decisions/0037-gym-env-implementation.md) | 2026-11-07 | tudor-claude | Gym env implementation: location-day engine, cached slices, cost_rule auto-detect
