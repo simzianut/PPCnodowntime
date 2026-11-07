@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from sim import transitions as tr
-from sim.config import TZ, PowerProfiles, SimConfig, power_profiles, sim_config
+from sim.config import TZ, PowerProfiles, SimConfig, cp_power, power_profiles, sim_config
 from sim.data import SimData
 from sim.metrics import PolicyMetrics
 from sim.types import (
@@ -160,7 +160,7 @@ class Engine:
         profiles: PowerProfiles | None = None,
     ) -> None:
         cfg = sim_cfg or sim_config()
-        prof = profiles or power_profiles()
+        prof = profiles if profiles is not None else power_profiles()
         self.day = day
         self.seed = seed
         self.forecaster = forecaster
@@ -174,7 +174,7 @@ class Engine:
             datetime.fromtimestamp(self._t0 + k * self.slot_s, ZONE)
             for k in range(self.n_slots + 1)
         ]
-        self._init_cps(data.cps, cp_ids, prof)
+        self._init_cps(data.cps, cp_ids, prof, per_cp=profiles is None)
         self._init_sessions(data.sessions)
         self._init_signals(data.signals)
         self._init_context(data.context)
@@ -209,7 +209,9 @@ class Engine:
 
     # ---- setup -------------------------------------------------------------------------------
 
-    def _init_cps(self, cps: pd.DataFrame, cp_ids: Sequence[str] | None, prof: PowerProfiles):
+    def _init_cps(
+        self, cps: pd.DataFrame, cp_ids: Sequence[str] | None, prof: PowerProfiles, per_cp: bool
+    ) -> None:
         by_id = cps.drop_duplicates("cp_id").set_index("cp_id", drop=False)
         ids = [str(c) for c in (by_id.index if cp_ids is None else cp_ids)]
         if len(set(ids)) != len(ids):
@@ -226,6 +228,8 @@ class Engine:
         self._pcs = [PowerClass(x) for x in sel["power_class"]]
         conns = sel["connectors"] if "connectors" in sel else [None] * n
         self._conns = [_as_list(x) for x in conns]
+        kws = sel["max_kw"] if "max_kw" in sel else [None] * n
+        self._max_kw = [None if pd.isna(x) else float(x) for x in kws]
         self._counties = {str(x) for x in sel["county_code"]} if "county_code" in sel else None
         if "current_type" in sel:
             cts = [str(x) for x in sel["current_type"]]
@@ -237,7 +241,7 @@ class Engine:
         self._sb_wake = np.zeros(n)
         self._ds_wake = np.full(n, np.nan)
         for i, pc in enumerate(self._pcs):
-            p = prof[pc]
+            p = cp_power(pc, self._max_kw[i]) if per_cp else prof[pc]
             deep_w = p.deep_sleep_w if p.has_deep_sleep else p.standby_w
             self._pw[i] = (0.0, p.idle_w, p.idle_w, p.standby_w, deep_w, 0.0)
             self._has_deep[i] = p.has_deep_sleep
@@ -344,6 +348,11 @@ class Engine:
     @property
     def t(self) -> datetime:
         return self._slot_dt[self.slot]
+
+    @property
+    def idle_w(self) -> np.ndarray:
+        """IDLE draw per CP (W), in `cp_ids` order."""
+        return self._pw[:, IDLE].copy()
 
     def step(self) -> StepResult:
         """Simulate the next slot: observe, decide, apply, events, account."""
@@ -544,14 +553,15 @@ class Engine:
         sig, ctx = self._shared_obs(k)
         secs = (k * self.slot_s - ps.since).astype(np.int64).tolist()
         cps = [
-            CpView(cp, loc, pc, list(conns), st, sec)
-            for cp, loc, pc, conns, st, sec in zip(
+            CpView(cp, loc, pc, list(conns), st, sec, kw)
+            for cp, loc, pc, conns, st, sec, kw in zip(
                 self.cp_ids,
                 self._locs,
                 self._pcs,
                 self._conns,
                 _STATE_OBJ[ps.state].tolist(),
                 secs,
+                self._max_kw,
                 strict=True,
             )
         ]

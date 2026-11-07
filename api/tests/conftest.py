@@ -12,6 +12,7 @@ from api.fixtures_gen import build_run_day
 from api.main import create_app
 from api.models import DoneMessage, SnapshotMessage, StatusMessage, TickMessage
 from sim.stations_seed import load_seed_stations
+from stations import store
 
 SHORT_SLOTS = 48
 MODELS = {
@@ -20,6 +21,17 @@ MODELS = {
     "status": StatusMessage,
     "done": DoneMessage,
 }
+
+
+@pytest.fixture(autouse=True)
+def _isolated_store(monkeypatch):
+    """No real DB in tests, and a fresh in-memory store (autonomy) for each test."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    store.set_engine(None)
+    store.reset_memory_store()
+    yield
+    store.set_engine(None)
+    store.reset_memory_store()
 
 
 @pytest.fixture(scope="session")

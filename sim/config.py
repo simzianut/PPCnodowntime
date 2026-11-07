@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 
+import pandas as pd
 import yaml
 
 from sim.types import PowerClass
@@ -66,6 +67,33 @@ def power_profiles(config_dir: Path = CONFIG_DIR) -> PowerProfiles:
     raw = _load("power_profiles.yaml", config_dir)
     extra = float(raw.pop("wake_extra_wh") or 0)
     return PowerProfiles({PowerClass(k): PowerProfile(**v) for k, v in raw.items()}, extra)
+
+
+def cp_power(pc: PowerClass | str, max_kw: float | None = None) -> PowerProfile:
+    """Per-CP watts from stations.store (decision 0049); wake times stay from the class profile."""
+    kw = None if max_kw is None or pd.isna(max_kw) else float(max_kw)
+    return _cp_power(PowerClass(pc), kw)
+
+
+@cache
+def _cp_power(pc: PowerClass, kw: float | None) -> PowerProfile:
+    base = power_profiles()[pc]
+    if kw is None:
+        return base
+    from stations.store import get_power_profile
+
+    p = get_power_profile(pc.value, kw)
+    deep = float(p["deep_sleep_w"]) if base.has_deep_sleep else None
+    return replace(
+        base, idle_w=float(p["idle_w"]), standby_w=float(p["standby_w"]), deep_sleep_w=deep
+    )
+
+
+@cache
+def net_tariff_ron_per_kwh() -> float:
+    from stations.store import get_energy_tariffs
+
+    return float(get_energy_tariffs()["net_b2b_ron_per_kwh"])
 
 
 @cache

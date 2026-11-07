@@ -35,6 +35,7 @@ describe('seed-backed frontend demo', () => {
     expect(run.slot).toBe(288)
     expect(run.kpis.rl_ppo?.sessions).toBe(264)
     expect(run.kpis.rl_ppo?.saved_kwh).toBeGreaterThan(0)
+    expect(run.kpis.rl_ppo?.saved_ron).toBeCloseTo((run.kpis.rl_ppo?.saved_kwh ?? 0) * 1.15, 0)
   })
 
   it('creates a pending recommendation and resolves its decision', () => {

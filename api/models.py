@@ -55,6 +55,8 @@ class Kpis(_Strict):
     overhead_kwh: float
     saved_kwh: float
     saved_pct: float = Field(description="0-100, share of always_on overhead")
+    overhead_ron: float
+    saved_ron: float
     wait_min_total: float
     wait_min_mean: float
     wait_min_p95: float
@@ -228,6 +230,8 @@ class EvalRow(_Strict):
     overhead_kwh: float
     saved_kwh: float
     saved_pct: float
+    overhead_ron: float | None = None
+    saved_ron: float | None = None
     wait_min_total: float
     wait_min_mean: float
     wait_min_p95: float

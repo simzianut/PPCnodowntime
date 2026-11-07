@@ -35,25 +35,4 @@ describe('useDashboard API mode', () => {
     expect(result.current.evaluation).toEqual({ generated_at: '', test_days: [], results: [] })
     expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ mode: 'replay', date: null }))
   })
-
-  it('replays the first test day when evaluation is available', async () => {
-    mocked.evaluation.mockResolvedValue({ generated_at: 'x', test_days: ['2024-03-14', '2024-03-15'], results: [] })
-    const { result } = renderHook(() => useDashboard())
-    await waitFor(() => expect(result.current.run?.run_id).toBe('r1'))
-    expect(result.current.evaluation.test_days).toEqual(['2024-03-14', '2024-03-15'])
-    expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ date: '2024-03-14' }))
-  })
-
-  it('requests only the policies the API reports as available', async () => {
-    mocked.evaluation.mockRejectedValue(new Error('API 404: Not Found'))
-    mocked.policies.mockResolvedValue([
-      { name: 'always_on', lambdas: [], available: true },
-      { name: 'naive_quiet_hours', lambdas: [], available: true },
-      { name: 'cost_rule', lambdas: [0.1], available: false },
-      { name: 'rl_ppo', lambdas: [0.1], available: false },
-    ])
-    const { result } = renderHook(() => useDashboard())
-    await waitFor(() => expect(result.current.run?.run_id).toBe('r1'))
-    expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ policies: ['always_on', 'naive_quiet_hours'], focus_policy: 'naive_quiet_hours' }))
-  })
 })

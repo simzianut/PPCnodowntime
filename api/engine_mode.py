@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.responses import JSONResponse
 
 from api.fixture_mode import Client
+from api.fixture_store import with_ron
 from api.models import (
     AutonomyBody,
     Health,
@@ -36,7 +37,8 @@ from api.models import (
 from sim.config import CONFIG_DIR, ROOT, TZ, sim_config
 from sim.data import SimData
 from sim.engine import Engine
-from sim.types import STATES, Autonomy, CommandStatus, PolicyName
+from sim.types import STATES, Autonomy, CommandStatus, PolicyName, State
+from stations import store
 
 log = logging.getLogger("uvicorn.error")
 ZONE = ZoneInfo(TZ)
@@ -46,6 +48,8 @@ PPO_META_PATH = ROOT / "artifacts" / "ppo_meta.json"
 MAX_RUNS = 10
 PENDING = CommandStatus.pending.value
 EXPIRED = CommandStatus.expired.value
+APPLIED = CommandStatus.applied.value
+HISTORY_FLUSH_TICKS = 12
 LIVE_DETAIL = "live mode comes with T12; only replay runs are available"
 
 
@@ -110,6 +114,10 @@ def build_stations(data: SimData) -> list[dict]:
     return out
 
 
+def _kpis(k: dict[str, dict]) -> dict[str, dict]:
+    return {p: with_ron(v) for p, v in k.items()}
+
+
 def _short_error(e: BaseException) -> str:
     return f"{type(e).__name__}: {str(e).splitlines()[0][:160] if str(e) else ''}"
 
@@ -140,8 +148,9 @@ class EngineRun:
         self.speed = body.speed
         self.status, self.paused_reason = "running", None
         self.slot = 0
-        self.kpis = engine.kpis()
+        self.kpis = _kpis(engine.kpis())
         self.states = engine.states(focus)
+        self.cp_index = {c: i for i, c in enumerate(engine.cp_ids)}
         self.rec_ids: list[int] = []
         self.outbox: dict[int, dict] = {}
         self.clients: set[Client] = set()
@@ -150,6 +159,12 @@ class EngineRun:
         self.running.set()
         self.task: asyncio.Task | None = None
         self._t0 = datetime.combine(day, dtime(0), tzinfo=ZONE).timestamp()
+        self.history = False  # write commands/state_events through stations.store (decision 0049)
+        self._hist_cmds: list[dict] = []
+        self._hist_events: list[dict] = []
+        self._hist_done: set[int] = set()
+        self._hist_ticks = 0
+        self._approved_cps: set[str] = set()
 
     # ---- views
     def sim_time(self, slot: int | None = None) -> str:
@@ -225,18 +240,70 @@ class EngineRun:
             if e.rec["status"] == PENDING:
                 e.rec = {**e.rec, "status": EXPIRED}
                 self.outbox[gid] = e.rec
+                self._hist_command(e.rec)
+
+    # ---- run history (stations.store.record_run_history)
+    def _hist_command(self, rec: dict, decided_by: str | None = None) -> None:
+        if not self.history or rec["id"] in self._hist_done:
+            return
+        self._hist_done.add(rec["id"])
+        applied = rec["status"] == APPLIED
+        self._hist_cmds.append({
+            **{k: rec[k] for k in ("ts", "cp_id", "policy", "from_state", "target_state",
+                                   "reason", "status")},
+            "expires_at": None if applied else rec["expires_at"],
+            "decided_by": decided_by,
+            "decided_at": self.sim_time() if decided_by else None,
+        })  # fmt: skip
+
+    def _hist_states(self, res, prev: np.ndarray, operator: set[str]) -> None:
+        events: dict[str, dict[str, str]] = {}
+        for ev in res.events.get(self.focus, []):
+            events.setdefault(ev["cp_id"], {})[ev["type"]] = ev["ts"]
+        slot_ts = self.sim_time(res.slot)
+        for cp, st in res.changes.get(self.focus, []):
+            frm, to = STATES[int(prev[self.cp_index[cp]])], State(st)
+            if frm == to:
+                continue
+            seen = events.get(cp, {})
+            if to == State.CHARGING or ("arrival" in seen and frm != State.CHARGING):
+                cause = "arrival"
+            elif frm == State.CHARGING or "departure" in seen:
+                cause = "departure"
+            else:
+                cause = "operator" if cp in operator else "agent"
+            self._hist_events.append({"ts": seen.get(cause, slot_ts), "cp_id": cp,
+                                      "from_state": frm.value, "to_state": to.value,
+                                      "cause": cause})  # fmt: skip
+
+    async def flush_history(self) -> None:
+        """Best effort: on any store error, log it and stop writing history for this run."""
+        if not self.history or not (self._hist_cmds or self._hist_events):
+            return
+        cmds, evs = self._hist_cmds, self._hist_events
+        self._hist_cmds, self._hist_events, self._hist_ticks = [], [], 0
+        try:
+            await asyncio.to_thread(store.record_run_history, self.run_id, cmds, evs)
+        except Exception:
+            log.exception("run %s: writing run history failed; history disabled", self.run_id)
+            self.history = False
 
     # ---- stepping
     def _step_sync(self):
         res = self.engine.step()
         return res, self.engine.applied_commands(self.focus, res.slot)
 
-    def _after_step(self, res, applied: list[dict]) -> list[dict]:
+    def _after_step(self, res, applied: list[dict], operator: set[str]) -> list[dict]:
         new_pending = any(d["status"] == PENDING for d in res.new_recommendations)
         for d in [*res.new_recommendations, *applied]:
             rec = self.mgr.register(self, d)
             self.outbox[rec["id"]] = rec
-        self.slot, self.kpis = res.slot, res.kpis
+            if rec["status"] in (APPLIED, EXPIRED):
+                self._hist_command(rec)
+        if self.history:
+            self._hist_states(res, self.states, operator)
+            self._hist_ticks += 1
+        self.slot, self.kpis = res.slot, _kpis(res.kpis)
         self.states = self.engine.states(self.focus)
         tick = {
             "type": "tick",
@@ -281,6 +348,7 @@ class EngineRun:
                 if self.engine.done:
                     self.set_status("done")
                     continue
+                operator, self._approved_cps = self._approved_cps, set()
                 try:
                     res, applied = await asyncio.to_thread(self._step_sync)
                 except Exception:
@@ -288,8 +356,10 @@ class EngineRun:
                     self.set_status("paused", "user")
                     self.broadcast(self.status_msg())
                     continue
-                msgs = self._after_step(res, applied)
+                msgs = self._after_step(res, applied, operator)
             self.broadcast(*msgs)
+            if self._hist_ticks >= HISTORY_FLUSH_TICKS or self.status != "running":
+                await self.flush_history()
             await asyncio.sleep(max(0.0, 1 / self.speed - (time.perf_counter() - t0)))
 
     # ---- control
@@ -307,8 +377,9 @@ class EngineRun:
             self.gen += 1
         self.engine.expire_pending()
         self._expire_known()
+        self._approved_cps.clear()
         self.slot = slot
-        self.kpis = self.engine.kpis()
+        self.kpis = _kpis(self.engine.kpis())
         self.states = self.engine.states(self.focus)
 
     async def control(self, body: RunControl) -> list[dict]:
@@ -344,6 +415,7 @@ class EngineRun:
                 if v != self.focus:
                     self.engine.expire_pending()
                     self._expire_known()
+                    self._approved_cps.clear()
                     self.focus = str(v)
                     self.engine.focus_policy = self.focus
                     self.states = self.engine.states(self.focus)
@@ -362,9 +434,13 @@ class EngineRun:
             except (KeyError, ValueError) as e:
                 entry.rec = {**entry.rec, "status": EXPIRED}
                 self.outbox[gid] = entry.rec
+                self._hist_command(entry.rec)
                 raise HTTPException(409, "recommendation has expired") from e
             entry.rec = {**d, "id": gid}
             self.outbox[gid] = entry.rec
+            self._hist_command(entry.rec, decided_by="operator")
+            if approve:
+                self._approved_cps.add(entry.rec["cp_id"])
             return entry.rec
 
 
@@ -391,6 +467,7 @@ class EngineManager:
         self._rl_cls = None
         self._ppo_model = None
         self._ready_lock: asyncio.Lock | None = None
+        self._bg: set[asyncio.Task] = set()
 
     # ---- loading
     def load(self) -> None:
@@ -455,11 +532,41 @@ class EngineManager:
 
     async def startup(self) -> None:
         await self.ready()
+        await self.load_autonomy()
 
     async def shutdown(self) -> None:
         for run in self.runs.values():
             if run.task:
                 run.task.cancel()
+        for run in self.runs.values():
+            await run.flush_history()
+
+    # ---- autonomy (stations.store: the settings table when the DB is up)
+    async def load_autonomy(self) -> Autonomy:
+        try:
+            self.autonomy = Autonomy(await asyncio.to_thread(store.get_autonomy))
+        except Exception:
+            log.exception("reading autonomy from stations.store failed; using %s", self.autonomy)
+        return self.autonomy
+
+    async def save_autonomy(self, mode: Autonomy) -> Autonomy:
+        try:
+            await asyncio.to_thread(store.set_autonomy, mode.value)
+        except Exception:
+            log.exception("writing autonomy to stations.store failed; kept in memory only")
+        self.autonomy = mode
+        for run in self.runs.values():
+            if run.status != "done":
+                run.engine.autonomy = mode
+        return mode
+
+    @staticmethod
+    def _history_enabled() -> bool:
+        try:
+            return store.run_history_enabled()
+        except Exception:
+            log.exception("run history check failed; not writing history")
+            return False
 
     # ---- policies
     def policy_infos(self) -> list[dict]:
@@ -515,6 +622,8 @@ class EngineManager:
             days = [d.isoformat() for d in self.test_days]
             raise HTTPException(400, f"date must be one of the test days {days}")
         lam = body.lambda_ or sim_config().default_lambda
+        await self.load_autonomy()
+        history = await asyncio.to_thread(self._history_enabled)
 
         def build():
             pols = self.make_policies(names, lam)
@@ -528,6 +637,7 @@ class EngineManager:
             log.exception("run creation failed")
             raise HTTPException(500, f"run creation failed ({_short_error(e)})") from e
         run = EngineRun(self, body, day, names, focus, lam, pols, eng)
+        run.history = history
         self.runs[run.run_id] = run
         while len(self.runs) > MAX_RUNS:
             self.drop_run(next(iter(self.runs)))
@@ -538,6 +648,10 @@ class EngineManager:
         run = self.runs.pop(run_id)
         if run.task:
             run.task.cancel()
+        if run.history:
+            task = asyncio.get_running_loop().create_task(run.flush_history())
+            self._bg.add(task)
+            task.add_done_callback(self._bg.discard)
         for gid in run.rec_ids:
             e = self.recs.pop(gid, None)
             if e is not None:
@@ -620,15 +734,11 @@ def build_router(mgr: EngineManager) -> APIRouter:
 
     @r.get("/api/settings/autonomy", response_model=AutonomyBody)
     async def get_autonomy():
-        return {"mode": mgr.autonomy}
+        return {"mode": await mgr.load_autonomy()}
 
     @r.put("/api/settings/autonomy", response_model=AutonomyBody)
     async def put_autonomy(body: AutonomyBody):
-        mgr.autonomy = body.mode
-        for run in mgr.runs.values():
-            if run.status != "done":
-                run.engine.autonomy = body.mode
-        return {"mode": mgr.autonomy}
+        return {"mode": await mgr.save_autonomy(body.mode)}
 
     @r.post("/api/runs", status_code=201, response_model=RunCreated)
     async def create_run(body: RunCreate):
@@ -642,6 +752,7 @@ def build_router(mgr: EngineManager) -> APIRouter:
     async def control(run_id: str, body: RunControl):
         run = mgr.get_run(run_id)
         run.broadcast(*(await run.control(body)))
+        await run.flush_history()
         return run.status_body()
 
     @r.get("/api/runs/{run_id}/cp/{cp_id}/timeline", response_model=Timeline)
@@ -676,7 +787,11 @@ def build_router(mgr: EngineManager) -> APIRouter:
         entry = mgr.recs.get(rec_id)
         if entry is None or entry.run_id not in mgr.runs:
             raise HTTPException(404, "recommendation not found")
-        return await mgr.runs[entry.run_id].decide(rec_id, body.decision == "approve")
+        run = mgr.runs[entry.run_id]
+        try:
+            return await run.decide(rec_id, body.decision == "approve")
+        finally:
+            await run.flush_history()
 
     @r.get("/api/eval")
     async def eval_results():

@@ -174,6 +174,13 @@ def test_autonomy_switch_db_and_memory(sqlite_engine):
         store.set_autonomy("INVALID")
 
 
+def test_get_autonomy_accepts_driver_decoded_jsonb(sqlite_engine):
+    store.set_engine(sqlite_engine)
+    with sqlite_engine.begin() as conn:  # psycopg returns jsonb '"RECOMMEND"' as the str RECOMMEND
+        conn.execute(text("UPDATE settings SET value = 'RECOMMEND' WHERE key = 'autonomy_mode'"))
+    assert store.get_autonomy() == "RECOMMEND"
+
+
 def test_apply_command_act_and_reject_and_drop(sqlite_engine):
     store.set_engine(sqlite_engine)
     t0 = datetime(2026, 11, 7, 2, 0, tzinfo=UTC)
@@ -252,3 +259,19 @@ def test_recommend_lifecycle_approve_reject_and_expire(sqlite_engine):
     assert rec3 is not None
     with pytest.raises(ValueError, match="expired"):
         store.decide_recommendation(rec3["id"], approve=True, ts=t0 + timedelta(minutes=20))
+
+
+def test_record_run_history(sqlite_engine):
+    cmd = {"ts": "2024-03-12T03:00:00+02:00", "cp_id": "L00001-1", "policy": "rl_ppo",
+           "from_state": "IDLE", "target_state": "DEEP_SLEEP", "reason": "p30=0.01",
+           "status": "applied"}  # fmt: skip
+    ev = {"ts": cmd["ts"], "cp_id": "L00001-1", "from_state": "IDLE",
+          "to_state": "DEEP_SLEEP", "cause": "agent"}  # fmt: skip
+    assert store.record_run_history("r1", [cmd], [ev]) == 0  # no DB
+    store.set_engine(sqlite_engine)
+    assert store.record_run_history("r1", [cmd], [ev]) == 2
+    with sqlite_engine.connect() as conn:
+        assert (
+            conn.execute(text("SELECT COUNT(*) FROM state_events WHERE run_id = 'r1'")).scalar()
+            == 1
+        )

@@ -166,6 +166,8 @@ wake_extra_wh: 0      # one-off energy per wake, placeholder
 
 `stations.store.get_power_profile(power_class, max_kw=None)` also supports the exact 13-capacity engineering table ($11\text{--}300\text{ kW}$), hardware contactor pre-charge latency (`precharge_wake_s`: $0.5\text{ s}$ AC, $5\text{--}8\text{ s}$ DC), and `stations.store.get_energy_tariffs()` ($1.15\text{ RON/kWh}$ Net B2B, $1.39\text{ RON/kWh}$ Gross Retail). During CHARGING, only energy delivered to the car is counted, and it is not overhead. OFFLINE draws 0.
 
+The simulator uses these per-CP values (`get_power_profile(power_class, max_kw)`) for every CP with a known `max_kw`, and the net B2B tariff for its RON KPIs (decision [0049](../decisions/0049-t5-data-in-sim-ron-kpis-run-history.md)).
+
 ## 6. Autonomy
 
 `settings.autonomy_mode` is a single global switch (decision 0009):

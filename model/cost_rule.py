@@ -67,6 +67,10 @@ class CostRulePolicy(Policy):
         self.slot_s = slot_s
         self.min_awake_per_location = min_awake_per_location
         self.power_profiles = power_profiles or self._load_power_profiles(power_profiles_path)
+        # Explicit profiles are used verbatim, like sim.engine.Engine(profiles=...).
+        self._per_cp = power_profiles is None
+        self._store_cfg = Path(power_profiles_path) if Path(power_profiles_path).exists() else None
+        self._cp_profiles: dict[tuple[PowerClass, float], dict[str, Any]] = {}
         self._load_sim_config(sim_config_path)
         self._fallback_forecaster = ConstantForecaster()
 
@@ -95,6 +99,28 @@ class CostRulePolicy(Policy):
                 ),
             }
         return profiles
+
+    def _profile(self, cp: CpView) -> dict[str, Any]:
+        """Class profile, with per-CP watts from stations.store when max_kw is known."""
+        base = self.power_profiles.get(cp.power_class, DEFAULT_POWER_PROFILES[cp.power_class])
+        kw = getattr(cp, "max_kw", None)
+        if not self._per_cp or kw is None or pd.isna(kw):
+            return base
+        key = (cp.power_class, float(kw))
+        prof = self._cp_profiles.get(key)
+        if prof is None:
+            from stations.store import get_power_profile
+
+            p = get_power_profile(cp.power_class, float(kw), config_path=self._store_cfg)
+            deep = p["deep_sleep_w"] if base["deep_sleep_w"] is not None else None
+            prof = {
+                **base,
+                "idle_w": p["idle_w"],
+                "standby_w": p["standby_w"],
+                "deep_sleep_w": deep,
+            }
+            self._cp_profiles[key] = prof
+        return prof
 
     def _load_sim_config(self, path: Path | str) -> None:
         p = Path(path)
@@ -135,7 +161,7 @@ class CostRulePolicy(Policy):
             p30 = float(fc.get("p_arrival_30", 0.10))
             p60 = float(fc.get("p_arrival_60", 0.20))
 
-            prof = self.power_profiles.get(cp.power_class, DEFAULT_POWER_PROFILES[cp.power_class])
+            prof = self._profile(cp)
             idle_w = prof["idle_w"]
 
             # Candidate states

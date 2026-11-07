@@ -34,6 +34,8 @@ export interface Kpis {
   overhead_kwh: number
   saved_kwh: number
   saved_pct: number
+  overhead_ron: number
+  saved_ron: number
   wait_min_total: number
   wait_min_mean: number
   wait_min_p95: number

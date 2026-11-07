@@ -17,7 +17,7 @@ from gymnasium import spaces
 from gymnasium.utils import seeding
 
 from sim.baselines import NaiveQuietHours
-from sim.config import power_profiles, sim_config
+from sim.config import sim_config
 from sim.data import SimData, load_default, processed_available
 from sim.engine import ZONE, Engine
 from sim.forecast import PrecomputedForecaster, ZeroForecaster
@@ -265,8 +265,6 @@ class ChargePointEnv(gymnasium.Env):
         self.sibling_policy = sibling_policy or _default_sibling(self._idx, self.lambda_wait)
         self.sibling_policy_name = str(self.sibling_policy.name)
         self.slot_s = int(cfg.slot_s)
-        prof = power_profiles()
-        self._norm = {pc: prof[pc].idle_w * self.slot_s / 3.6e6 for pc in PowerClass}
 
         self.action_space = spaces.Discrete(len(ACTIONS))
         self.observation_space = _obs_space()
@@ -302,7 +300,7 @@ class ChargePointEnv(gymnasium.Env):
         self._static = np.zeros(OBS_DIM - _EXO, dtype=np.float32)
         self._static[_SIB_TOTAL - _EXO] = min((len(sl.cp_ids) - 1) / 10, 1)
         self._static[_POWER + _PC_INDEX[pc] - _EXO] = 1
-        self._norm_cp = self._norm[self._idx.cp_pc[self.cp_id]]
+        self._norm_cp = float(self.engine.idle_w[self._i]) * self.slot_s / 3.6e6
         self._observe()
         return self._obs, self._info(0)
 

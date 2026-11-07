@@ -101,6 +101,7 @@ class CpView:
     connectors: list[str]
     state: State
     seconds_in_state: int
+    max_kw: float | None = None
 
 
 @dataclass
