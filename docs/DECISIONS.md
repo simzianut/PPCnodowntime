@@ -41,3 +41,6 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0031](decisions/0031-cost-rule-implementation-and-m2-stubs.md) | 2026-11-07 | edy-antigravity | M2 day-one stubs (ConstantForecaster, RandomPolicy), contract type fallback, and cost_rule implementation
 - [0032](decisions/0032-demand-forecaster-lightgbm-and-calibration.md) | 2026-11-07 | edy-antigravity | LightGBM EV demand forecaster, PAVA isotonic calibration, and precomputed forecasts
 - [0033](decisions/0033-station-import-units-classes-context.md) | 2026-11-07 | vlad + vlad-claude | Station import: one CP per physical unit, HPC at 100 kW+, context rules, other operators as context layer
+- [0034](decisions/0034-engine-implementation-details.md) | 2026-11-07 | tudor-claude | Engine implementation details: event order, command handling, recommendations, midnight
+- [0035](decisions/0035-synthetic-generator-parameters.md) | 2026-11-07 | tudor-claude | Parameters of the synthetic simulation data
+- [0037](decisions/0037-gym-env-implementation.md) | 2026-11-07 | tudor-claude | Gym env implementation: location-day engine, cached slices, cost_rule auto-detect
