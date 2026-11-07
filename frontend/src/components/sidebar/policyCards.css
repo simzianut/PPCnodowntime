@@ -1,18 +1,9 @@
-.h2h { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.h2h-card { --policy: #8d99a9; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; min-width: 0; display: flex; flex-direction: column; }
-.h2h-card.is-agent { border-color: color-mix(in srgb, var(--policy) 55%, var(--line)); background: color-mix(in srgb, var(--policy) 7%, var(--surface)); box-shadow: 0 3px 12px color-mix(in srgb, var(--policy) 18%, transparent); }
-.h2h-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.h2h-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--policy); flex: none; }
-.h2h-name { font: 700 11px Manrope, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.h2h-role { margin-left: auto; padding: 2px 5px; border-radius: 3px; font: 500 8px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); background: var(--surface-soft, var(--page)); }
-.is-agent .h2h-role { color: #fff; background: var(--policy); }
-.h2h-main { margin-top: 9px; display: flex; align-items: baseline; gap: 4px; }
-.h2h-main strong { font: 800 22px Manrope, sans-serif; letter-spacing: -.6px; line-height: 1; }
-.is-agent .h2h-main strong { color: var(--policy); }
-.is-baseline .h2h-main strong { color: var(--muted); }
-.h2h-main span { color: var(--muted); font-size: 9px; }
-.h2h-ron { margin-top: 3px; color: var(--muted); font: 500 9px 'DM Mono', monospace; }
-.h2h-stats { margin: 9px 0 0; padding-top: 7px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
-.h2h-stats div { display: flex; justify-content: space-between; align-items: baseline; font-size: 9px; }
-.h2h-stats dt { color: var(--muted); }
-.h2h-stats dd { margin: 0; font: 600 10px 'DM Mono', monospace; color: var(--text); }
+.kpi-table { width: 100%; border-collapse: collapse; }
+.kpi-table th, .kpi-table td { padding: 6px 0; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.kpi-table thead th { padding-top: 0; color: var(--muted); font-size: 12px; font-weight: 400; border-bottom-color: var(--line-strong); }
+.kpi-table th[scope="row"] { text-align: left; font-weight: 400; color: var(--muted); }
+.kpi-table td { padding-left: 12px; }
+.kpi-table td.is-agent { font-weight: 600; }
+.kpi-table thead th.is-agent { color: var(--accent); font-weight: 500; }
+.kpi-table tbody tr:last-child > * { border-bottom: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

@@ -32,7 +32,8 @@ const DRAG_THRESHOLD_PX = 4
 const DESELECT_DELAY_MS = 260
 const MAX_PULSES = 40
 const PULSE_MS = 1600
-const TICKER_SIZE = 5
+const ACTION_HISTORY = 20000
+const TICKER_COLLAPSED = 3
 const LEGEND: Array<[StateGroup, string]> = [['idle', 'Idle'], ['asleep', 'Asleep'], ['charging', 'Charging'], ['offline', 'Offline']]
 
 type Side = 'without' | 'with'
@@ -197,7 +198,7 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
       if (agg.charge) newPulses.push({ id: nextId.current++, locId, kind: 'charge', label: '', born: now })
     }
     if (sleeps || wakes) setCounts((c) => ({ sleeps: c.sleeps + sleeps, wakes: c.wakes + wakes }))
-    if (newActions.length) setActions((list) => [...newActions.reverse(), ...list].slice(0, TICKER_SIZE))
+    if (newActions.length) setActions((list) => [...newActions.reverse(), ...list].slice(0, ACTION_HISTORY))
     if (newPulses.length) setPulses((list) => [...list.filter((p) => now - p.born < PULSE_MS), ...newPulses].slice(-MAX_PULSES))
   }, [cpState, cpIndex])
 
@@ -224,6 +225,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   const splitRef = useRef(split)
   splitRef.current = split
   const { pulses, actions, counts } = useAgentActions(locations, cpState, run)
+  const [tickerOpen, setTickerOpen] = useState(false)
+  const shownActions = tickerOpen ? actions : actions.slice(0, TICKER_COLLAPSED)
   const uid = useId().replace(/:/g, '')
 
   useEffect(() => {
@@ -598,21 +601,21 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
         </svg>}
 
         <div className={`nm-card nm-card-without${split * size.w < (narrow ? size.w * 0.45 : 230) ? ' is-covered' : ''}`}>
-          <div className="nm-card-top"><i className="nm-swatch" />Without agent</div>
-          <strong>{kw(totals.burnedW)} <em>burned</em></strong>
-          <span className="nm-sub">{totals.without.idle} CPs idle, all awake</span>
+          <div className="nm-card-top">Without agent</div>
+          <strong>{kw(totals.burnedW)} <em>idle draw</em></strong>
+          <span className="nm-sub">{totals.without.idle} charge points idle</span>
         </div>
 
         <div className={`nm-card nm-card-with${(1 - split) * size.w < (narrow ? size.w * 0.45 : 320) ? ' is-covered' : ''}`}>
-          <div className="nm-card-top"><span className="nm-live-dot" />With {policy}<span className="nm-time">{clock(run?.sim_time)}</span></div>
-          <strong>{kw(totals.actualW)} <em>burned</em></strong>
+          <div className="nm-card-top">With {policy}</div>
+          <strong>{kw(totals.actualW)} <em>idle draw</em></strong>
           <span className="nm-sub">{totals.with.asleep} asleep · {totals.with.idle} idle</span>
           {savedNow >= 50
-            ? <span className="nm-saved">−{kw(savedNow)} · {savedPct}% less idle power</span>
-            : <span className="nm-saved is-zero">No idle power saved yet</span>}
+            ? <span className="nm-saved">{kw(savedNow)} lower ({savedPct}%)</span>
+            : <span className="nm-saved is-zero">No saving yet</span>}
           <div className="nm-counts">
-            <span><b className="is-sleep">{counts.sleeps.toLocaleString()}</b> sleep actions</span>
-            <span><b className="is-wake">{counts.wakes.toLocaleString()}</b> wakes</span>
+            <span><b>{counts.sleeps.toLocaleString()}</b> sleep commands</span>
+            <span><b>{counts.wakes.toLocaleString()}</b> wakes</span>
           </div>
         </div>
 
@@ -627,15 +630,20 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           </div>
         </div>}
 
-        <div className="nm-ticker">
-          <div className="nm-ticker-head">Agent actions</div>
-          {actions.length === 0 && <div className="nm-ticker-empty">Waiting for the agent to act…</div>}
+        <div className={`nm-ticker${tickerOpen ? ' is-open' : ''}`}>
+          <div className="nm-ticker-head">
+            <span>Agent actions</span>
+            {actions.length > TICKER_COLLAPSED && <button type="button" aria-expanded={tickerOpen} onClick={() => setTickerOpen((open) => !open)}>
+              {tickerOpen ? 'Show latest 3' : `Show all ${actions.length}`}
+            </button>}
+          </div>
+          {actions.length === 0 && <div className="nm-ticker-empty">No actions yet.</div>}
           <ol>
-            {actions.map((action, i) => <li key={action.id} className={`is-${action.kind}`} style={{ opacity: 1 - i * 0.16 }}>
+            {shownActions.map((action) => <li key={action.id} className={`is-${action.kind}`}>
               <span className="nm-tick-time">{action.time}</span>
               <span className="nm-tick-main">
                 <span className="nm-tick-name">{action.name}</span>
-                <span className="nm-tick-what">{action.cps} CP{action.cps > 1 ? 's' : ''} → {action.kind === 'sleep' ? (action.deep ? 'deep sleep' : 'sleep') : 'woke up'}</span>
+                <span className="nm-tick-what">{action.cps} charge point{action.cps > 1 ? 's' : ''} → {action.kind === 'sleep' ? (action.deep ? 'deep sleep' : 'sleep') : 'woke up'}</span>
               </span>
               <span className="nm-tick-w">{action.watts < 0 ? '−' : '+'}{fmtW(Math.abs(action.watts))}</span>
             </li>)}
