@@ -1,0 +1,37 @@
+# Station importer settings (spec 03 §2, decisions 0029 and the T4 power-class decision)
+ppc_provider_id: 5
+match_radius_m: 50          # open-data row to AmpWhere location
+power:
+  ac_max_kw: 22             # <= this: AC_22
+  hpc_min_kw: 100           # >= this: DC_HPC, in between DC_50
+context:
+  highway_m: 500
+  urban_km: 3
+  airport_keywords: [airport, aeroport, henri coanda]  # "otopeni" alone matches the town
+  fuel_keywords: [omv, petrom, mol, rompetrol, lukoil, socar, gazprom]
+  retail_keywords:
+    - penny
+    - carrefour
+    - mega image
+    - kaufland
+    - lidl
+    - auchan
+    - profi
+    - selgros
+    - metro
+    - dedeman
+    - altex
+    - romstal
+    - hornbach
+    - leroy merlin
+    - brico
+    - mall
+    - shopping
+    - park
+    - plaza
+    - cora
+    - jumbo
+overpass:
+  url: https://overpass-api.de/api/interpreter
+  user_agent: "PPCnodowntime-hackathon (EV research; one-off cached query)"
+  timeout_s: 240
