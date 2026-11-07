@@ -50,7 +50,12 @@
 .nm-handle svg path { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 .nm-ticker { right: 12px; bottom: 12px; width: 300px; padding: 8px 12px 4px; }
-.nm-ticker-head { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.nm-ticker-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.nm-ticker-head button { pointer-events: auto; border: 0; background: none; padding: 0; font: inherit; font-weight: 500; color: var(--accent, #0B5CAD); cursor: pointer; }
+.nm-ticker-head button:hover { text-decoration: underline; }
+.nm-ticker-head button:focus-visible { outline: 2px solid var(--accent, #0B5CAD); outline-offset: 2px; }
+.nm-ticker.is-open { pointer-events: auto; }
+.nm-ticker.is-open ol { max-height: min(52vh, 420px); overflow-y: auto; overscroll-behavior: contain; margin-right: -8px; padding-right: 8px; }
 .nm-ticker-empty { color: var(--nm-muted); font-size: 12px; padding: 2px 0 6px; }
 .nm-ticker ol { list-style: none; margin: 0; padding: 0; }
 .nm-ticker li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 0 4px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--nm-ink); position: relative; }

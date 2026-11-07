@@ -32,7 +32,8 @@ const DRAG_THRESHOLD_PX = 4
 const DESELECT_DELAY_MS = 260
 const MAX_PULSES = 40
 const PULSE_MS = 1600
-const TICKER_SIZE = 5
+const ACTION_HISTORY = 20000
+const TICKER_COLLAPSED = 3
 const LEGEND: Array<[StateGroup, string]> = [['idle', 'Idle'], ['asleep', 'Asleep'], ['charging', 'Charging'], ['offline', 'Offline']]
 
 type Side = 'without' | 'with'
@@ -197,7 +198,7 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
       if (agg.charge) newPulses.push({ id: nextId.current++, locId, kind: 'charge', label: '', born: now })
     }
     if (sleeps || wakes) setCounts((c) => ({ sleeps: c.sleeps + sleeps, wakes: c.wakes + wakes }))
-    if (newActions.length) setActions((list) => [...newActions.reverse(), ...list].slice(0, TICKER_SIZE))
+    if (newActions.length) setActions((list) => [...newActions.reverse(), ...list].slice(0, ACTION_HISTORY))
     if (newPulses.length) setPulses((list) => [...list.filter((p) => now - p.born < PULSE_MS), ...newPulses].slice(-MAX_PULSES))
   }, [cpState, cpIndex])
 
@@ -224,6 +225,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   const splitRef = useRef(split)
   splitRef.current = split
   const { pulses, actions, counts } = useAgentActions(locations, cpState, run)
+  const [tickerOpen, setTickerOpen] = useState(false)
+  const shownActions = tickerOpen ? actions : actions.slice(0, TICKER_COLLAPSED)
   const uid = useId().replace(/:/g, '')
 
   useEffect(() => {
@@ -627,11 +630,16 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           </div>
         </div>}
 
-        <div className="nm-ticker">
-          <div className="nm-ticker-head">Agent actions</div>
+        <div className={`nm-ticker${tickerOpen ? ' is-open' : ''}`}>
+          <div className="nm-ticker-head">
+            <span>Agent actions</span>
+            {actions.length > TICKER_COLLAPSED && <button type="button" aria-expanded={tickerOpen} onClick={() => setTickerOpen((open) => !open)}>
+              {tickerOpen ? 'Show latest 3' : `Show all ${actions.length}`}
+            </button>}
+          </div>
           {actions.length === 0 && <div className="nm-ticker-empty">No actions yet.</div>}
           <ol>
-            {actions.map((action) => <li key={action.id} className={`is-${action.kind}`}>
+            {shownActions.map((action) => <li key={action.id} className={`is-${action.kind}`}>
               <span className="nm-tick-time">{action.time}</span>
               <span className="nm-tick-main">
                 <span className="nm-tick-name">{action.name}</span>

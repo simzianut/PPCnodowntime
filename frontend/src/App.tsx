@@ -116,7 +116,7 @@ function App() {
   const dashboard = useDashboard()
   const { locations, cpState, selectedLocation, timelineByCp, openStation, run, autonomy, changeAutonomy, connectionMode, connected, error, setError } = dashboard
   const cpTotal = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
-  const connIssue = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Not connected · showing demo data' : connected ? null : 'Not connected'
+  const connIssue = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Not connected · showing demo data' : connected || run?.status === 'done' ? null : 'Not connected'
 
   return <div className="app-shell">
     <header className="topbar">
