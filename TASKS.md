@@ -9,7 +9,6 @@ Add notes as indented sub-bullets.
 
 ## In progress
 - [T30] M5 map scratchpad: 3–4 simplified map-view variants behind a switcher (`?map=a..d`) so Tudor can pick one; the losers get dropped | owner: tudor-claude | branch: tudor-claude/T30-map-variants | depends: T29
-- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
 - [T29] M5 map: replace numbered cluster bubbles with energy-saved blobs (colour = arithmetic mean of member stations' saved level, red → yellow → green) | owner: tudor-claude | branch: tudor-claude/T29-cluster-blobs | depends: T22
   - PR #5 open (decision 0055). Test: `cd frontend && npm test`, `make web`.
 - [T25] M2 GPU training infra: docker/train.Dockerfile + docker-compose.train.yml (GPU_ID picks the host GPU), reproducible runs (seeds, deterministic torch/LightGBM, run manifest with git SHA + data hashes + versions), experiment CLI `python -m model.experiments`, runs/<run_id>/ layout, explicit promote to artifacts/ | owner: vlad-claude | branch: vlad-claude/T25-train-infra | depends: T13, T14
@@ -37,6 +36,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T15] M2 live-mode signal sampling + live validation report (spec 02 §5, §2) | owner: edy-antigravity | branch: edy-antigravity/T15-live-signals | depends: T9, T13
+  - LiveSignalSampler samples route intents, maps EV and ICE counts with CP charging confirmation; generates model/reports/live_validation_report.json; decision 0056. Test: uv run pytest model/tests/test_live_signals.py.
 - [T11] M4 evaluator → artifacts/eval_results.json (spec 04 §5) | owner: edy-antigravity | branch: edy-antigravity/T11-evaluator | depends: T10, T13
   - sim.evaluate runs policies over test days and lambda grid; generates artifacts/eval_results.json for GET /api/eval and the frontend Pareto curve; decision 0055. Test: uv run pytest sim/tests/test_evaluate.py.
 - [T24] Integrate T5 station data into the sim: per-CP power from the capacity table, RON KPIs (net B2B tariff), API autonomy + run history through stations.store | owner: tudor-claude | branch: tudor-claude/T24-t5-into-sim | depends: T5, T23
