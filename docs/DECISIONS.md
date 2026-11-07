@@ -23,3 +23,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0013](decisions/0013-repo-scaffold.md) | 2026-11-07 | tudor-claude | Repo scaffold: packaging, entry points, tests, migrations
 - [0014](decisions/0014-station-list-from-open-sources.md) | 2026-11-07 | tudor-claude | Station list from free online sources only; commit the openly licensed subset (supersedes 0004)
 - [0015](decisions/0015-synthetic-m1-fixtures.md) | 2026-11-07 | vlad-claude | M1 fixtures are synthetic, on placeholder locations L00001–L00005
+- [0016](decisions/0016-live-collector-design.md) | 2026-11-07 | vlad-claude | Live collector writes JSONL first, DB when T5 lands; AmpWhere request from a human capture

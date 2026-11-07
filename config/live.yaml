@@ -1,0 +1,30 @@
+poll_s: 300
+min_request_gap_s: 2.0
+request_timeout_s: 30
+backoff:
+  initial_s: 5
+  factor: 2
+  max_s: 300
+  max_retries: 4
+max_consecutive_failures: 5
+# lower-case raw word -> CHARGING | AVAILABLE | OFFLINE | UNKNOWN
+status_map:
+  available: AVAILABLE
+  free: AVAILABLE
+  idle: AVAILABLE
+  preparing: AVAILABLE
+  reserved: AVAILABLE
+  charging: CHARGING
+  occupied: CHARGING
+  in use: CHARGING
+  busy: CHARGING
+  suspendedev: CHARGING
+  suspendedevse: CHARGING
+  finishing: CHARGING
+  offline: OFFLINE
+  out of order: OFFLINE
+  outoforder: OFFLINE
+  faulted: OFFLINE
+  unavailable: OFFLINE
+  inoperative: OFFLINE
+  unknown: UNKNOWN
