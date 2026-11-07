@@ -1,0 +1,74 @@
+.vd-card { --vd-sleep: #16a34a; --vd-wake: #f59e0b; --vd-charge: #2563eb; --vd-awake: #9aa3af; --vd-ink: #111827; --vd-muted: #6b7280; position: relative; }
+.vd-card .map-canvas { font-family: Manrope, sans-serif; }
+
+.vd-station .vd-hit, .vd-cluster .vd-hit { fill: transparent; }
+.vd-body { transition: transform .12s; }
+.vd-station:hover .vd-body, .vd-cluster:hover .vd-body, .vd-station.is-selected .vd-body { transform: scale(1.2); }
+.vd-dot { stroke: #fff; stroke-width: 1.6px; transition: fill .6s ease; filter: drop-shadow(0 1px 1.5px #0f172a33); }
+.vd-cluster .vd-dot { stroke-width: 2px; }
+.vd-dot.is-waking { stroke: var(--vd-wake); stroke-width: 2.6px; }
+.vd-charging { fill: var(--vd-charge); stroke: #fff; stroke-width: 1.2px; }
+.vd-selected { fill: #fff; stroke: var(--vd-ink); stroke-width: 2.2px; }
+.vd-leg { stroke: var(--vd-ink); stroke-opacity: .35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.map-marker:focus-visible .vd-hit { stroke: var(--vd-ink); stroke-width: 2px; }
+
+.vd-pulses { pointer-events: none; }
+.vd-pulse { --c: var(--vd-sleep); }
+.vd-pulse.is-wake { --c: var(--vd-wake); }
+.vd-pulse.is-charge { --c: var(--vd-charge); }
+.vd-ripple { fill: var(--c); fill-opacity: .32; stroke: var(--c); stroke-width: 2.5px; transform-box: fill-box; transform-origin: center; opacity: 0; animation: vd-ripple 1.4s cubic-bezier(.2, .7, .3, 1) forwards; }
+.vd-ripple-2 { fill: none; animation-delay: .22s; }
+.is-charge .vd-ripple { animation-duration: .9s; fill-opacity: .4; }
+.vd-float { fill: var(--c); font: 800 12.5px Manrope, sans-serif; text-anchor: middle; paint-order: stroke; stroke: #fff; stroke-width: 3.5px; stroke-linejoin: round; opacity: 0; animation: vd-float 1.5s ease-out forwards; }
+.is-wake .vd-float { fill: #b45309; }
+@keyframes vd-ripple { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(3.6); opacity: 0; } }
+@keyframes vd-float { 0% { transform: translateY(4px); opacity: 0; } 15% { opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-16px); opacity: 0; } }
+
+.vd-headline, .vd-ticker, .vd-legend, .vd-controls { position: absolute; z-index: 3; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 4px 16px #0f172a12; }
+.vd-headline { left: 12px; top: 12px; padding: 11px 14px 12px; min-width: 210px; }
+.vd-headline-top { display: flex; align-items: center; gap: 7px; color: var(--vd-ink); font-size: 11px; font-weight: 700; }
+.vd-time { margin-left: auto; color: var(--vd-muted); font: 500 11px 'DM Mono', monospace; }
+.vd-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vd-sleep); box-shadow: 0 0 0 3px #16a34a26; animation: vd-live 2s ease-in-out infinite; }
+@keyframes vd-live { 50% { box-shadow: 0 0 0 6px #16a34a00; } }
+.vd-saving { margin-top: 6px; display: flex; flex-direction: column; }
+.vd-saving strong { color: var(--vd-sleep); font: 800 28px/1.05 Manrope, sans-serif; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.vd-saving span { color: var(--vd-muted); font-size: 11px; font-weight: 600; margin-top: 2px; }
+.vd-counts { display: flex; gap: 14px; margin-top: 9px; padding-top: 9px; border-top: 1px solid #eef0f2; color: var(--vd-muted); font-size: 11px; }
+.vd-counts b { font: 700 13px 'DM Mono', monospace; margin-right: 3px; }
+.vd-counts b.is-sleep { color: var(--vd-sleep); }
+.vd-counts b.is-wake { color: #d97706; }
+
+.vd-ticker { right: 12px; bottom: 12px; width: 300px; padding: 10px 12px 8px; }
+.vd-ticker-head { color: var(--vd-muted); font: 600 9px 'DM Mono', monospace; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 6px; }
+.vd-ticker-empty { color: var(--vd-muted); font-size: 11px; padding: 4px 0 6px; }
+.vd-ticker ol { list-style: none; margin: 0; padding: 0; }
+.vd-ticker li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 0 4px 9px; border-top: 1px solid #f1f2f4; font-size: 11px; color: var(--vd-ink); position: relative; transition: opacity .4s; }
+.vd-ticker li:first-child { border-top: 0; animation: vd-row-in .35s ease-out; }
+.vd-ticker li::before { content: ''; position: absolute; left: 0; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--vd-sleep); }
+.vd-ticker li.is-wake::before { background: var(--vd-wake); }
+.vd-tick-time { color: var(--vd-muted); font: 500 10px 'DM Mono', monospace; }
+.vd-tick-main { display: flex; flex-direction: column; min-width: 0; gap: 0; line-height: 1.25; }
+.vd-tick-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vd-tick-what { color: var(--vd-muted); font-size: 10px; line-height: 1.2; white-space: nowrap; }
+.vd-tick-w { font: 600 11px 'DM Mono', monospace; color: var(--vd-sleep); min-width: 46px; text-align: right; }
+.is-wake .vd-tick-w { color: #d97706; }
+@keyframes vd-row-in { from { transform: translateY(-4px); opacity: 0; } }
+
+.vd-legend { left: 12px; bottom: 12px; display: flex; gap: 14px; padding: 8px 12px; font-size: 11px; color: var(--vd-muted); font-weight: 600; }
+.vd-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.vd-legend i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #0000000f; }
+.vd-legend i.is-sleep { background: var(--vd-sleep); }
+.vd-legend i.is-awake { background: var(--vd-awake); }
+.vd-legend i.is-wake { background: #fff; border: 2px solid var(--vd-wake); box-shadow: 0 0 0 3px #f59e0b33; }
+.vd-legend i.is-charge { background: var(--vd-charge); width: 7px; height: 7px; }
+
+.vd-controls { right: 12px; top: 12px; display: flex; flex-direction: column; overflow: hidden; border-radius: 8px; }
+.vd-controls button { width: 30px; height: 29px; border: 0; border-bottom: 1px solid #e5e7eb; background: #fff; display: grid; place-items: center; color: #4b5563; cursor: pointer; }
+.vd-controls button:last-child { border: 0; }
+.vd-controls button:hover { color: var(--vd-ink); background: #f7f8fa; }
+
+@media (max-width: 700px) {
+  .vd-ticker { left: 12px; right: 12px; width: auto; bottom: 52px; }
+  .vd-legend { gap: 10px; }
+  .vd-saving strong { font-size: 22px; }
+}
