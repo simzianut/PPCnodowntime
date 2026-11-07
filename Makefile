@@ -1,4 +1,4 @@
-.PHONY: db migrate db-down seed data train api web test lint train-image train-image-verify train-docker train-suite-docker train-local
+.PHONY: db migrate db-down seed data train api web test lint train-image train-image-verify train-docker train-suite-docker train-local figures figures-local
 
 PSQL = docker compose exec -T -e PGOPTIONS=--client-min-messages=warning db psql -U ppc -d ppc -v ON_ERROR_STOP=1 -q
 # Runs `python -m <pkg>` if the module has added its entry point (CONTRACTS: make targets).
@@ -70,3 +70,11 @@ train-suite-docker:
 
 train-local:
 	uv run --extra rl --extra train python -m model.experiments run $(CONFIG) --seed $(SEED) $(ARGS)
+
+# Paper figures (docs/figures): pinned TeX Live in Docker, or local TeX with figures-local.
+figures:
+	docker build -f docker/tex.Dockerfile -t ppc-figures .
+	docker run --rm -v "$(PWD)":/work -w /work ppc-figures
+
+figures-local:
+	bash docs/figures/build.sh
