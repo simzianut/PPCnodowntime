@@ -1,4 +1,4 @@
-# 0033: Engine implementation details: event order, command handling, recommendations, midnight
+# 0034: Engine implementation details: event order, command handling, recommendations, midnight
 
 - Date: 2026-11-07
 - Who: tudor-claude
