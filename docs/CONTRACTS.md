@@ -43,6 +43,10 @@ Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/
 | `PPC_HOST` | compose (server) | `ppc.example.com` | Host rule of the Traefik router on `ppc-web` |
 | `TRAEFIK_ENTRYPOINT` | compose (server) | `websecure` | Traefik entrypoint for the router |
 | `COMPOSE_FILE`, `COMPOSE_PROFILES` | compose | `docker-compose.yml:docker-compose.server.yml`, `live` | Set in the server `.env` so plain `docker compose up -d` uses the server override; `live` adds `ppc-collector` |
+| `PPC_AUTH` | M4 API | `on` | `on` = every `/api` route (except `/api/health` and `/api/auth/*`) and the `/ws` handshake need the access cookie. Default `off` in code (host dev); compose sets `on` (decision 0087) |
+| `PPC_ACCESS_KEY` | M4 API | — | The access key. Setting it also turns auth on. Unset with `PPC_AUTH=on`: `ppc-api` generates one at start (`secrets.token_urlsafe(32)`) and logs it once (`docker compose logs ppc-api`); it changes on every restart. Never commit |
+| `API_CPUS`, `API_MEM_LIMIT` | compose | `4`, `8g` | CPU and memory caps of the API-image services (`ppc-api`, `ppc-seed`, `ppc-collector`). `API_CPUS` must be a whole number: it also sets `OMP_NUM_THREADS`/`MKL_NUM_THREADS` (decision 0087) |
+| `DB_CPUS`, `DB_MEM_LIMIT`, `WEB_CPUS`, `WEB_MEM_LIMIT` | compose | `1`, `1g`, `0.5`, `256m` | Caps of `ppc-db` and `ppc-web` |
 
 ## Make targets and entry points
 `make` targets (spec 00 §4) call one entry point per module. A module provides it by adding the file; until then the target prints "not implemented yet".
@@ -232,6 +236,13 @@ type Recommendation = { id: number; ts: string; cp_id: string; policy: PolicyNam
 
 ### GET /api/health
 Response 200: `{"ok": true}`
+
+### Access key (decision 0087)
+When auth is on (`PPC_AUTH=on` or `PPC_ACCESS_KEY` set), any other `/api` route without a valid cookie returns **401** `{"detail": "access key required"}`, and a `/ws` handshake without one is refused (close code 4401, before accept). `/api/health` and `/api/auth/*` stay open.
+- `GET /api/auth/status` → 200 `{"required": bool, "authenticated": bool}`
+- `POST /api/auth/login` `{"key": "..."}` → 200 `{"authenticated": true}` and sets cookie `ppc_access` (HttpOnly, SameSite=Strict, Path=/, Max-Age 30 days, Secure when `X-Forwarded-Proto: https`). The cookie holds an HMAC derived from the key, never the key. Wrong key → 401. Auth off → 200 with no cookie.
+- `POST /api/auth/logout` → 200, clears the cookie.
+The key never goes in a URL. A new key (restart without `PPC_ACCESS_KEY`) invalidates all cookies.
 
 ### GET /api/stations?bbox=minLon,minLat,maxLon,maxLat&county=B
 Response 200: `Location[]`. `state` is included only when a live run exists.
