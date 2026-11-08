@@ -1,10 +1,11 @@
 """Map Dundee donor sessions onto Romanian PPC charge points (spec 01 §4).
 
-CLI: python -m dataset.mapping
+CLI: python -m dataset.mapping [--donors dundee,cps]   ($DATASET_DONORS does the same)
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -56,13 +57,22 @@ def load_config() -> dict:
     cfg = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
     sig = yaml.safe_load(SIGNALS_PATH.read_text(encoding="utf-8"))
     d = cfg["dundee"]
-    return {
+    out = {
         **cfg["mapping"],
         "start": d["start"],
         "end": d["end"],
         "split_date": d["split_date"],
         "context_multiplier": sig["context_multiplier"],
     }
+    env = donor_list(os.environ.get("DATASET_DONORS"))
+    if env:
+        out["donors"] = env
+    return out
+
+
+def donor_list(raw: str | None) -> list[str]:
+    """'dundee,cps' -> ['dundee', 'cps']; empty for None or blank."""
+    return [d.strip() for d in (raw or "").split(",") if d.strip()]
 
 
 def data_dir() -> Path:
@@ -652,8 +662,16 @@ def build(out_root: Path | None = None, cfg: dict | None = None) -> dict:
     return report
 
 
-def main() -> None:
-    print(json.dumps(build(), indent=2, default=str))
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(prog="python -m dataset.mapping")
+    ap.add_argument(
+        "--donors", default=None, help="comma list overriding mapping.donors, e.g. dundee,cps"
+    )
+    cfg = load_config()
+    cli = donor_list(ap.parse_args(argv).donors)
+    if cli:
+        cfg["donors"] = cli
+    print(json.dumps(build(cfg=cfg), indent=2, default=str))
 
 
 if __name__ == "__main__":
