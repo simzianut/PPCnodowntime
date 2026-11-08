@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, runSocketUrl } from '../api/client'
+import { ApiError, api, runSocketUrl } from '../api/client'
 import { advanceDemoRun, createDemoRun, demoKpisAt, demoStatesAt, demoEval, demoLocations, getDemoAutonomy, getDemoRecommendations, makeDemoTimeline, resolveDemoRecommendation, setDemoAutonomy } from '../api/mock'
-import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type Location, type PolicyName, type Recommendation, type Run, type State, type Tick } from '../api/types'
+import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from '../api/types'
 
 export type ConnectionMode = 'connecting' | 'api' | 'demo'
 
@@ -134,11 +134,14 @@ export function useDashboard() {
     const policies = policiesRef.current
     const payload = { mode, date, policies, focus_policy: defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
-    flushStagger(false)
-    setTrend([])
-    setSelectedLocation(null)
-    setTimelineByCp({})
+    const reset = () => {
+      flushStagger(false)
+      setTrend([])
+      setSelectedLocation(null)
+      setTimelineByCp({})
+    }
     if (connectionMode === 'demo') {
+      reset()
       const demoRun = createDemoRun(payload)
       setCpState(demoStatesAt(0))
       runRef.current = demoRun
@@ -149,10 +152,16 @@ export function useDashboard() {
     try {
       const created = await api.startRun(payload)
       const current = await api.getRun(created.run_id)
+      reset()
       runRef.current = current
       setRun(current)
       setConnected(true)
     } catch (cause) {
+      if (cause instanceof ApiError && cause.fromBackend) {
+        setError(cause.message)
+        return
+      }
+      reset()
       setConnectionMode('demo')
       const demoRun = createDemoRun(payload)
       setLocations(demoLocations)
@@ -179,16 +188,26 @@ export function useDashboard() {
         autonomyRef.current = autonomyData.mode
         const available = POLICIES.filter((name) => policyList?.find((item) => item.name === name)?.available ?? true)
         policiesRef.current = available.includes('rl_ppo') ? available : ['always_on']
-        const payload = { mode: 'replay' as const, date: evalData?.test_days[0] ?? null, policies: policiesRef.current, focus_policy: defaultFocus(policiesRef.current), lambda: 0.1, speed: 60 }
-        const created = await api.startRun(payload)
+        const payload: RunRequest = { mode: 'replay', date: evalData?.test_days[0] ?? null, policies: policiesRef.current, focus_policy: defaultFocus(policiesRef.current), lambda: 0.1, speed: 60 }
+        let created: { run_id: string } | null = null
+        if (new URLSearchParams(window.location.search).get('mode') === 'live') {
+          try {
+            created = await api.startRun({ ...payload, mode: 'live', date: null })
+          } catch (cause) {
+            if (!(cause instanceof ApiError && cause.fromBackend)) throw cause
+            setError(`${cause.message}. Showing replay instead.`)
+          }
+        }
+        created ??= await api.startRun(payload)
         const current = await api.getRun(created.run_id)
         if (cancelled) return
         runRef.current = current
         setRun(current)
         setConnected(true)
         api.recommendations(current.run_id).then(setRecommendations).catch(() => undefined)
-      } catch {
+      } catch (cause) {
         if (cancelled) return
+        setError(cause instanceof Error ? `${cause.message}. Showing seed-data demo.` : 'API unavailable. Showing seed-data demo.')
         setLocations(demoLocations)
         setCpState(demoStatesAt(0))
         setEvaluation(demoEval)
