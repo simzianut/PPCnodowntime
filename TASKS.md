@@ -36,6 +36,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T48] Bug: page at / falls back to demo with 400 "date must be a test day covered by forecasts.parquet": /api/eval lists eval_results.json days (2025) but the engine can only replay the days it loaded (synthetic 2024 without the private sessions) | owner: tudor-claude | branch: tudor-claude/T48-replay-days | depends: T46
+  - Done: /api/eval test_days = the engine's replayable days (decision 0083), PR #19. Test: docker compose up -d --build ppc-api, open http://localhost:8080/ → replay plays, no demo banner.
 - [T46] E2E: merge T44 into main, real model data (F2 forecasts + private sessions/signals) in the Docker app, frontend on the real API | owner: tudor-claude | branch: tudor-claude/T46-e2e | depends: T44, T36, T35
   - Done: T44 merged; frontend keeps the run on backend errors (nginx 502-504 still → demo), `?mode=live` start, live wording; decision 0080; PR #17. Verified in Docker: /?mode=live runs the F2 GRU on real AmpWhere statuses, 671/671 CPs, ~41% saved. Test: put forecasts.parquet in data/processed, `uv run python -m stations` if source_refs.parquet is missing, `docker compose up -d --build`, open http://localhost:8080/?mode=live. Replay on real sessions still needs Vlad's ppc_data_v1 + ppc_signals_v3 zips.
 - [T45] Bug: live demo clock: with LIVE_CLOCK_START/SPEED set, new live runs get 400 "live feed is stale" a few minutes after the API starts (newest status 23:30 vs a clock past midnight), although each run should start its clock at LIVE_CLOCK_START | owner: tudor-claude | branch: tudor-claude/T45-live-clock | depends: T37
