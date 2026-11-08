@@ -42,6 +42,8 @@ Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/
 | `TRAEFIK_NETWORK` | compose (server) | `traefik` | Existing external Docker network of the server's Traefik; becomes the stack's default network |
 | `PPC_HOST` | compose (server) | `ppc.example.com` | Host rule of the Traefik router on `ppc-web` |
 | `TRAEFIK_ENTRYPOINT` | compose (server) | `websecure` | Traefik entrypoint for the router |
+| `PPC_TRAEFIK_LABELS` | compose (server) | `true` | `false` = `ppc-web` carries `traefik.enable=false`, for routing through a route in Traefik's file provider (`dynamic.yaml`) instead of Docker labels; the file route's service URL is `http://ppcnodowntime-ppc-web-1:80` (decision 0088) |
+| `COMPOSE_PROJECT_NAME` | compose (server) | `ppcnodowntime` | Fixes container names (`ppcnodowntime-ppc-web-1`) whatever the folder is called |
 | `COMPOSE_FILE`, `COMPOSE_PROFILES` | compose | `docker-compose.yml:docker-compose.server.yml`, `live` | Set in the server `.env` so plain `docker compose up -d` uses the server override; `live` adds `ppc-collector` |
 | `PPC_AUTH` | M4 API | `on` | `on` = every `/api` route (except `/api/health` and `/api/auth/*`) and the `/ws` handshake need the access cookie. Default `off` in code (host dev); compose sets `on` (decision 0087) |
 | `PPC_ACCESS_KEY` | M4 API | — | The access key. Setting it also turns auth on. Unset with `PPC_AUTH=on`: `ppc-api` generates one at start (`secrets.token_urlsafe(32)`) and logs it once (`docker compose logs ppc-api`); it changes on every restart. Never commit |
