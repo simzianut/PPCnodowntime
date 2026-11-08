@@ -34,6 +34,7 @@ const MAX_PULSES = 40
 const PULSE_MS = 1600
 const ACTION_HISTORY = 20000
 const TICKER_COLLAPSED = 3
+const SNAP_PX = 28
 const LEGEND: Array<[StateGroup, string, string]> = [
   ['idle', 'Idle', 'on, wasting power'], ['asleep', 'Asleep', 'saving power'],
   ['charging', 'Charging', 'a car is plugged in'], ['offline', 'Offline', 'no data'],
@@ -73,6 +74,9 @@ function summarize(members: Location[], cpState: Record<string, State>, side: Si
 function tallyText(t: Tally) {
   return `${t.idle} idle, ${t.asleep} asleep, ${t.charging} charging${t.offline ? `, ${t.offline} offline` : ''}`
 }
+
+/** Horizontal middle of the with-agent half; the whole map when it is hidden. */
+const agentMid = (split: number) => split >= 1 ? 0.5 : (1 + split) / 2
 
 const fmtW = (w: number) => Math.abs(w) >= 1000 ? `${(w / 1000).toFixed(1)} kW` : `${Math.round(w)} W`
 const kw = (w: number) => `${(w / 1000).toFixed(w >= 10000 ? 0 : 1)} kW`
@@ -409,7 +413,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   /** View that puts (x, y) in the middle of the with-agent half, clear of the divider handle. */
   function centerInAgentHalf(x: number, y: number, k: number) {
     const v = vpRef.current
-    const cx = v.x0 + (v.w * (1 + splitRef.current)) / 2
+    const cx = v.x0 + v.w * agentMid(splitRef.current)
     return clampView({ k, tx: cx - x * k, ty: v.y0 + v.h / 2 - y * k }, frame!, v)
   }
 
@@ -425,7 +429,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     // Centre it in the with-agent half, clear of the divider handle.
     const v = vpRef.current
     const k = Math.max(viewRef.current.k, SELECT_MIN_K)
-    const x = v.x0 + (v.w * (1 + splitRef.current)) / 2
+    const x = v.x0 + v.w * agentMid(splitRef.current)
     animateTo(clampView({ k, tx: x - point.x * k, ty: v.y0 + v.h / 2 - point.y * k }, frame, v), 600)
   }, [selectedLocationId, frame, pointById, animateTo, viewRef])
 
@@ -462,7 +466,9 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   /* The divider is an HTML handle above the SVG, so dragging it never pans the map. */
   function moveSplitTo(clientX: number) {
     const rect = canvasRef.current?.getBoundingClientRect()
-    if (rect && rect.width) setSplit(Math.min(0.98, Math.max(0.02, (clientX - rect.left) / rect.width)))
+    if (!rect?.width) return
+    const x = clientX - rect.left
+    setSplit(x < SNAP_PX ? 0 : x > rect.width - SNAP_PX ? 1 : x / rect.width)
   }
   function onDividerDown(event: React.PointerEvent<HTMLDivElement>) {
     event.preventDefault()
@@ -473,8 +479,8 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   }
   function onDividerKey(event: React.KeyboardEvent<HTMLDivElement>) {
     const step = event.shiftKey ? 0.1 : 0.03
-    const next: Record<string, number> = { ArrowLeft: split - step, ArrowRight: split + step, Home: 0.02, End: 0.98 }
-    if (event.key in next) { event.preventDefault(); setSplit(Math.min(0.98, Math.max(0.02, next[event.key]))) }
+    const next: Record<string, number> = { ArrowLeft: split - step, ArrowRight: split + step, Home: 0, End: 1 }
+    if (event.key in next) { event.preventDefault(); setSplit(Math.min(1, Math.max(0, next[event.key]))) }
   }
 
   function markerBody(color: string, tally: Tally, r: number) {
@@ -603,13 +609,13 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           <g className="nm-pulses" clipPath={`url(#${uid}-r)`} aria-hidden="true">{renderPulses()}</g>
         </svg>}
 
-        <div className={`nm-card nm-card-without${split * size.w < (narrow ? size.w * 0.45 : 230) ? ' is-covered' : ''}`}>
+        <div className={`nm-card nm-card-without${split <= 0 ? ' is-hidden' : split * size.w < (narrow ? size.w * 0.45 : 230) ? ' is-covered' : ''}`}>
           <div className="nm-card-top">Without agent</div>
           <strong>{kw(totals.burnedW)} <em>idle draw</em></strong>
           <span className="nm-sub">{totals.without.idle} charge points idle</span>
         </div>
 
-        <div className={`nm-card nm-card-with${(1 - split) * size.w < (narrow ? size.w * 0.45 : 320) ? ' is-covered' : ''}`}>
+        <div className={`nm-card nm-card-with${split >= 1 ? ' is-hidden' : (1 - split) * size.w < (narrow ? size.w * 0.45 : 320) ? ' is-covered' : ''}`}>
           <div className="nm-card-top">With {policy}</div>
           <strong>{kw(totals.actualW)} <em>idle draw</em></strong>
           <span className="nm-sub">{totals.with.asleep} asleep · {totals.with.idle} idle</span>
@@ -622,14 +628,14 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           </div>
         </div>
 
-        {frame && <div className="nm-divider" style={{ left: `${split * 100}%` }}>
+        {frame && <div className={`nm-divider${split <= 0 ? ' at-left' : split >= 1 ? ' at-right' : ''}`} style={{ left: `${split * 100}%` }}>
           <div className="nm-line" />
           <div className="nm-handle" role="slider" tabIndex={0} aria-label="Compare without and with the agent"
             aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(split * 100)} aria-valuetext={`${Math.round(split * 100)}% without agent`}
             onPointerDown={onDividerDown} onPointerMove={(event) => { if (dragging) moveSplitTo(event.clientX) }}
             onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)}
             onKeyDown={onDividerKey} onDoubleClick={() => setSplit(0.5)}>
-            <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d="M6 1 1 6l5 5M12 1l5 5-5 5" /></svg>
+            <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d={split <= 0 ? 'M7 1l5 5-5 5' : split >= 1 ? 'M11 1 6 6l5 5' : 'M6 1 1 6l5 5M12 1l5 5-5 5'} /></svg>
           </div>
         </div>}
 
