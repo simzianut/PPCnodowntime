@@ -74,10 +74,17 @@ export interface Run {
   paused_reason?: 'user' | 'recommendations' | null
   sim_time: string
   slot: number
+  /** Minutes since local midnight of the run day (0..1439); slot = minute // 5. */
+  minute: number
+  /** Playable minute range of the run, e.g. 35..685 for a collected day. */
+  window: RunWindow
   speed: number
   focus_policy: PolicyName
   kpis: Partial<Record<PolicyName, Kpis>>
 }
+
+export interface RunWindow { start_minute: number; end_minute: number }
+export const FULL_DAY: RunWindow = { start_minute: 0, end_minute: 1440 }
 
 export interface RunRequest {
   mode: 'replay' | 'live'
@@ -93,6 +100,7 @@ export interface Tick {
   run_id?: string
   sim_time?: string
   slot?: number
+  minute?: number
   kpis?: Partial<Record<PolicyName, Kpis>>
   focus_policy?: PolicyName
   status?: Run['status']

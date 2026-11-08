@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, api, runSocketUrl } from '../api/client'
-import { advanceDemoRun, createDemoRun, demoKpisAt, demoStatesAt, demoEval, demoLocations, getDemoAutonomy, getDemoRecommendations, makeDemoTimeline, resolveDemoRecommendation, setDemoAutonomy } from '../api/mock'
+import { advanceDemoRun, createDemoRun, DAY_MIN, demoKpisAt, demoSimTime, demoStatesAt, demoEval, demoLocations, getDemoAutonomy, getDemoRecommendations, makeDemoTimeline, resolveDemoRecommendation, setDemoAutonomy } from '../api/mock'
 import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from '../api/types'
 
-export type ConnectionMode = 'connecting' | 'api' | 'demo'
+export type ConnectionMode = 'connecting' | 'api' | 'offline' | 'demo'
 
 function initialStates(locations: Location[]) {
   return Object.fromEntries(locations.flatMap((location) => location.charge_points.map((cp) => [cp.cp_id, cp.state ?? 'IDLE']))) as Record<string, State>
 }
 
-const SLOT_MIN = 5
-const STAGGER_BUCKETS = 40
-const pad = (n: number) => String(n).padStart(2, '0')
-/** Stable [0, 1) per key, so a CP's action lands at the same moment on every replay. */
-function frac(key: string) {
-  let h = 2166136261
-  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619)
-  return (h >>> 0) / 4294967296
+const RETRY_MS = 5000
+
+/** Seed-data demo only on explicit opt-in (decision 0092): `VITE_DEMO=1` build or `?demo` in the URL. */
+export function demoRequested() {
+  return import.meta.env.VITE_DEMO === '1' || new URLSearchParams(window.location.search).has('demo')
 }
-function shiftClock(iso: string, minutes: number) {
-  const m = iso.match(/T(\d{2}):(\d{2})/)
-  if (!m) return iso
-  const t = (Number(m[1]) * 60 + Number(m[2]) + minutes + 1440) % 1440
-  return `${iso.slice(0, 11)}${pad(Math.floor(t / 60))}:${pad(t % 60)}${iso.slice(16)}`
+
+function backendDown(cause: unknown) {
+  if (cause instanceof ApiError && cause.fromBackend) return `Backend error: ${cause.message}.`
+  return `Backend unreachable${cause instanceof Error ? ` (${cause.message})` : ''}. No data is shown until the API answers.`
 }
 
 const emptyEval: EvalData = { generated_at: '', test_days: [], results: [] }
@@ -50,21 +46,7 @@ export function useDashboard() {
   const autonomyRef = useRef(autonomy)
   const pendingStatesRef = useRef<Record<string, State>>({})
   const policiesRef = useRef<PolicyName[]>(POLICIES)
-  const [actionClock, setActionClock] = useState<string | null>(null)
-  const staggerRef = useRef<{ timers: number[]; pending: Record<string, State> }>({ timers: [], pending: {} })
-  const cpCountRef = useRef(0)
-  cpCountRef.current = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
-
-  const flushStagger = useCallback((apply: boolean) => {
-    const stagger = staggerRef.current
-    stagger.timers.forEach((timer) => window.clearTimeout(timer))
-    stagger.timers = []
-    const pending = stagger.pending
-    stagger.pending = {}
-    if (apply && Object.keys(pending).length) setCpState((current) => ({ ...current, ...pending }))
-    if (!apply) setActionClock(null)
-  }, [])
-  useEffect(() => () => flushStagger(false), [flushStagger])
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => { runRef.current = run }, [run])
   useEffect(() => { autonomyRef.current = autonomy }, [autonomy])
@@ -79,37 +61,14 @@ export function useDashboard() {
         focus_policy: tick.focus_policy ?? current.focus_policy,
         sim_time: tick.sim_time ?? current.sim_time,
         slot: tick.slot ?? current.slot,
+        minute: tick.minute ?? current.minute,
       } : current)
       return
     }
-    flushStagger(true)
-    const changes = tick.changes ?? []
-    const speed = Math.max(1, runRef.current?.speed ?? 60)
-    const spreadMs = (SLOT_MIN * 60_000 / speed) * 0.9
-    const wholesale = changes.length > cpCountRef.current * 0.5
-    const groups = new Map<number, Record<string, State>>()
-    for (const change of changes) {
-      const bucket = wholesale ? 0 : Math.floor(frac(`${change.cp_id}:${tick.slot ?? 0}`) * STAGGER_BUCKETS)
-      groups.set(bucket, { ...groups.get(bucket), [change.cp_id]: change.state })
-    }
+    const changes = Object.fromEntries((tick.changes ?? []).map((change) => [change.cp_id, change.state]))
     const approved = pendingStatesRef.current
     pendingStatesRef.current = {}
-    setCpState((current) => ({ ...current, ...(groups.get(0) ?? {}), ...approved }))
-    const simTime = tick.sim_time
-    if (simTime) {
-      setActionClock(shiftClock(simTime, -SLOT_MIN + 1))
-      for (let minute = 1; minute < SLOT_MIN; minute++) {
-        staggerRef.current.timers.push(window.setTimeout(() => setActionClock(shiftClock(simTime, -SLOT_MIN + 1 + minute)), (minute / SLOT_MIN) * spreadMs))
-      }
-    }
-    groups.delete(0)
-    for (const [bucket, group] of groups) {
-      Object.assign(staggerRef.current.pending, group)
-      staggerRef.current.timers.push(window.setTimeout(() => {
-        for (const cpId of Object.keys(group)) delete staggerRef.current.pending[cpId]
-        setCpState((current) => ({ ...current, ...group }))
-      }, (bucket / STAGGER_BUCKETS) * spreadMs))
-    }
+    if (Object.keys(changes).length || Object.keys(approved).length) setCpState((current) => ({ ...current, ...changes, ...approved }))
     if (tick.recommendations?.length) {
       const incoming = tick.recommendations
       setRecommendations((current) => {
@@ -118,7 +77,7 @@ export function useDashboard() {
         return [...byId.values()].filter((item) => item.status === 'pending')
       })
     }
-    setRun((current) => current ? { ...current, sim_time: tick.sim_time ?? current.sim_time, slot: tick.slot ?? current.slot, kpis: { ...current.kpis, ...tick.kpis }, focus_policy: tick.focus_policy ?? current.focus_policy, status: tick.status ?? (tick.type === 'done' ? 'done' : current.status), paused_reason: tick.paused_reason !== undefined ? tick.paused_reason : current.paused_reason } : current)
+    setRun((current) => current ? { ...current, sim_time: tick.sim_time ?? current.sim_time, slot: tick.slot ?? current.slot, minute: tick.minute ?? current.minute, kpis: { ...current.kpis, ...tick.kpis }, focus_policy: tick.focus_policy ?? current.focus_policy, status: tick.status ?? (tick.type === 'done' ? 'done' : current.status), paused_reason: tick.paused_reason !== undefined ? tick.paused_reason : current.paused_reason } : current)
     if (autonomyRef.current === 'ACT' && tick.changes?.length) {
       const latest = tick.changes[tick.changes.length - 1]
       setActivity((items) => [`${latest.cp_id} moved to ${latest.state}`, ...items].slice(0, 8))
@@ -126,16 +85,15 @@ export function useDashboard() {
     setTrend((current) => {
       const point: { slot: number } & Partial<Record<PolicyName, number>> = { slot: tick.slot ?? runRef.current?.slot ?? 0 }
       for (const policy of POLICIES) point[policy] = tick.kpis?.[policy]?.saved_kwh ?? runRef.current?.kpis[policy]?.saved_kwh ?? 0
-      return [...current.slice(-287), point]
+      return [...current.slice(-(DAY_MIN - 1)), point]
     })
-  }, [flushStagger])
+  }, [])
 
   const startRun = useCallback(async (mode: 'replay' | 'live', date: string | null, speed = runRef.current?.speed ?? 60) => {
     const policies = policiesRef.current
     const payload = { mode, date, policies, focus_policy: defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
     const reset = () => {
-      flushStagger(false)
       setTrend([])
       setSelectedLocation(null)
       setTimelineByCp({})
@@ -161,22 +119,28 @@ export function useDashboard() {
         setError(cause.message)
         return
       }
-      reset()
-      setConnectionMode('demo')
-      const demoRun = createDemoRun(payload)
-      setLocations(demoLocations)
-      setCpState(demoStatesAt(0))
-      runRef.current = demoRun
-      setRun(demoRun)
-      setRecommendations(getDemoRecommendations())
-      setConnected(true)
-      setError(cause instanceof Error ? `${cause.message}. Showing seed-data demo.` : 'API unavailable. Showing seed-data demo.')
+      setConnected(false)
+      setError(backendDown(cause))
     }
   }, [connectionMode])
 
   useEffect(() => {
     let cancelled = false
+    let retryTimer = 0
+    function startDemo() {
+      setLocations(demoLocations)
+      setCpState(demoStatesAt(0))
+      setEvaluation(demoEval)
+      setAutonomy(getDemoAutonomy())
+      autonomyRef.current = getDemoAutonomy()
+      setConnectionMode('demo')
+      setConnected(true)
+      const demoRun = createDemoRun({ mode: 'replay', date: demoEval.test_days[0], policies: POLICIES, focus_policy: 'rl_ppo', lambda: 0.1, speed: 60 })
+      runRef.current = demoRun
+      setRun(demoRun)
+    }
     async function initialize() {
+      if (demoRequested()) { startDemo(); return }
       try {
         const [stations, evalData, autonomyData, policyList] = await Promise.all([api.stations(), api.evaluation().catch(() => null), api.autonomy(), api.policies().catch(() => null)])
         if (cancelled) return
@@ -185,6 +149,7 @@ export function useDashboard() {
         setEvaluation(evalData ?? emptyEval)
         setAutonomy(autonomyData.mode)
         setConnectionMode('api')
+        setError(null)
         autonomyRef.current = autonomyData.mode
         const available = POLICIES.filter((name) => policyList?.find((item) => item.name === name)?.available ?? true)
         policiesRef.current = available.includes('rl_ppo') ? available : ['always_on']
@@ -207,26 +172,19 @@ export function useDashboard() {
         api.recommendations(current.run_id).then(setRecommendations).catch(() => undefined)
       } catch (cause) {
         if (cancelled) return
-        setError(cause instanceof Error ? `${cause.message}. Showing seed-data demo.` : 'API unavailable. Showing seed-data demo.')
-        setLocations(demoLocations)
-        setCpState(demoStatesAt(0))
-        setEvaluation(demoEval)
-        setAutonomy(getDemoAutonomy())
-        autonomyRef.current = getDemoAutonomy()
-        setConnectionMode('demo')
-        setConnected(true)
-        const demoRun = createDemoRun({ mode: 'replay', date: demoEval.test_days[0], policies: POLICIES, focus_policy: 'rl_ppo', lambda: 0.1, speed: 60 })
-        runRef.current = demoRun
-        setRun(demoRun)
+        setConnectionMode('offline')
+        setConnected(false)
+        setError(`${backendDown(cause)} Retrying every ${RETRY_MS / 1000} s…`)
+        retryTimer = window.setTimeout(() => setAttempt((n) => n + 1), RETRY_MS)
       }
     }
     void initialize()
-    return () => { cancelled = true }
-  }, [])
+    return () => { cancelled = true; window.clearTimeout(retryTimer) }
+  }, [attempt])
 
   useEffect(() => {
     if (connectionMode !== 'demo' || !run || run.status !== 'running') return
-    const interval = Math.max(120, Math.round(1000 * 288 / Math.max(1, run.speed)))
+    const interval = Math.max(50, Math.round(60_000 / Math.max(1, run.speed)))
     const timer = window.setInterval(() => {
       const current = runRef.current
       if (!current || current.status !== 'running') return
@@ -291,15 +249,15 @@ export function useDashboard() {
         if (action === 'play' || action === 'pause') next = { ...current, status: action === 'play' ? 'running' : 'paused', paused_reason: action === 'play' ? null : 'user' }
         if (action === 'speed' && typeof value === 'number') next = { ...current, speed: value }
         if (action === 'seek' && typeof value === 'number') {
-          const slot = Math.max(0, Math.min(288, value))
-          next = { ...current, slot, sim_time: `${current.sim_time.slice(0, 10)}T${String(Math.floor(slot * 5 / 60)).padStart(2, '0')}:${String(slot * 5 % 60).padStart(2, '0')}:00+02:00`, status: 'paused', paused_reason: 'user', kpis: demoKpisAt(slot) }
+          const minute = Math.max(0, Math.min(DAY_MIN, value))
+          const slot = Math.floor(minute / 5)
+          next = { ...current, slot, minute, sim_time: demoSimTime(current.sim_time.slice(0, 10), minute), status: 'paused', paused_reason: 'user', kpis: demoKpisAt(slot) }
         }
         if (action === 'focus' && typeof value === 'string') next = { ...current, focus_policy: value as PolicyName }
         runRef.current = next
         return next
       })
-      if (action === 'seek' && typeof value === 'number') flushStagger(false)
-      if (action === 'seek' && typeof value === 'number') setCpState(demoStatesAt(Math.max(0, Math.min(288, value))))
+      if (action === 'seek' && typeof value === 'number') setCpState(demoStatesAt(Math.floor(Math.max(0, Math.min(DAY_MIN, value)) / 5)))
       return
     }
     try {
@@ -313,8 +271,8 @@ export function useDashboard() {
 
   const changeAutonomy = useCallback(async (mode: Autonomy) => {
     try {
-      if (connectionMode === 'api') await api.setAutonomy(mode)
-      else setDemoAutonomy(mode)
+      if (connectionMode === 'demo') setDemoAutonomy(mode)
+      else await api.setAutonomy(mode)
       autonomyRef.current = mode
       setAutonomy(mode)
       setActivity((items) => [`Autonomy switched to ${mode}`, ...items].slice(0, 8))
@@ -325,7 +283,7 @@ export function useDashboard() {
 
   const decideRecommendation = useCallback(async (id: number, decision: 'approve' | 'reject') => {
     try {
-      const result = connectionMode === 'api' ? await api.decideRecommendation(id, decision) : resolveDemoRecommendation(id, decision)
+      const result = connectionMode === 'demo' ? resolveDemoRecommendation(id, decision) : await api.decideRecommendation(id, decision)
       setRecommendations((items) => items.filter((item) => item.id !== id))
       if (decision === 'approve') pendingStatesRef.current[result.cp_id] = result.target_state
       setActivity((items) => [`${decision === 'approve' ? 'Approved' : 'Rejected'} recommendation for ${result.cp_id}`, ...items].slice(0, 8))
@@ -340,13 +298,14 @@ export function useDashboard() {
     if (!location || !runRef.current) return
     const entries = await Promise.all(location.charge_points.map(async (cp) => {
       try {
-        const timeline = connectionMode === 'api' ? await api.timeline(runRef.current!.run_id, cp.cp_id) : makeDemoTimeline(cp.cp_id, runRef.current!.focus_policy)
-        return [cp.cp_id, timeline] as const
-      } catch {
-        return [cp.cp_id, makeDemoTimeline(cp.cp_id, runRef.current!.focus_policy)] as const
+        const timeline = connectionMode === 'demo' ? makeDemoTimeline(cp.cp_id, runRef.current!.focus_policy) : await api.timeline(runRef.current!.run_id, cp.cp_id)
+        return [[cp.cp_id, timeline] as const]
+      } catch (cause) {
+        setError(cause instanceof Error ? `Timeline for ${cp.cp_id}: ${cause.message}` : `Could not load the timeline for ${cp.cp_id}.`)
+        return []
       }
     }))
-    setTimelineByCp((current) => ({ ...current, ...Object.fromEntries(entries) }))
+    setTimelineByCp((current) => ({ ...current, ...Object.fromEntries(entries.flat()) }))
   }, [connectionMode])
 
   const toggleTheme = useCallback(() => {
@@ -360,7 +319,7 @@ export function useDashboard() {
   const history = useMemo(() => trend, [trend])
 
   return {
-    locations, evaluation, run, cpState, actionClock, recommendations, autonomy, connectionMode, connected, activity,
+    locations, evaluation, run, cpState, recommendations, autonomy, connectionMode, connected, activity,
     selectedLocation, timelineByCp, theme, history, error, setError, startRun, control, changeAutonomy,
     decideRecommendation, openStation, toggleTheme,
   }

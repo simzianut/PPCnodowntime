@@ -20,3 +20,25 @@ export function readableReason(reason: string) {
   const p30 = /^p30=([\d.]+)$/.exec(reason.trim())
   return p30 ? `${Math.round(Number(p30[1]) * 100)}% chance of an arrival within 30 min` : reason
 }
+/** HH:MM for minutes since local midnight (1440 shows as 24:00). */
+export function minuteClock(minute: number) {
+  const m = Math.max(0, Math.round(minute))
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+/** Hour ticks and labels for a timeline zoomed to [start, end] minutes; both edges are labelled. */
+export function timelineTicks(start: number, end: number) {
+  const span = Math.max(1, end - start)
+  const pos = (minute: number) => ((minute - start) / span) * 100
+  const step = [1, 2, 3, 4, 6, 12].find((hours) => span / 60 / hours < 6) ?? 12
+  const edge = (minute: number) => minute % 60 ? minuteClock(minute) : minuteClock(minute).slice(0, 2)
+  const hours: Array<{ left: number; major: boolean }> = []
+  const labels: Array<{ left: number; text: string }> = [{ left: 0, text: edge(start) }]
+  for (let hour = Math.ceil(start / 60); hour * 60 <= end; hour++) {
+    const left = pos(hour * 60)
+    const major = hour % step === 0
+    hours.push({ left, major })
+    if (major && left > 6 && left < 94) labels.push({ left, text: String(hour).padStart(2, '0') })
+  }
+  labels.push({ left: 100, text: edge(end) })
+  return { hours, labels }
+}

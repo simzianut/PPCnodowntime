@@ -8,7 +8,7 @@ const request: RunRequest = {
   policies: POLICIES,
   focus_policy: 'rl_ppo',
   lambda: 0.1,
-  speed: 288,
+  speed: 300,
 }
 
 describe('seed-backed frontend demo', () => {
@@ -19,18 +19,20 @@ describe('seed-backed frontend demo', () => {
     expect(demoLocations.every((location) => location.charge_points.length > 0)).toBe(true)
   })
 
-  it('advances a replay one slot and emits state diffs with cumulative metrics', () => {
-    const started = createDemoRun(request)
-    const advanced = advanceDemoRun(started, 'RECOMMEND')
+  it('advances a replay minute by minute and emits state diffs at the slot boundary', () => {
+    let advanced = advanceDemoRun(createDemoRun(request), 'RECOMMEND')
+    expect(advanced.run.minute).toBe(1)
+    expect(advanced.tick.changes).toEqual([])
+    for (let minute = 1; minute < 5; minute += 1) advanced = advanceDemoRun(advanced.run, 'RECOMMEND')
     expect(advanced.run.slot).toBe(1)
     expect(advanced.tick.type).toBe('tick')
     expect(advanced.tick.changes?.length).toBeGreaterThan(0)
     expect(advanced.run.kpis.rl_ppo?.sessions).toBeGreaterThanOrEqual(0)
   })
 
-  it('completes a 288-slot replay with final cumulative KPIs', () => {
+  it('completes a 1440-minute replay with final cumulative KPIs', () => {
     let run = createDemoRun(request)
-    for (let slot = 0; slot < 288; slot += 1) run = advanceDemoRun(run, 'ACT').run
+    for (let minute = 0; minute < 1440; minute += 1) run = advanceDemoRun(run, 'ACT').run
     expect(run.status).toBe('done')
     expect(run.slot).toBe(288)
     expect(run.kpis.rl_ppo?.sessions).toBeGreaterThan(0)
@@ -40,7 +42,7 @@ describe('seed-backed frontend demo', () => {
 
   it('creates a pending recommendation and resolves its decision', () => {
     let run = createDemoRun(request)
-    for (let slot = 0; slot < 34; slot += 1) run = advanceDemoRun(run, 'RECOMMEND').run
+    for (let minute = 0; minute < 34 * 5; minute += 1) run = advanceDemoRun(run, 'RECOMMEND').run
     const [recommendation] = getDemoRecommendations()
     expect(recommendation?.status).toBe('pending')
     expect(run.paused_reason).toBe('recommendations')

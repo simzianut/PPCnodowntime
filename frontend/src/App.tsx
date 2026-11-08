@@ -109,7 +109,7 @@ function App() {
   const dashboard = useDashboard()
   const { locations, cpState, selectedLocation, timelineByCp, openStation, run, autonomy, changeAutonomy, connectionMode, connected, error, setError } = dashboard
   const cpTotal = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
-  const connIssue = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Not connected · showing demo data' : connected || run?.status === 'done' ? null : 'Not connected'
+  const connIssue = connectionMode === 'connecting' ? 'Connecting…' : connectionMode === 'demo' ? 'Demo mode · simulated seed data' : connectionMode === 'offline' ? 'Backend unreachable' : connected || run?.status === 'done' ? null : 'Not connected'
 
   return <div className="app-shell">
     <header className="topbar">
@@ -133,7 +133,7 @@ function App() {
         <ReplayBar dashboard={dashboard} />
       </div>
       <div className="map-column">
-        <NetworkMap locations={locations} cpState={cpState} run={run} actionClock={dashboard.actionClock} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
+        <NetworkMap locations={locations} cpState={cpState} run={run} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
       </div>
     </main>
   </div>
