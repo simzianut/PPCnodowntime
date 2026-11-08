@@ -24,6 +24,8 @@ Add notes as indented sub-bullets.
 
 
 ## To do
+- [T45] Bug: live demo clock: with LIVE_CLOCK_START/SPEED set, new live runs get 400 "live feed is stale" a few minutes after the API starts (newest status 23:30 vs a clock past midnight), although each run should start its clock at LIVE_CLOCK_START | owner: - | branch: - | depends: T37
+  - Repro: Docker stack with LIVE_CLOCK_START=2026-11-07T19:30:00+02:00, LIVE_CLOCK_SPEED=30; POST /api/runs mode=live right after start → 201, ~8 min later → 400. Look at api/live_mode.py clock_from_env / create_live_run and the reader's last_ts. Real-time live also needs ppc-collector running (decision 0003).
 
 - [T12] M4 FastAPI (fixture mode is T19; live mode moved to T37): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
