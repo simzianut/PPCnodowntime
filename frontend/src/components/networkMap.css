@@ -48,6 +48,11 @@
 .nm-handle:hover { background: var(--accent); }
 .nm-handle:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
 .nm-handle svg path { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.nm-handle { transition: transform .15s, border-radius .15s; }
+.nm-divider.at-left .nm-line, .nm-divider.at-right .nm-line { display: none; }
+.nm-divider.at-left .nm-handle { transform: translate(0, -50%); width: 26px; height: 44px; border-left: 0; border-radius: 0 22px 22px 0; }
+.nm-divider.at-right .nm-handle { transform: translate(-100%, -50%); width: 26px; height: 44px; border-right: 0; border-radius: 22px 0 0 22px; }
+.nm-card.is-hidden { opacity: 0; }
 
 .nm-ticker { right: 12px; bottom: 12px; width: 300px; padding: 8px 12px 4px; }
 .nm-ticker-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
