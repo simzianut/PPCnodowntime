@@ -97,7 +97,9 @@ services:
     <<: *api
     profiles: ["live"]
     user: "0:0"
-    command: ["python", "-m", "dataset.live_collector"]
+    # Exit 2 = deliberate stop (not enabled, or the site said stop; decision 0003): stay down.
+    # Crashes and repeated poll failures (exit 1) get a few restarts only (decision 0086).
+    command: ["sh", "-c", "python -m dataset.live_collector; rc=$$?; [ $$rc -eq 2 ] && exit 0; exit $$rc"]
     environment:
       <<: *api-env
       AMPWHERE_ENABLED: ${AMPWHERE_ENABLED:-0}
@@ -108,7 +110,7 @@ services:
     depends_on:
       ppc-migrate:
         condition: service_completed_successfully
-    restart: unless-stopped
+    restart: "on-failure:5"
 
 volumes:
   pgdata:
