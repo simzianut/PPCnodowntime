@@ -143,10 +143,7 @@ Use the existing code: `sim/live.py` (`LiveStatusReader`, `cp_status`, `obs_code
 ## 7. Gaps and imputation
 
 - **Finding gaps:** consecutive poll `ts` values more than 360 s apart, or `poll fail` lines in `collector.log`. After a gap, the first poll carries every net change at once, all timed at or near that poll.
-- **Known gaps** in the 2026-11-07/08 run:
-  - 03:00 UTC: disk full, one poll missed
-  - 03:30–04:16 UTC: laptop asleep
-  - 04:14 UTC: DNS outage, recovered at 04:16
+- **Known gaps** in the 2026-11-07/08 run are listed in its manifest, [live-runs/2026-11-07-overnight.md](live-runs/2026-11-07-overnight.md), with the archive checksum and per-poll PPC counts.
 - **Imputed rows** live only in `imputed/<name>.jsonl` with a `<name>.meta.json` (method, seed, fitted parameters).
   - Each row has the §5.1 fields plus `source: "imputed"`, `imputed: true` and `imputation: "<method>"`, with `raw_status` and `source_updated_at` set to null.
   - The current method is a Markov bridge (0082).
