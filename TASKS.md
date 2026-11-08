@@ -8,7 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T42] M5 agent actions appear live within each 5-min slot (staggered), with their own minute in the ticker | owner: tudor-claude | branch: tudor-claude/T42-live-actions | depends: T41
 - [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
   - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
@@ -31,6 +30,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T42] M5 agent actions appear live within each 5-min slot (staggered), with their own minute in the ticker | owner: tudor-claude | branch: tudor-claude/T42-live-actions | depends: T41
+  - Done: tick changes are staggered across the slot with stable per-CP offsets; ticker shows each action's minute (decision 0076). Test: play at 60x, watch Agent actions.
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
   - Merged by vlad-claude (this session) on the user's request: T35's local commits + current main; fixes: api.Dockerfile ENV line break, live clock env on ppc-api, DATA_HOST_DIR for the private data. Verified locally (Docker 4 GB): ppc-db, ppc-api (healthy, rl_ppo = gru, live forecaster f2_gru, no lightgbm, 1.4 GB), ppc-web on :8080; replay + live through nginx. Test: copy .env.example to .env (set DATA_HOST_DIR), `docker compose up -d --build`, open http://localhost:8080. The T35 session should `git pull` main.
 - [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
