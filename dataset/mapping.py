@@ -1,10 +1,11 @@
 """Map Dundee donor sessions onto Romanian PPC charge points (spec 01 §4).
 
-CLI: python -m dataset.mapping
+CLI: python -m dataset.mapping [--donors dundee,cps]   ($DATASET_DONORS does the same)
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -56,13 +57,22 @@ def load_config() -> dict:
     cfg = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
     sig = yaml.safe_load(SIGNALS_PATH.read_text(encoding="utf-8"))
     d = cfg["dundee"]
-    return {
+    out = {
         **cfg["mapping"],
         "start": d["start"],
         "end": d["end"],
         "split_date": d["split_date"],
         "context_multiplier": sig["context_multiplier"],
     }
+    env = donor_list(os.environ.get("DATASET_DONORS"))
+    if env:
+        out["donors"] = env
+    return out
+
+
+def donor_list(raw: str | None) -> list[str]:
+    """'dundee,cps' -> ['dundee', 'cps']; empty for None or blank."""
+    return [d.strip() for d in (raw or "").split(",") if d.strip()]
 
 
 def data_dir() -> Path:
@@ -103,6 +113,35 @@ def share_at_or_below(values: np.ndarray) -> np.ndarray:
     """Quantile as the share of values <= each value (same rule as donor util_quantile)."""
     v = np.asarray(values, dtype=float)
     return np.searchsorted(np.sort(v), v, side="right") / len(v)
+
+
+def pooled_util_quantile(donors: pd.DataFrame) -> np.ndarray:
+    """Donor util_quantile rule over a pooled table: share of train-basis chargers of the class
+    at or below each charger's rate (same rule as dundee.build_chargers)."""
+    q = np.full(len(donors), 0.5)
+    rate = donors["sessions_per_day"].to_numpy(dtype=float)
+    train = (donors["util_basis"] == "train").to_numpy()
+    for idx in donors.groupby("power_class").indices.values():
+        ref = np.sort(rate[idx][train[idx]])
+        if len(ref):
+            q[idx] = np.searchsorted(ref, rate[idx], side="right") / len(ref)
+    return q
+
+
+def pool_donors(
+    proc: Path, donors: pd.DataFrame, donor_sessions: pd.DataFrame, extra: list[str]
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Append donor_{chargers,sessions}_<name>.parquet per extra donor city and re-rank
+    util_quantile per class over the union."""
+    for name in extra:
+        more = pd.read_parquet(proc / f"donor_chargers_{name}.parquet")
+        donors = pd.concat([donors, more], ignore_index=True)
+        more = pd.read_parquet(
+            proc / f"donor_sessions_{name}.parquet", columns=list(donor_sessions.columns)
+        )
+        donor_sessions = pd.concat([donor_sessions, more], ignore_index=True)
+    donors["util_quantile"] = pooled_util_quantile(donors)
+    return donors, donor_sessions
 
 
 def _closest(q: float, pool: pd.DataFrame, exclude: set, rng: np.random.Generator) -> str | None:
@@ -600,6 +639,9 @@ def build(out_root: Path | None = None, cfg: dict | None = None) -> dict:
         columns=["donor_charger_id", "arrival_ts", "departure_ts", "energy_kwh"],
     )
     ev = pd.read_csv(COUNTY_STATS_PATH, dtype={"county_code": str}).set_index("county_code")
+    extra = [d for d in cfg.get("donors", ["dundee"]) if d != "dundee"]
+    if extra:
+        donors, donor_sessions = pool_donors(proc, donors, donor_sessions, extra)
 
     s, m, stats = map_sessions(cps, locations, ev["ev_per_1000"], donors, donor_sessions, cfg)
     s.to_parquet(proc / "sessions.parquet", index=False)
@@ -612,14 +654,24 @@ def build(out_root: Path | None = None, cfg: dict | None = None) -> dict:
     report["inactive_cp_day_share"] = (~days["active"]).groupby(cls).mean().round(4).to_dict()
     elig = donors[donors["sessions_per_day"] > cfg.get("min_donor_sessions_per_day", 0.0)]
     report["arrival_shape"] = write_shapes(arrival_shapes(s, m, donor_sessions, elig, cfg), rep_dir)
+    if extra:
+        report["donor_pool"] = cfg["donors"]
     (rep_dir / "mapping_report.json").write_text(
         json.dumps(report, indent=2, default=str), encoding="utf-8"
     )
     return report
 
 
-def main() -> None:
-    print(json.dumps(build(), indent=2, default=str))
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(prog="python -m dataset.mapping")
+    ap.add_argument(
+        "--donors", default=None, help="comma list overriding mapping.donors, e.g. dundee,cps"
+    )
+    cfg = load_config()
+    cli = donor_list(ap.parse_args(argv).donors)
+    if cli:
+        cfg["donors"] = cli
+    print(json.dumps(build(cfg=cfg), indent=2, default=str))
 
 
 if __name__ == "__main__":

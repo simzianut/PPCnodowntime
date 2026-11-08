@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -68,6 +69,12 @@ def clock_from_env():
     return ShiftedClock(dt.timestamp(), speed)
 
 
+def live_signals_mode() -> str:
+    """LIVE_SIGNALS: `mock` (default, decision 0070) or `off` (no mocked intents, decision 0084)."""
+    v = (os.environ.get("LIVE_SIGNALS") or "mock").strip().lower()
+    return "off" if v in ("off", "0", "false", "none") else "mock"
+
+
 def describe_clock(clock) -> str:
     d = getattr(clock, "describe", None)
     return d() if d else type(clock).__name__
@@ -80,16 +87,56 @@ def _zone():
 
 
 # ---- forecaster hook: F2 GRU (decision 0069)
+def live_model_path(art_dir: Path | None = None) -> Path:
+    """LIVE_F2_MODEL, else artifacts/f2_gru_live.pt (honest model) if present, else f2_gru.pt."""
+    art = Path(art_dir) if art_dir is not None else ROOT / "artifacts"
+    env = os.environ.get("LIVE_F2_MODEL")
+    if env:
+        return Path(env)
+    live = art / "f2_gru_live.pt"
+    return live if live.exists() else art / "f2_gru.pt"
+
+
+def live_calibration_for(model_file: Path) -> dict | None:
+    """Affine hazard calibration fitted on real AmpWhere arrivals (decision 0084), if it matches."""
+    p = Path(
+        os.environ.get("LIVE_F2_CALIBRATION") or model_file.parent / "f2_live_calibration.json"
+    )
+    if not p.exists():
+        return None
+    try:
+        d = json.loads(p.read_text())
+    except ValueError as e:
+        log.warning("live: ignoring %s (%s)", p, _short_error(e))
+        return None
+    if d.get("model") != model_file.name:
+        log.warning(
+            "live: %s was fitted for %s, not %s; ignored", p, d.get("model"), model_file.name
+        )
+        return None
+    return {"kind": "temp_bias", "a": float(d["a"]), "b": float(d["b"])}
+
+
 def live_forecaster(art_dir: Path | None = None):
     """(forecaster, name) for live runs: the F2 GRU; a constant stub only if it cannot load."""
-    art = Path(art_dir) if art_dir is not None else ROOT / "artifacts"
-    f2 = Path(os.environ.get("LIVE_F2_MODEL") or art / "f2_gru.pt")
+    f2 = live_model_path(art_dir)
     try:
         from model.gru_forecaster import GRUForecaster
 
         if f2.exists():
             # live: no session history; arrivals are inferred from CHARGING transitions (0070)
-            return GRUForecaster.from_data(f2, sessions=None), "f2_gru"
+            name = "f2_gru_live" if f2.name == "f2_gru_live.pt" else "f2_gru"
+            fc = GRUForecaster.from_data(f2, sessions=None)
+            cal = live_calibration_for(f2)
+            if cal is not None:
+                fc.model.calibration, fc.model.calibrators = cal, {}
+                log.info(
+                    "live: %s uses the real-data calibration a=%.3f b=%.3f",
+                    name,
+                    cal["a"],
+                    cal["b"],
+                )
+            return fc, name
     except Exception as e:
         log.warning("live: F2 GRU unavailable (%s); using a constant stub", _short_error(e))
     from model.stubs import ConstantForecaster
@@ -148,10 +195,12 @@ class SignalFeed:
     """Samples mocked PPC Blue intents and Maps counts per location from the F0 rate (0070)."""
 
     def __init__(self, locations: list[str], rates: dict[str, np.ndarray],
-                 traffic: dict[str, np.ndarray], slot_s: int, seed: int = 0) -> None:  # fmt: skip
+                 traffic: dict[str, np.ndarray], slot_s: int, seed: int = 0,
+                 enabled: bool = True) -> None:  # fmt: skip
         self.locations = locations
         self.rates, self.traffic = rates, traffic
         self.slot_s = slot_s
+        self.enabled = enabled  # LIVE_SIGNALS=off: no mocked intents or Maps counts (0084)
         self.sampler = LiveSignalSampler(seed=seed)
 
     def n60(self, loc: str, t: datetime) -> float:
@@ -166,7 +215,7 @@ class SignalFeed:
         h = int(hour_of_week(pd.Timestamp(t)))
         per_slot = self.slot_s / 3600.0
         rows: list[dict] = []
-        for loc in self.locations:
+        for loc in self.locations if self.enabled else []:
             n60 = self.n60(loc, t)
             tr = self.traffic.get(loc)
             ti = float(tr[h]) if tr is not None else 0.5
@@ -277,7 +326,8 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
         eng = LiveEngine(data, day, pols, initial=initial, start_slot=start, forecaster=fc,
                          autonomy=mgr.autonomy, focus_policy=focus)  # fmt: skip
         rates, rate_src = mgr.get_live_rates()
-        feed = SignalFeed(sorted(set(eng._locs)), rates, mgr.get_live_traffic(), eng.slot_s)
+        feed = SignalFeed(sorted(set(eng._locs)), rates, mgr.get_live_traffic(), eng.slot_s,
+                          enabled=live_signals_mode() != "off")  # fmt: skip
         return pols, eng, feed, fc_name, rate_src
 
     try:
@@ -287,8 +337,8 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
         raise HTTPException(500, f"live run creation failed ({_short_error(e)})") from e
     states = np.bincount(eng.states(focus), minlength=6).tolist()
     info = {**reader.summary(), "clock": clock_desc, "forecaster": fc_name,
-            "signal_rates": rate_src, "cps_in_run": len(initial), "start_slot": start,
-            "state_counts": states}  # fmt: skip
+            "signal_rates": rate_src, "signals": live_signals_mode(), "cps_in_run": len(initial),
+            "start_slot": start, "state_counts": states}  # fmt: skip
     run = LiveRun(mgr, body, day, names, focus, lam, pols, eng, clock=clock, reader=reader,
                   feed=feed, lag_s=mgr.live_lag_s, poll_s=mgr.live_poll_s, info=info)  # fmt: skip
     run.history = history

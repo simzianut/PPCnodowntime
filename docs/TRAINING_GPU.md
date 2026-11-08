@@ -44,3 +44,12 @@ The stage times above are estimates from smoke runs, not measurements.
 ## After training
 Copy the results back. The best F1 run's `forecasts.parquet` feeds the RL runs (`--set data.forecasts=<abs path>`).
 Promote a forecaster into `artifacts/` only by decision: `python -m model.experiments promote runs/<run_id>`.
+
+## Without the team server: any CUDA box (decision 0084)
+No Docker needed. On the laptop `docker/pack_cloud.sh` writes `ppc_cloud_<sha>.tar.gz` (code of HEAD plus the seven private data files; never publish it). On the box, with a PyTorch CUDA image or plain Ubuntu with an NVIDIA driver:
+```bash
+tar xzf ppc_cloud_<sha>.tar.gz && cd ppc_cloud
+tmux new -s train
+docker/train_cloud.sh all      # setup (uv), check, 2-min smoke, suite f2_v2, ensembles, pack
+```
+Stages can be run one by one (`setup|check|smoke|suite|ensemble|pack`). A run of the F2 configs takes about 5 minutes on an A100. The result tarball `f2_v2_results_*.tar.gz` holds `runs/` (without the big forecasts files); unpack it into the repo root on the laptop and promote with `python -m model.experiments promote runs/<id> [--as f2_gru_live.pt]`. Apple-silicon fallback: `--set device=mps --set deterministic=false` (slower, not bit-reproducible).

@@ -17,7 +17,8 @@ MIN = 60 * NS
 
 def test_feature_groups_and_width():
     new = ["arrivals_cp_7d", "arrivals_cp_28d", "mins_since_last_arrival"]
-    assert FEATURE_COLUMNS[-3:] == new and fd.FEATURE_GROUPS["cp_level"] == new
+    assert FEATURE_COLUMNS[-8:-5] == new and fd.FEATURE_GROUPS["cp_level"] == new
+    assert FEATURE_COLUMNS[-5:] == fd.FEATURE_GROUPS["site_level"]
     assert set(new) <= set(fd.COUNT_COLUMNS)
     old = fd.feature_names(["calendar_history", "traffic", "ev_flow", "intents"])
     assert len(old) == 22 and not set(new) & set(old)

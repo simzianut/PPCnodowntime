@@ -74,7 +74,8 @@ def run_suite(suite_path, continue_on_error: bool = False) -> Path:
     return out_dir
 
 
-def promote(run_dir) -> list[Path]:
+def promote(run_dir, rename: str | None = None) -> list[Path]:
+    """Copy the run's model into artifacts/; `rename` replaces its artifact file name."""
     run_dir = Path(run_dir)
     manifest = json.loads((run_dir / "manifest.json").read_text())
     if manifest.get("status") != "ok":
@@ -85,6 +86,7 @@ def promote(run_dir) -> list[Path]:
     dest.mkdir(parents=True, exist_ok=True)
     written = []
     for src, name in spec.promote.items():
+        name = rename or name
         shutil.copy2(run_dir / src, dest / name)
         written.append(dest / name)
         prov = {

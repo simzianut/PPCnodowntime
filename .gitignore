@@ -38,3 +38,5 @@ docs/figures/**/*.dvi
 # training outputs on the GPU server (docker/train_forecasters.sh)
 logs/
 forecaster_results_*.tar.gz
+ppc_cloud_*.tar.gz
+f2_v2_results_*.tar.gz

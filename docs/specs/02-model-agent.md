@@ -42,6 +42,8 @@ Each must be under 20 MB.
     - arrivals in the same slot ±30 min over the last 4 same weekdays
     - whether the CP is currently charging
   - Station: `power_class`, `context_type`, `county_ev_per_1000`, `cps_at_location`.
+  - Charge-point level (`cp_level`, decision 0079): arrivals per day over the last 7 and 28 days, minutes since the last arrival.
+  - Site level (`site_level`, decision 0084): arrivals at the location in the last 1 h and 3 h, the location's same-slot mean over the last 4 weeks, its 7-day rate, charge points at the location charging now.
   - Signals at the location:
     - count of `ppcblue_route_intent` events with `eta` in `(t, t+15]`, `(t+15, t+30]` and `(t+30, t+60]`
     - `maps_ev_count` over the last 15 min
@@ -50,6 +52,7 @@ Each must be under 20 MB.
 - **Leakage guard:** the `session_id` column in signals is never a feature. All features use only data at or before `t`.
 - **Evaluation**, on the test split (2024–2025): AUC and Brier score per horizon and per `power_class`, plus reliability plots. Written to `forecaster_meta.json` and to `model/reports/`.
 - **Validation against live data:** compare predicted occupancy by hour with occupancy observed in `live_status` for the hackathon hours. Report the gap; it is not a training target.
+- **Two F2 models (decision 0084):** `artifacts/f2_gru.pt` (all feature groups, used for replay and the evaluator) and `artifacts/f2_gru_live.pt` (`calendar_history + cp_level + site_level`, no mocked app/maps signals and no traffic), which live mode serves. The live model's hazard logits get an affine calibration fitted on the real AmpWhere arrivals (`python -m model.live_calibration`, `artifacts/f2_live_calibration.json`). Training uses cold-start augmentation so the model has seen the empty history a live run starts with.
 
 ## 3. Cost-rule policy (must-have, fallback and comparison)
 
@@ -120,3 +123,4 @@ Every model is trained through `python -m model.experiments` (CONTRACTS "Trainin
 - **Models compared:**
   - forecasters F0 seasonal, F1 LightGBM, F2 GRU, plus a feature ablation and sensitivity suite (0052)
   - policies MaskablePPO, Double DQN and a hindsight oracle bound (0053)
+- **F2 v2 (0084):** suite `config/train/suites/f2_v2.yaml` (baseline rerun, v2 full × 3 seeds, live × 3 seeds), then `python -m model.experiments ensemble` per triple and `promote --as f2_gru_live.pt` for the live model. Without the team server: `docker/pack_cloud.sh` on the laptop, `docker/train_cloud.sh all` on any CUDA box.

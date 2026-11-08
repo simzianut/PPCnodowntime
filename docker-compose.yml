@@ -62,6 +62,7 @@ services:
       RL_AGENT: ${RL_AGENT:-auto}
       # live mode (decisions 0070, 0072); empty LIVE_CLOCK_START = real time
       LIVE_CLOCK_START: ${LIVE_CLOCK_START:-}
+      LIVE_SIGNALS: ${LIVE_SIGNALS:-mock}
       LIVE_CLOCK_SPEED: ${LIVE_CLOCK_SPEED:-1}
       LIVE_LAG_S: ${LIVE_LAG_S:-60}
     volumes:

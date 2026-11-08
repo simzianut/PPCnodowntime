@@ -1,0 +1,14 @@
+name: f2_v2
+# decision 0084: v2 recipe on the full feature set (replay) and on honest features (live), 3 seeds
+# each; the deployed baseline config is rerun once for a same-data comparison. Members of each
+# triple are averaged with `python -m model.experiments ensemble` afterwards.
+runs:
+  - config: config/train/f2_gru.yaml
+    seeds: [0]
+    set:
+      params.calibration: auto
+  - config: config/train/f2_gru_v2.yaml
+    seeds: [0, 1, 2]
+  - config: config/train/f2_gru_live.yaml
+    seeds: [0, 1, 2]
+summary_metrics: [test.overall.y15.auc, test.overall.y15.pr_auc, test.overall.y15.brier, test.overall.y30.auc, test.overall.y30.pr_auc, test.overall.y30.brier, test.overall.y60.auc, test.overall.y60.pr_auc, test.overall.y60.brier, test.overall.n60.poisson_deviance, calibration_chosen, n_params]
