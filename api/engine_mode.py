@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 import anyio
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from api.fixture_mode import Client
@@ -872,9 +872,12 @@ def build_router(mgr: EngineManager) -> APIRouter:
             async with anyio.create_task_group() as tg:
 
                 async def sender():
-                    while (text := await client.queue.get()) is not None:
-                        await websocket.send_text(text)
-                    await websocket.close(code=1013)
+                    try:
+                        while (text := await client.queue.get()) is not None:
+                            await websocket.send_text(text)
+                        await websocket.close(code=1013)
+                    except (WebSocketDisconnect, RuntimeError):
+                        pass  # the browser left (reload, run switch): end quietly
                     tg.cancel_scope.cancel()
 
                 async def receiver():
