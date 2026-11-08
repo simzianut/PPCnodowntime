@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChevronDown, X } from 'lucide-react'
 import { NetworkMap } from './components/NetworkMap'
 import { PolicyCards } from './components/sidebar/PolicyCards'
 import { ReplayCharts } from './components/sidebar/ReplayCharts'
 import { ReplayBar } from './components/sidebar/ReplayBar'
-import { format, formatClock, readableReason, stateLabel } from './components/sidebar/shared'
+import { formatClock, readableReason, stateLabel } from './components/sidebar/shared'
 import { useDashboard } from './state/useDashboard'
-import { api } from './api/client'
 import { MAP_COLORS, stateGroup } from './map/energy'
 import type { Location, Recommendation, State } from './api/types'
 import './App.css'
@@ -38,9 +37,7 @@ function StateTrack({ states }: { states: Array<{ from: string; to: string; stat
   })}</div>
 }
 
-function StationDetail({ location, timelines, cpState, runId, onClose }: { location: Location; timelines: ReturnType<typeof useDashboard>['timelineByCp']; cpState: Record<string, State>; runId?: string; onClose: () => void }) {
-  const [summary, setSummary] = useState<{ current_kw: number | null; expected_wait_min: number | null; anomaly_score: number | null } | null>(null)
-  useEffect(() => { let live = true; setSummary(null); if (runId) void api.stationSummary(runId, location.location_id).then((data) => { if (live) setSummary(data) }).catch(() => { if (live) setSummary({ current_kw: null, expected_wait_min: null, anomaly_score: null }) }); return () => { live = false } }, [runId, location.location_id])
+function StationDetail({ location, timelines, cpState, onClose }: { location: Location; timelines: ReturnType<typeof useDashboard>['timelineByCp']; cpState: Record<string, State>; onClose: () => void }) {
   const [expanded, setExpanded] = useState(location.charge_points[0]?.cp_id ?? '')
   const primaryTimeline = timelines[expanded]
   const chartData = useMemo(() => {
@@ -54,15 +51,11 @@ function StationDetail({ location, timelines, cpState, runId, onClose }: { locat
     }))
   }, [primaryTimeline])
   const activeStateCount = location.charge_points.filter((cp) => (cpState[cp.cp_id] ?? cp.state) === 'CHARGING').length
-  const value = (n: number | null | undefined, unit: string, digits = 1) => n == null ? '—' : `${format(n, digits)}${unit}`
   return (
     <section className="station-detail" aria-label="Station details">
       <header className="detail-header"><div><h2>{location.name}</h2><p>{location.county_code}{location.address ? ` · ${location.address}` : ''}</p></div><button className="icon-button" aria-label="Close station details" onClick={onClose}><X size={16} /></button></header>
       <dl className="kv">
         <div><dt>Charging now</dt><dd>{activeStateCount} of {location.charge_points.length}</dd></div>
-        <div><dt>Current output</dt><dd>{value(summary?.current_kw, ' kW')}</dd></div>
-        <div><dt>Expected wait</dt><dd>{value(summary?.expected_wait_min, ' min')}</dd></div>
-        <div><dt>Anomaly score</dt><dd>{value(summary?.anomaly_score, '', 2)}</dd></div>
         <div><dt>Partner</dt><dd>{location.partner ?? '—'}</dd></div>
         <div><dt>Site type</dt><dd className="cap">{location.context_type}</dd></div>
         <div><dt>Source</dt><dd>{location.primary_source}, {location.confidence} confidence</dd></div>
@@ -134,7 +127,7 @@ function App() {
     <main className="workspace">
       <div className="sidebar">
         <div className="sidebar-scroll">{selectedLocation
-          ? <StationDetail key={selectedLocation.location_id} location={selectedLocation} timelines={timelineByCp} cpState={cpState} runId={run?.run_id} onClose={() => void openStation(null)} />
+          ? <StationDetail key={selectedLocation.location_id} location={selectedLocation} timelines={timelineByCp} cpState={cpState} onClose={() => void openStation(null)} />
           : <><PolicyCards dashboard={dashboard} /><ReplayCharts dashboard={dashboard} />{autonomy === 'RECOMMEND' && <RecommendationFeed dashboard={dashboard} />}</>}
         </div>
         <ReplayBar dashboard={dashboard} />

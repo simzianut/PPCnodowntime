@@ -34,7 +34,10 @@ const MAX_PULSES = 40
 const PULSE_MS = 1600
 const ACTION_HISTORY = 20000
 const TICKER_COLLAPSED = 3
-const LEGEND: Array<[StateGroup, string]> = [['idle', 'Idle'], ['asleep', 'Asleep'], ['charging', 'Charging'], ['offline', 'Offline']]
+const LEGEND: Array<[StateGroup, string, string]> = [
+  ['idle', 'Idle', 'on, wasting power'], ['asleep', 'Asleep', 'saving power'],
+  ['charging', 'Charging', 'a car is plugged in'], ['offline', 'Offline', 'no data'],
+]
 
 type Side = 'without' | 'with'
 type Kind = 'sleep' | 'wake' | 'charge'
@@ -650,8 +653,13 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           </ol>
         </div>
 
-        <div className="nm-legend" aria-label="Legend">
-          {legend.map(([group, text]) => <span key={group}><i style={{ background: MAP_COLORS[group] }} />{text}</span>)}
+        <div className="nm-legend" aria-label="Map key">
+          <ul>{legend.map(([group, text, hint]) => <li key={group}><i style={{ background: MAP_COLORS[group] }} /><b>{text}</b><span>{hint}</span></li>)}</ul>
+          <div className="nm-legend-scale">
+            <b>Groups of stations</b>
+            <i aria-hidden />
+            <span><span>all idle</span><span>all asleep</span></span>
+          </div>
         </div>
 
         <div className="map-controls nm-controls">
