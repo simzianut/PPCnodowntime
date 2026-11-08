@@ -27,6 +27,8 @@ MODELS = {
 def _isolated_store(monkeypatch):
     """No real DB in tests, and a fresh in-memory store (autonomy) for each test."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("PPC_AUTH", raising=False)
+    monkeypatch.delenv("PPC_ACCESS_KEY", raising=False)
     store.set_engine(None)
     store.reset_memory_store()
     yield

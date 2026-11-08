@@ -23,10 +23,18 @@ async function errorDetail(response: Response) {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
+  if (response.status === 401 && !path.startsWith('/api/auth/')) window.dispatchEvent(new Event('ppc:auth-required'))
   if (!response.ok) throw new ApiError(response.status, `API ${response.status}: ${await errorDetail(response)}`)
   return response.json() as Promise<T>
+}
+
+export const authApi = {
+  status: () => request<{ required: boolean; authenticated: boolean }>('/api/auth/status'),
+  login: (key: string) => request<{ authenticated: boolean }>('/api/auth/login', { method: 'POST', body: JSON.stringify({ key }) }),
+  logout: () => request<unknown>('/api/auth/logout', { method: 'POST' }),
 }
 
 export const api = {
