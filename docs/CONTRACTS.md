@@ -28,6 +28,10 @@ Compose service names carry a `ppc-` prefix (`ppc-db`, `ppc-migrate`, `ppc-seed`
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 | `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
 | `RL_AGENT` | M4 API, evaluator | `auto` | Which agent serves `rl_ppo`: `gru` (cost rule driven by F2 GRU forecasts, decision 0069), `ppo`, `maskppo`, `ddqn`, or `auto` = gru if `artifacts/f2_gru.pt` exists, else ppo |
+| `LIVE_DIR` | M4 API | `./data/raw/live` | Where live runs read the collector's `statuses-YYYYMMDD.jsonl` (default `$DATA_DIR/raw/live`, decision 0072) |
+| `LIVE_LAG_S` | M4 API | `60` | Seconds after a slot ends before a live run steps it |
+| `LIVE_CLOCK_START`, `LIVE_CLOCK_SPEED` | M4 API | `2026-11-07T21:00:00+02:00`, `60` | Demo only: live runs replay collected statuses from that time at that speed. Unset = real time |
+| `LIVE_F2_MODEL`, `LIVE_F0_RATES` | M4 API | `artifacts/f2_gru.pt`, `artifacts/f0_rates.parquet` | Override the live forecaster and live-signal rate files |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 | `POSTGRES_PASSWORD` | compose | `ppc` | Password for `ppc-db`; the compose `DATABASE_URL` is built from it. Must be a real secret on the server (decision 0066). Never commit |
 | `HTTP_PORT` | compose | `8080` | Host port of `ppc-web` locally. Not used on the server |

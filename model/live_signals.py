@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import yaml
 
 from sim.config import CONFIG_DIR, ROOT
@@ -49,16 +48,24 @@ class LiveSignalSampler:
         t: datetime,
         n60_forecast: float = 0.0,
         traffic_index: float = 0.5,
+        intent_rate: float | None = None,
     ) -> list[dict[str, Any]]:
-        """Sample live signals for one location at timestamp t."""
+        """Sample live signals for one location at timestamp t.
+
+        intent_rate: expected real intents in this call (live mode passes a per-slot rate);
+        false positives then add `false_positive_rate` of it, as dataset/signals.py does.
+        """
         signals: list[dict[str, Any]] = []
         loc = str(location_id)
-        lam_intent = max(0.0, self.p_app * float(n60_forecast))
-        n_intents = int(self.rng.poisson(lam_intent))
-
-        # 10% chance of false positive extra intents
-        if self.rng.random() < self.fp_rate:
-            n_intents += 1
+        if intent_rate is not None:
+            lam = max(0.0, float(intent_rate)) * (1.0 + self.fp_rate)
+            n_intents = int(self.rng.poisson(lam))
+        else:
+            lam_intent = max(0.0, self.p_app * float(n60_forecast))
+            n_intents = int(self.rng.poisson(lam_intent))
+            # 10% chance of false positive extra intents
+            if self.rng.random() < self.fp_rate:
+                n_intents += 1
 
         for _ in range(n_intents):
             lead = self.rng.uniform(self.lead_min[0], self.lead_min[1])
@@ -75,7 +82,7 @@ class LiveSignalSampler:
             signals.append(rec)
             self.active_intents.setdefault(loc, []).append(rec)
 
-        # maps_ev_count: Poisson(ev_tag_rate * (expected_arrivals_30 + background_ev * traffic_index))
+        # maps_ev_count: Poisson(ev_tag_rate * (exp_arrivals_30 + background_ev * traffic_index))
         exp_arr_30 = max(0.0, 0.5 * float(n60_forecast))
         ev_rate = max(0.0, self.ev_tag_rate * (exp_arr_30 + self.background_ev * traffic_index))
         ev_count = int(self.rng.poisson(ev_rate))
@@ -172,7 +179,7 @@ def generate_live_validation_report(
     rmse = float(np.sqrt(np.mean((np.array(pred_occ) - np.array(actual_occ)) ** 2)))
 
     report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "evaluation_scope": "live_status_vs_forecast",
         "samples_evaluated": n_samples,
         "metrics": {
