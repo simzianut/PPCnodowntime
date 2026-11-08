@@ -97,7 +97,7 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 
 **Live mode:**
 - Every 5 minutes, read the latest `live_status` into CP states. AVAILABLE becomes IDLE unless the agent has put the CP to sleep.
-- Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
+- Signals: none by default (`LIVE_SIGNALS=off`, decision [0093](../decisions/0093-no-mocked-inputs-in-decision-path.md)); `LIVE_SIGNALS=mock` opts in to samples from `model.live_signals`. Call the policy with the F2 GRU forecast (run creation fails if it cannot load) and apply or recommend its commands through `stations.store`. Collected-day replays (0090) follow the same rules.
 - Send ticks over the same WebSocket.
 
 **Engine mode (T23, default):** with `API_FIXTURES` unset, `api/engine_mode.py` runs each replay on `sim.Engine` in memory, with no DB. Stations come from `sim.stations_seed.load_stations()`: the real list when `data/processed/` has it, else the open seed. Sessions are real processed data or synthetic sessions on those stations. Live mode returns 400 until T12. Details in [0047](../decisions/0047-engine-backed-api-and-station-loader.md). Autonomy is stored through `stations.store`, and when the DB is up each run writes its focus policy's commands and state changes with its `run_id` ([0049](../decisions/0049-t5-data-in-sim-ron-kpis-run-history.md)).

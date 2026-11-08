@@ -76,6 +76,7 @@ def test_live_run_steps_on_clock_with_arrival_wait(live):
     rid = r.json()["run_id"]
     run = mgr.runs[rid]
     assert run.info["forecaster"] == "constant_stub" and run.info["cps_in_run"] == len(cps)
+    assert run.info["signals"] == "off" and run.feed.sample(run.engine.t).empty  # decision 0093
     end = time.monotonic() + 10
     while run.engine.slot < 120:  # slot 119 is due at once: cost_rule sleeps idle CPs (ACT)
         assert time.monotonic() < end
@@ -172,3 +173,9 @@ def test_env_clock_starts_each_live_run_at_start(live, monkeypatch):
     r3 = c.post("/api/runs", json=body())
     detail = r3.json()["detail"]
     assert r3.status_code == 400 and "clock: demo from 2026-11-08T11:30:00" in detail
+
+
+def test_live_forecaster_missing_fails_instead_of_stub(tmp_path, monkeypatch):
+    monkeypatch.delenv("LIVE_F2_MODEL", raising=False)
+    with pytest.raises(RuntimeError, match="no stub"):
+        live_mode.live_forecaster(tmp_path)
