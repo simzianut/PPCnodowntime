@@ -38,6 +38,9 @@ class WallClock:
     def now(self) -> float:
         return time.time()
 
+    def describe(self) -> str:
+        return "real time"
+
 
 class ShiftedClock:
     """Starts at `start` (epoch s) when created and runs `speed` times faster than real time."""
@@ -49,6 +52,10 @@ class ShiftedClock:
     def now(self) -> float:
         return self._start + (time.monotonic() - self._origin) * self.speed
 
+    def describe(self) -> str:
+        start = datetime.fromtimestamp(self._start, _zone()).isoformat(timespec="seconds")
+        return f"demo from {start} at {self.speed:g}x"
+
 
 def clock_from_env():
     start = os.environ.get("LIVE_CLOCK_START")
@@ -59,6 +66,11 @@ def clock_from_env():
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=_zone())
     return ShiftedClock(dt.timestamp(), speed)
+
+
+def describe_clock(clock) -> str:
+    d = getattr(clock, "describe", None)
+    return d() if d else type(clock).__name__
 
 
 def _zone():
@@ -234,6 +246,7 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
     data = await mgr.ready()
     clock = mgr.live_clock()
     now = clock.now()
+    clock_desc = describe_clock(clock)
     slot_s = sim_config().slot_s
     refs = await asyncio.to_thread(mgr.live_source_refs)
     if refs is None:
@@ -246,8 +259,8 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
     last = reader.stats.last_ts
     if last is None or now - last > STALE_S:
         when = "never" if last is None else datetime.fromtimestamp(last, _zone()).isoformat()
-        _fail(f"live feed is stale (newest status: {when}, older than {int(STALE_S // 60)} min); "
-              "is ppc-collector running?")  # fmt: skip
+        _fail(f"live feed is stale (newest status: {when}, older than {int(STALE_S // 60)} min; "
+              f"clock: {clock_desc}); is ppc-collector running?")  # fmt: skip
     local = datetime.fromtimestamp(now, _zone())
     day = local.date()
     t0 = datetime.combine(day, datetime.min.time(), tzinfo=_zone()).timestamp()
@@ -273,8 +286,9 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
         log.exception("live run creation failed")
         raise HTTPException(500, f"live run creation failed ({_short_error(e)})") from e
     states = np.bincount(eng.states(focus), minlength=6).tolist()
-    info = {**reader.summary(), "forecaster": fc_name, "signal_rates": rate_src,
-            "cps_in_run": len(initial), "start_slot": start, "state_counts": states}  # fmt: skip
+    info = {**reader.summary(), "clock": clock_desc, "forecaster": fc_name,
+            "signal_rates": rate_src, "cps_in_run": len(initial), "start_slot": start,
+            "state_counts": states}  # fmt: skip
     run = LiveRun(mgr, body, day, names, focus, lam, pols, eng, clock=clock, reader=reader,
                   feed=feed, lag_s=mgr.live_lag_s, poll_s=mgr.live_poll_s, info=info)  # fmt: skip
     run.history = history
