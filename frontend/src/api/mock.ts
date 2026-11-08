@@ -1,5 +1,6 @@
 import Papa from 'papaparse'
 import stationCsv from '../../../data/seed/stations_open.csv?raw'
+import { simulateDay, SLOTS, type DemoDay } from './demoSim'
 import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type EvalResult, type Kpis, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from './types'
 
 interface StationRow {
@@ -89,7 +90,19 @@ export const demoEval: EvalData = {
   results: [metric('always_on', 0), ...POLICIES.slice(1).flatMap((policy) => [metric(policy, 0.5), metric(policy, 1), metric(policy, 1.5)])],
 }
 
-let autonomy: Autonomy = 'RECOMMEND'
+let demoDay: DemoDay | null = null
+const day = () => (demoDay ??= simulateDay(demoLocations))
+const dayIndex = (slot: number) => slot <= SLOTS ? Math.max(0, slot) : ((slot - 1) % SLOTS) + 1
+
+/** CP states of the demo day at a slot (0 = midnight, before the first step). */
+export function demoStatesAt(slot: number): Record<string, State> {
+  const { cps, states } = day()
+  const row = states[dayIndex(slot)]
+  return Object.fromEntries(cps.map((cp, i) => [cp.cp_id, row[i]]))
+}
+export const demoKpisAt = (slot: number): Run['kpis'] => day().kpis[dayIndex(slot)]
+
+let autonomy: Autonomy = 'ACT'
 let nextRunNumber = 1
 let nextRecommendationId = 1
 let pendingRecommendations: Recommendation[] = []
@@ -117,24 +130,9 @@ export function createDemoRun(request: RunRequest): Run {
     slot: 0,
     speed: request.speed,
     focus_policy: request.focus_policy,
-    kpis: Object.fromEntries(POLICIES.map((policy) => [policy, metric(policy, 0)])),
+    kpis: demoKpisAt(0),
   }
   return run
-}
-
-function makeKpis(slot: number): Run['kpis'] {
-  const progress = (slot > 0 ? ((slot - 1) % 288) + 1 : 0) / 288
-  return Object.fromEntries(POLICIES.map((policy) => [policy, withRon({
-    overhead_kwh: Math.round((slot * (policy === 'always_on' ? 0.18 : 0.11)) * 10) / 10,
-    saved_kwh: Math.round(slot * (policy === 'rl_ppo' ? 0.14 : 0) * 10) / 10,
-    saved_pct: Math.round(progress * (policy === 'rl_ppo' ? 16.8 : 0) * 10) / 10,
-    wait_min_total: Math.round(slot * (policy === 'rl_ppo' ? 0.7 : 0)),
-    wait_min_mean: Math.round(progress * (policy === 'rl_ppo' ? 2.8 : 0) * 10) / 10,
-    wait_min_p95: Math.round(progress * (policy === 'rl_ppo' ? 11 : 0)),
-    sessions: Math.round(progress * 264),
-    waited_sessions: Math.round(progress * (policy === 'rl_ppo' ? 39 : 0)),
-    sleep_share: Math.round(progress * (policy === 'rl_ppo' ? 0.27 : 0) * 100) / 100,
-  })]))
 }
 
 export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; tick: Tick } {
@@ -145,10 +143,10 @@ export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; ti
   const clockSlot = run.mode === 'live' ? slot % 288 : slot
   const seed = slot * 19
   const candidates = demoLocations.flatMap((location) => location.charge_points)
-  const changes: Tick['changes'] = Array.from({ length: slot % 7 === 0 ? 3 : 1 }, (_, index) => {
-    const cp = candidates[(seed + index * 43) % candidates.length]
-    return { cp_id: cp.cp_id, state: fallbackStates[(seed + index + 2) % fallbackStates.length] }
-  })
+  const { cps, states } = day()
+  const before = states[dayIndex(run.slot)]
+  const after = states[dayIndex(slot)]
+  const changes: Tick['changes'] = cps.flatMap((cp, i) => before[i] === after[i] ? [] : [{ cp_id: cp.cp_id, state: after[i] }])
   const sim_time = `${run.sim_time.slice(0, 10)}T${String(Math.floor(clockSlot * 5 / 60)).padStart(2, '0')}:${String(clockSlot * 5 % 60).padStart(2, '0')}:00+02:00`
   let newRecommendations: Recommendation[] = []
   if (autonomyMode === 'RECOMMEND' && slot % 34 === 0) {
@@ -173,7 +171,7 @@ export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; ti
     paused_reason: newRecommendations.length ? 'recommendations' : run.paused_reason,
     slot,
     sim_time,
-    kpis: makeKpis(slot),
+    kpis: demoKpisAt(slot),
   }
   return {
     run: nextRun,

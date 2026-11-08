@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, runSocketUrl } from '../api/client'
-import { advanceDemoRun, createDemoRun, demoEval, demoLocations, getDemoAutonomy, getDemoRecommendations, makeDemoTimeline, resolveDemoRecommendation, setDemoAutonomy } from '../api/mock'
+import { advanceDemoRun, createDemoRun, demoKpisAt, demoStatesAt, demoEval, demoLocations, getDemoAutonomy, getDemoRecommendations, makeDemoTimeline, resolveDemoRecommendation, setDemoAutonomy } from '../api/mock'
 import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type Location, type PolicyName, type Recommendation, type Run, type State, type Tick } from '../api/types'
 
 export type ConnectionMode = 'connecting' | 'api' | 'demo'
@@ -87,6 +87,7 @@ export function useDashboard() {
     setTimelineByCp({})
     if (connectionMode === 'demo') {
       const demoRun = createDemoRun(payload)
+      setCpState(demoStatesAt(0))
       runRef.current = demoRun
       setRun(demoRun)
       setRecommendations(getDemoRecommendations())
@@ -101,6 +102,8 @@ export function useDashboard() {
     } catch (cause) {
       setConnectionMode('demo')
       const demoRun = createDemoRun(payload)
+      setLocations(demoLocations)
+      setCpState(demoStatesAt(0))
       runRef.current = demoRun
       setRun(demoRun)
       setRecommendations(getDemoRecommendations())
@@ -134,7 +137,7 @@ export function useDashboard() {
       } catch {
         if (cancelled) return
         setLocations(demoLocations)
-        setCpState(initialStates(demoLocations))
+        setCpState(demoStatesAt(0))
         setEvaluation(demoEval)
         setAutonomy(getDemoAutonomy())
         autonomyRef.current = getDemoAutonomy()
@@ -207,12 +210,13 @@ export function useDashboard() {
         if (action === 'speed' && typeof value === 'number') next = { ...current, speed: value }
         if (action === 'seek' && typeof value === 'number') {
           const slot = Math.max(0, Math.min(288, value))
-          next = { ...current, slot, sim_time: `${current.sim_time.slice(0, 10)}T${String(Math.floor(slot * 5 / 60)).padStart(2, '0')}:${String(slot * 5 % 60).padStart(2, '0')}:00+02:00`, status: 'paused', paused_reason: 'user', kpis: current.kpis }
+          next = { ...current, slot, sim_time: `${current.sim_time.slice(0, 10)}T${String(Math.floor(slot * 5 / 60)).padStart(2, '0')}:${String(slot * 5 % 60).padStart(2, '0')}:00+02:00`, status: 'paused', paused_reason: 'user', kpis: demoKpisAt(slot) }
         }
         if (action === 'focus' && typeof value === 'string') next = { ...current, focus_policy: value as PolicyName }
         runRef.current = next
         return next
       })
+      if (action === 'seek' && typeof value === 'number') setCpState(demoStatesAt(Math.max(0, Math.min(288, value))))
       return
     }
     try {
