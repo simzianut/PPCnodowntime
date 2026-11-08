@@ -296,3 +296,4 @@ Request: `{"decision": "approve"|"reject"}`. Response 200: `Recommendation`. Err
 
 ### GET /api/eval
 Response 200: the contents of `artifacts/eval_results.json`. Errors: 404 if the file doesn't exist yet.
+In real mode `test_days` is replaced by the days the engine can replay (loaded test days covered by `forecasts.parquet`), so the frontend never offers a day `POST /api/runs` rejects (decision 0083).
