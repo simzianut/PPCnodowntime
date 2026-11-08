@@ -10,6 +10,8 @@ Add notes as indented sub-bullets.
 > **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. **Don't rename the compose services** (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector`) or hardcode backend URLs in the frontend: use `API_BASE` with `/api` and `/ws`. Rules: AGENTS.md "Running the app", CONTRACTS services. Details: README, decision 0077.
 
 ## In progress
+- [T47] F2 GRU v2: honest live model (no mock signals), cp_profile + cp_level features, seed ensemble, cosine schedule + cold-start augmentation, real-data calibration on the AmpWhere PPC statuses, retrain on a cloud GPU, promote by metrics | owner: tudor-claude | branch: tudor-claude/T47-gru-v2 | depends: T44, T46
+  - Tudor's call: T47 takes over the F2 files (f2_gru.py, forecast_data.py, gru_forecaster.py, features.py, configs) from T44; T44's code is on main and unchanged by T47 unless noted here.
 - [T44] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic/temp_bias/auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T44-gru-improve | depends: T26, T36
   - Renumbered from T41 (tudor-claude also used T41 for the demo sim); decision 0079.
   - Note from T46 (tudor-claude, Tudor's call): T44's branch is merged into tudor-claude/T46-e2e and reaches main with T46; f2_gru.pt unchanged. Keep promoting only via the f2_improve suite.
