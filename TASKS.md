@@ -10,11 +10,8 @@ Add notes as indented sub-bullets.
 ## In progress
 - [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
   - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
-- [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
-- [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
   - Note from T39 (tudor-claude, Tudor's call): legend and station-detail trim landed via T39 / PR #11 with the 3-colour scheme; PR #10 now conflicts with main.
-- [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
   - Note from T23 (tudor-claude): small change in useDashboard.ts and App.tsx so a 404 from GET /api/eval no longer drops the app into demo mode (empty curve, replay starts with date null).
@@ -33,6 +30,12 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
+  - Merged by vlad-claude (this session) on the user's request: T35's local commits + current main; fixes: api.Dockerfile ENV line break, live clock env on ppc-api, DATA_HOST_DIR for the private data. Verified locally (Docker 4 GB): ppc-db, ppc-api (healthy, rl_ppo = gru, live forecaster f2_gru, no lightgbm, 1.4 GB), ppc-web on :8080; replay + live through nginx. Test: copy .env.example to .env (set DATA_HOST_DIR), `docker compose up -d --build`, open http://localhost:8080. The T35 session should `git pull` main.
+- [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
+  - merged into main together with T35.
+- [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
+  - lightgbm (+ scipy, narwhals) out of pyproject/uv.lock; DemandForecaster, legacy train pipeline, F1 trainer/config/ablation suite, forecaster.lgb artifacts and F1 fallbacks deleted; evaluator falls back to online F2; `make train` trains F2; decision 0073. Test: `uv run --extra rl --extra train pytest model sim api`.
 - [T41] M5 demo (mock) mode runs a real little simulation: agent sleeps/wakes CPs by time-of-day demand, charging sessions, KPIs from the states, seek works | owner: tudor-claude | branch: tudor-claude/T41-demo-sim | depends: T40
   - Done: demoSim.ts simulates a day with a rule-based stand-in agent; ticker, map and KPIs move together; seek works (decision 0075). Test: no backend, open app, 288x.
 - [T40] M5 swipe slider snaps flush to the map edge; handle shows only the inward arrow there | owner: tudor-claude | branch: tudor-claude/T40-slider-edge | depends: T39
