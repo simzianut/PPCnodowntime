@@ -524,7 +524,7 @@ class EngineManager:
             from model.cost_rule import CostRulePolicy
 
             self._cost_rule_cls = CostRulePolicy
-        except Exception as e:  # lightgbm can fail with OSError, not only ImportError
+        except Exception as e:  # import can fail with OSError, not only ImportError
             self.unavailable["cost_rule"] = f"model.cost_rule failed to import ({_short_error(e)})"
         for name in ("rl_ppo", "rl_maskppo", "rl_ddqn"):
             try:

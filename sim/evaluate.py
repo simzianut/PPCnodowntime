@@ -13,7 +13,6 @@ import pandas as pd
 
 from model import rl_select
 from model.cost_rule import CostRulePolicy
-from model.forecaster import DemandForecaster
 from model.oracle import HindsightOraclePolicy
 from model.types import Forecaster, Policy, SimState
 from sim.baselines import AlwaysOn, NaiveQuietHours
@@ -83,9 +82,12 @@ def _resolve_test_days(data: SimData, days_arg: str | None, cfg_eval: str | list
 def _build_forecaster(data: SimData) -> Forecaster:
     if data.forecasts is not None and not data.forecasts.empty:
         return _SlotCachedForecaster(PrecomputedForecaster(data.forecasts))
-    art_path = ROOT / "artifacts"
-    if (art_path / "forecaster.lgb").exists() and (art_path / "forecaster_meta.json").exists():
-        return _SlotCachedForecaster(DemandForecaster.load(art_path))
+    f2 = ROOT / "artifacts" / "f2_gru.pt"
+    if f2.exists():  # no precomputed table: run the F2 GRU online (decision 0069)
+        from model.gru_forecaster import GRUForecaster
+
+        gru = GRUForecaster.from_data(f2, sessions=data.sessions, infer_arrivals=False)
+        return _SlotCachedForecaster(gru)
     from sim.forecast import ZeroForecaster
     return ZeroForecaster()
 

@@ -2,8 +2,6 @@ name: forecasters
 runs:
   - config: config/train/f0_seasonal.yaml
     seeds: [0, 1, 2]
-  - config: config/train/f1_lgbm.yaml
-    seeds: [0, 1, 2]
   - config: config/train/f2_gru.yaml
     seeds: [0, 1, 2]
 summary_metrics: [test.overall.y15.auc, test.overall.y15.pr_auc, test.overall.y15.brier, test.overall.y30.auc, test.overall.y30.pr_auc, test.overall.y30.brier, test.overall.y60.auc, test.overall.y60.pr_auc, test.overall.y60.brier, test.overall.n60.poisson_deviance]

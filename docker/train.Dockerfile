@@ -42,5 +42,5 @@ FROM runtime AS verify
 ENV UV_CONCURRENT_INSTALLS=2
 RUN ulimit -n "$(ulimit -Hn)" 2>/dev/null || true; \
     uv sync --frozen --extra rl --extra train
-RUN uv run --frozen --no-sync python -c "import torch, lightgbm, stable_baselines3, sb3_contrib, model.experiments; print(torch.__version__, torch.version.cuda); assert torch.version.cuda.startswith('12.4')"
+RUN uv run --frozen --no-sync python -c "import torch, stable_baselines3, sb3_contrib, model.experiments; print(torch.__version__, torch.version.cuda); assert torch.version.cuda.startswith('12.4')"
 RUN RUNS_DIR=/tmp/runs ARTIFACTS_DIR=/tmp/artifacts uv run --frozen --no-sync pytest model/tests/test_experiments.py -q

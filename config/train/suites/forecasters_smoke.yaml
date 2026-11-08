@@ -8,13 +8,6 @@ runs:
       params.n_train_cpdays: 300
       params.n_val_cpdays: 100
       params.n_test_cpdays: 150
-  - config: config/train/f1_lgbm.yaml
-    seeds: [0]
-    set:
-      <<: *small
-      params.num_threads: 4
-      params.min_data_in_leaf: 20
-      params.num_leaves: 15
   - config: config/train/f2_gru.yaml
     seeds: [0]
     set:

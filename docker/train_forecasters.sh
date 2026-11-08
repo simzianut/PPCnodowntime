@@ -48,9 +48,8 @@ gpu_check() {
 }
 
 smoke() {
-  log "small F0/F1/F2 runs on real data (catches data/cache/CUDA problems in minutes)"
+  log "small F0/F2 runs on real data (catches data/cache/CUDA problems in minutes)"
   run run config/train/f0_seasonal.yaml $SMOKE --overwrite
-  run run config/train/f1_lgbm.yaml $SMOKE --overwrite
   run run config/train/f2_gru.yaml $SMOKE --set device=cuda --set params.epochs=2 \
     --set params.samples_per_epoch=100000 --overwrite
 }

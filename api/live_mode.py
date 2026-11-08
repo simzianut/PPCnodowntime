@@ -67,9 +67,9 @@ def _zone():
     return ZoneInfo(TZ)
 
 
-# ---- forecaster hook: switch to F2 here when T36 lands
+# ---- forecaster hook: F2 GRU (decision 0069)
 def live_forecaster(art_dir: Path | None = None):
-    """(forecaster, name) for live runs: F2 GRU if importable with its model, else F1, else stub."""
+    """(forecaster, name) for live runs: the F2 GRU; a constant stub only if it cannot load."""
     art = Path(art_dir) if art_dir is not None else ROOT / "artifacts"
     f2 = Path(os.environ.get("LIVE_F2_MODEL") or art / "f2_gru.pt")
     try:
@@ -79,14 +79,7 @@ def live_forecaster(art_dir: Path | None = None):
             # live: no session history; arrivals are inferred from CHARGING transitions (0070)
             return GRUForecaster.from_data(f2, sessions=None), "f2_gru"
     except Exception as e:
-        log.info("live: F2 GRU forecaster unavailable (%s)", _short_error(e))
-    try:
-        if (art / "forecaster.lgb").exists():
-            from model.forecaster import DemandForecaster
-
-            return DemandForecaster.load(art), "f1_lgbm"
-    except Exception as e:
-        log.info("live: F1 LightGBM forecaster unavailable (%s)", _short_error(e))
+        log.warning("live: F2 GRU forecaster unavailable (%s); using a constant stub", _short_error(e))
     from model.stubs import ConstantForecaster
 
     return ConstantForecaster(), "constant_stub"
