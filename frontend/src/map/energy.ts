@@ -18,6 +18,21 @@ export function overheadW(cp: ChargePoint, state: State): number {
 
 export const MAP_COLORS = { idle: '#EF4444', asleep: '#16A34A', charging: '#EAB308', offline: '#9CA3AF' } as const
 export type StateGroup = keyof typeof MAP_COLORS
+export const STATUS_ORDER: State[] = ['CHARGING', 'IDLE', 'STANDBY', 'WAKING', 'DEEP_SLEEP', 'OFFLINE']
+export const STATUS_LABELS: Record<State, string> = {
+  CHARGING: 'Charging', IDLE: 'Idle', STANDBY: 'Stand by', WAKING: 'Waking', DEEP_SLEEP: 'Deep sleep', OFFLINE: 'Offline',
+}
+
+export function stateCounts(states: State[]) {
+  return STATUS_ORDER.map((state) => ({ state, count: states.filter((item) => item === state).length })).filter((item) => item.count > 0)
+}
+
+/** Most common connector status; ties follow STATUS_ORDER. Empty sites are treated as offline. */
+export function dominantState(states: State[]): State {
+  const counts = new Map(stateCounts(states).map(({ state, count }) => [state, count]))
+  const max = Math.max(0, ...counts.values())
+  return STATUS_ORDER.find((state) => counts.get(state) === max) ?? 'OFFLINE'
+}
 
 /** Map colour group: WAKING counts as idle, STANDBY and DEEP_SLEEP as asleep. */
 export function stateGroup(state: State): StateGroup {
@@ -53,4 +68,18 @@ export function markerColor(stations: State[][]): string {
   const levels = stations.map(stationLevel).filter((level): level is number => level !== null)
   if (levels.length) return levelColor(levels.reduce((sum, level) => sum + level, 0) / levels.length)
   return stations.some((states) => states.includes('CHARGING')) ? MAP_COLORS.charging : MAP_COLORS.offline
+}
+
+/** Station energy saved against its eligible always-idle draw, matching the map's network total. */
+export function stationSavedPercent(chargePoints: ChargePoint[], cpState: Record<string, State>): number | null {
+  let idleBaselineW = 0
+  let savedW = 0
+  for (const cp of chargePoints) {
+    const state = cpState[cp.cp_id] ?? cp.state ?? 'IDLE'
+    if (state === 'CHARGING' || state === 'OFFLINE') continue
+    const idleW = (PROFILES[cp.power_class] ?? PROFILES.DC_50).idle_w
+    idleBaselineW += idleW
+    savedW += idleW - overheadW(cp, state)
+  }
+  return idleBaselineW ? savedW / idleBaselineW * 100 : null
 }

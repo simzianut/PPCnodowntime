@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
-import { POLICY_LABELS, type ChargePoint, type Location, type Run, type State } from '../api/types'
+import { POLICY_LABELS, STATE_COLORS, type ChargePoint, type Location, type Run, type State } from '../api/types'
+import { MapLegend } from './map/MapLegend'
 import {
   MAX_K, clampView, clusterPoints, clusterZoom, fitPoints, parseFrame, project, sliceViewport, zoomAt,
   type Cluster, type MapFrame, type Point, type View, type Viewport,
 } from '../map/geo'
-import { MAP_COLORS, PROFILES, markerColor, overheadW, stateGroup, type StateGroup } from '../map/energy'
+import { dominantState, PROFILES, markerColor, overheadW, stateCounts, stateGroup, stationLevel, STATUS_LABELS, type StateGroup } from '../map/energy'
 import './networkMap.css'
 
 interface NetworkMapProps {
@@ -34,7 +35,6 @@ const MAX_PULSES = 40
 const PULSE_MS = 1600
 const ACTION_HISTORY = 20000
 const TICKER_COLLAPSED = 3
-const LEGEND: Array<[StateGroup, string]> = [['idle', 'Idle'], ['asleep', 'Asleep'], ['charging', 'Charging'], ['offline', 'Offline']]
 
 type Side = 'without' | 'with'
 type Kind = 'sleep' | 'wake' | 'charge'
@@ -69,6 +69,10 @@ function summarize(members: Location[], cpState: Record<string, State>, side: Si
 
 function tallyText(t: Tally) {
   return `${t.idle} idle, ${t.asleep} asleep, ${t.charging} charging${t.offline ? `, ${t.offline} offline` : ''}`
+}
+
+function stationStatusText(states: State[]) {
+  return stateCounts(states).map(({ state, count }) => `${STATUS_LABELS[state]} ${count}`).join(', ')
 }
 
 const fmtW = (w: number) => Math.abs(w) >= 1000 ? `${(w / 1000).toFixed(1)} kW` : `${Math.round(w)} W`
@@ -474,10 +478,10 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     if (event.key in next) { event.preventDefault(); setSplit(Math.min(0.98, Math.max(0.02, next[event.key]))) }
   }
 
-  function markerBody(color: string, tally: Tally, r: number) {
+  function markerBody(color: string, tally: Tally, r: number, dominant?: State) {
     return <>
       <circle className="nm-edge" r={r + 1.7} />
-      {tally.charging > 0 && color !== MAP_COLORS.charging && <circle className="nm-charging-ring" r={r + 2.9} />}
+      {tally.charging > 0 && dominant !== 'CHARGING' && <circle className="nm-charging-ring" r={r + 2.9} />}
       <circle className="nm-dot" r={r} fill={color} />
     </>
   }
@@ -485,10 +489,13 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   function renderStation(id: string, x: number, y: number, side: Side) {
     const location = byId.get(id)
     if (!location) return null
-    const { tally, color } = summarize([location], cpState, side)
+    const states = location.charge_points.map((cp) => sideState(stateOf(cp, cpState), side))
+    const { tally } = summarize([location], cpState, side)
+    const dominant = dominantState(states)
+    const color = STATE_COLORS[dominant]
     const selected = id === selectedLocationId
     const interactive = side === 'with'
-    const label = `${location.name}: ${tallyText(tally)}${location.confidence === 'low' ? ' (low confidence)' : ''}`
+    const label = `${location.name}: ${stationStatusText(states)}${location.confidence === 'low' ? ' (low confidence)' : ''}`
     return <g key={id} className={`map-marker nm-station${selected ? ' is-selected' : ''}`} transform={`translate(${x} ${y}) scale(${px})`}
       role={interactive ? 'button' : undefined} tabIndex={interactive ? 0 : -1} aria-pressed={interactive ? selected : undefined} aria-label={interactive ? label : undefined}
       onClick={() => selectLocation(id)}
@@ -498,7 +505,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
       <g className="nm-body">
         {selected && <circle className="nm-selected" r={11} />}
         {location.confidence === 'low' && <circle className="nm-low" r={10.5} />}
-        {markerBody(color, tally, 5.5)}
+        {markerBody(color, tally, 5.5, dominant)}
       </g>
     </g>
   }
@@ -521,7 +528,9 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
     const r = Math.min(12, 6.5 + Math.log2(cluster.ids.length) * 1.3)
     const interactive = side === 'with'
     const selected = !!selectedLocationId && cluster.ids.includes(selectedLocationId)
-    const label = `${cluster.ids.length} locations: ${tallyText(tally)}. Zoom in.`
+    const levels = members.map((location) => stationLevel(location.charge_points.map((cp) => sideState(stateOf(cp, cpState), side)))).filter((level): level is number => level !== null)
+    const meanAsleepShare = levels.length ? `${Math.round(levels.reduce((sum, level) => sum + level, 0) / levels.length * 100)}% average asleep share` : 'no eligible asleep/idle states'
+    const label = `${cluster.ids.length} locations: ${meanAsleepShare}; ${tallyText(tally)}. Zoom in.`
     return <g key={cluster.ids[0]} className={`map-marker nm-cluster${selected ? ' is-selected' : ''}`} transform={`translate(${x} ${y}) scale(${px})`}
       role={interactive ? 'button' : undefined} tabIndex={interactive ? 0 : -1} aria-label={interactive ? label : undefined}
       onClick={() => openCluster(cluster)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCluster(cluster) } }}>
@@ -566,7 +575,6 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   const savedNow = totals.burnedW - totals.actualW
   const savedPct = totals.burnedW ? Math.round((savedNow / totals.burnedW) * 100) : 0
   const narrow = size.w < 700
-  const legend = LEGEND.filter(([group]) => group !== 'offline' || totals.with.offline > 0)
 
   return (
     <section className="map-card nm" aria-label="Romania charging network map, without and with the agent">
@@ -650,9 +658,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
           </ol>
         </div>
 
-        <div className="nm-legend" aria-label="Legend">
-          {legend.map(([group, text]) => <span key={group}><i style={{ background: MAP_COLORS[group] }} />{text}</span>)}
-        </div>
+        <MapLegend />
 
         <div className="map-controls nm-controls">
           <button aria-label="Zoom in" onClick={() => zoomBy(1.6)}><Plus size={16} /></button>

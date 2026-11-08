@@ -36,7 +36,9 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 
 ### 3.1 Romania map with charge-point states
 - Each **location** is one flat dot on a quiet base: no state rings, no cluster numbers ([decision 0064](../decisions/0064-map-live-actions-with-swipe.md)).
-- Map colours and legend (4 only): idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey.
+- Clusters keep the red-to-green mean asleep-share gradient: each member station contributes asleep / (asleep + idle) across its charge points; charging and offline are excluded. If no member has an eligible state, a charging-containing cluster is yellow, otherwise grey.
+- Individual station pins use the dominant exact charge-point state: CHARGING `#22C55E`, IDLE `#06B6D4`, STANDBY `#F59E0B`, WAKING `#F97316`, DEEP_SLEEP `#6366F1`, OFFLINE `#EF4444`. Ties follow this listed order. The hover label reports the full six-state count.
+- The prominent two-part legend explains the cluster asleep-share gradient and all six dominant station-status colours. Its labels distinguish cluster colour from station-pin status colour.
 - A selected station is drawn larger and centred in the right ("with agent") half, so the divider handle never covers it. The map remains interactive while the sidebar changes between overview and station details.
 - Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within 44 px on screen at country zoom, shrinking to 14 px from about 8× zoom so stations separate as you zoom in ([decision 0064](../decisions/0064-map-live-actions-with-swipe.md)). Clicking a cluster zooms in and centres it in the with-agent half. Cluster colour = mean over member stations of asleep / (asleep + idle) CPs, interpolated red → green in RGB (never via yellow); charging and offline CPs are ignored, and an all-charging cluster is yellow. Clicking it zooms in. Locations at the same spot (within 12 px at max zoom) fan out into a tight ring on a faint disc, without legs.
 - **Live actions:** a ripple + label per transition (green "−W" on sleep, red on wake, yellow on charge start), an action ticker showing the latest 3 actions, expandable ("Show all N") to a scrollable list of every action since the run started or the last seek back ([decision 0068](../decisions/0068-deslop-control-room-style.md)), and sleep/wake counters. Transitions come from diffing `cpState` between ticks; a seek or policy switch (>50% of CPs changing) resets with no animation.
@@ -60,12 +62,7 @@ Two policies only: Always on (baseline) and RL agent (`rl_ppo`). Runs request ju
   - **RECOMMEND:** pending recommendations appear in the feed, each with the CP, `from → to` states, the reason and the time left before it expires, plus Approve and Reject buttons.
 
 ### 3.4 Station detail panel
-Opens when a location is clicked (`GET /api/runs/{run_id}/cp/{cp_id}/timeline` for each CP). It shows:
-- Header: name, partner, address, county, context, sources and confidence.
-- Per CP: power class, connectors, and a **state timeline bar** for the day.
-- A chart of the forecast `p30` as a line against actual arrivals as ticks, with route-intent markers.
-- The list of the agent's commands for this location, each with its reason and status.
-- Run summary metrics from `GET /api/runs/{run_id}/locations/{location_id}/summary`: current metered kW, expected wait in minutes, and a unitless anomaly score. Null or unavailable fields display as “—”, waits 1 dp, anomaly 2 dp; rated `max_kw` is never used as current output.
+Opens when a location is clicked. The compact panel shows the station name, address/county, current charge-point status mix with the six status colours, and energy saved as a percentage of eligible always-idle draw. Charging and offline charge points are excluded from the idle baseline, matching the network comparison; if no eligible baseline remains, show “Unavailable”. Do not show current output, expected wait, anomaly score, partner/source metadata, or charge-point drill-down timelines, charts, and commands.
 
 ## 4. State management
 - One WebSocket per run, with auto-reconnect. On reconnect, call `GET /api/runs/{id}` to resync.

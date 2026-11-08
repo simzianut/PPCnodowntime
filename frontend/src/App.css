@@ -61,6 +61,23 @@ h1, h2, h3, p, dl, dd { margin: 0; }
 .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
 .detail-header h2 { font-size: 16px; font-weight: 600; }
 .detail-header p { margin-top: 2px; color: var(--muted); font-size: 12px; }
+.station-detail .detail-header { padding: 20px 18px 16px; }
+.station-detail .detail-header .eyebrow { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.station-detail .detail-header h2 { margin-top: 5px; font-size: 20px; }
+.station-summary { display: grid; gap: 14px; padding: 16px 18px; }
+.station-status, .station-energy { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.station-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.station-summary-heading h3 { font-size: 13px; font-weight: 600; }
+.station-summary-heading > span { color: var(--muted); font-size: 11px; }
+.station-summary-heading > strong { font-size: 17px; font-weight: 600; }
+.station-status ul { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 16px; margin: 13px 0 0; padding: 0; list-style: none; }
+.station-status li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+.station-status li i { width: 9px; height: 9px; border-radius: 50%; }
+.station-status li strong { color: var(--text); font-weight: 600; }
+.station-empty { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.station-energy-track { height: 8px; overflow: hidden; margin-top: 12px; border-radius: 99px; background: var(--surface-soft); }
+.station-energy-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ef4444, #16a34a); transition: width .2s ease; }
+.station-energy > p { margin-top: 8px; color: var(--muted); font-size: 10px; }
 .icon-button { width: 28px; height: 28px; flex: none; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
 .icon-button:hover { border-color: var(--line-strong); color: var(--text); }
 .kv { padding: 4px 16px 12px; }
