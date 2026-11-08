@@ -27,6 +27,11 @@ function shiftClock(iso: string, minutes: number) {
 
 const emptyEval: EvalData = { generated_at: '', test_days: [], results: [] }
 
+// The API rejects `oracle` in live runs (replay-only, decision 0061).
+export function policiesForMode(mode: 'replay' | 'live', policies: PolicyName[]): PolicyName[] {
+  return mode === 'live' ? policies.filter((p) => (p as string) !== 'oracle') : policies
+}
+
 function defaultFocus(policies: PolicyName[]): PolicyName {
   return policies.includes('rl_ppo') ? 'rl_ppo' : 'always_on'
 }
@@ -131,7 +136,7 @@ export function useDashboard() {
   }, [flushStagger])
 
   const startRun = useCallback(async (mode: 'replay' | 'live', date: string | null, speed = runRef.current?.speed ?? 60) => {
-    const policies = policiesRef.current
+    const policies = policiesForMode(mode, policiesRef.current)
     const payload = { mode, date, policies, focus_policy: defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
     const reset = () => {
@@ -192,7 +197,7 @@ export function useDashboard() {
         let created: { run_id: string } | null = null
         if (new URLSearchParams(window.location.search).get('mode') === 'live') {
           try {
-            created = await api.startRun({ ...payload, mode: 'live', date: null })
+            created = await api.startRun({ ...payload, mode: 'live', date: null, policies: policiesForMode('live', payload.policies), focus_policy: defaultFocus(policiesForMode('live', payload.policies)) })
           } catch (cause) {
             if (!(cause instanceof ApiError && cause.fromBackend)) throw cause
             setError(`${cause.message}. Showing replay instead.`)

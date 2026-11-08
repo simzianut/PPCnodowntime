@@ -2,8 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '../api/client'
 import { demoLocations } from '../api/mock'
-import type { Run } from '../api/types'
-import { useDashboard } from './useDashboard'
+import type { PolicyName, Run } from '../api/types'
+import { policiesForMode, useDashboard } from './useDashboard'
 
 vi.mock('../api/client', async (importActual) => ({
   ApiError: (await importActual<typeof import('../api/client')>()).ApiError,
@@ -45,5 +45,13 @@ describe('useDashboard API mode', () => {
     expect(result.current.connectionMode).toBe('api')
     expect(result.current.run?.run_id).toBe('r1')
     expect(result.current.error).toBe('API 400: live mode unavailable')
+  })
+})
+
+describe('policiesForMode', () => {
+  it('drops oracle from live runs only', () => {
+    const all = ['always_on', 'cost_rule', 'rl_ppo', 'oracle'] as unknown as PolicyName[]
+    expect(policiesForMode('live', all)).toEqual(['always_on', 'cost_rule', 'rl_ppo'])
+    expect(policiesForMode('replay', all)).toEqual(all)
   })
 })
