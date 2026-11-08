@@ -172,8 +172,8 @@ def test_features_match_existing_builder_and_have_no_lookahead(env):
     keep = (ref_X["cp_id"] == cp_id).to_numpy()
     ref_X, ref_y = ref_X[keep], ref_y[keep]
     for k, name in enumerate(FEATURE_COLUMNS):
-        cp_level = name in fd.FEATURE_GROUPS["cp_level"]  # see test_cp_level
-        if name == "arrivals_same_slot_4w" or cp_level:
+        new = name in fd.FEATURE_GROUPS["cp_level"] + fd.FEATURE_GROUPS["site_level"]
+        if name == "arrivals_same_slot_4w" or new:  # see test_cp_level, test_site_level
             continue
         np.testing.assert_allclose(X[:, k], ref_X[name].to_numpy(), atol=1e-5, err_msg=name)
     for k, h in enumerate(("y15", "y30", "y60")):
@@ -269,7 +269,6 @@ def test_f0_end_to_end_and_deterministic(env):
     assert (runner.repro.runs_dir() / runner.make_run_id(_cfg("f0_seasonal", seed=3))
             / "metrics.json").read_text() == first  # fmt: skip
     assert m["features"] == []
-
 
 
 def test_f2_end_to_end_and_same_seed_identical(env):

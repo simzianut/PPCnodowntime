@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -80,16 +81,56 @@ def _zone():
 
 
 # ---- forecaster hook: F2 GRU (decision 0069)
+def live_model_path(art_dir: Path | None = None) -> Path:
+    """LIVE_F2_MODEL, else artifacts/f2_gru_live.pt (honest model) if present, else f2_gru.pt."""
+    art = Path(art_dir) if art_dir is not None else ROOT / "artifacts"
+    env = os.environ.get("LIVE_F2_MODEL")
+    if env:
+        return Path(env)
+    live = art / "f2_gru_live.pt"
+    return live if live.exists() else art / "f2_gru.pt"
+
+
+def live_calibration_for(model_file: Path) -> dict | None:
+    """Affine hazard calibration fitted on real AmpWhere arrivals (decision 0083), if it matches."""
+    p = Path(
+        os.environ.get("LIVE_F2_CALIBRATION") or model_file.parent / "f2_live_calibration.json"
+    )
+    if not p.exists():
+        return None
+    try:
+        d = json.loads(p.read_text())
+    except ValueError as e:
+        log.warning("live: ignoring %s (%s)", p, _short_error(e))
+        return None
+    if d.get("model") != model_file.name:
+        log.warning(
+            "live: %s was fitted for %s, not %s; ignored", p, d.get("model"), model_file.name
+        )
+        return None
+    return {"kind": "temp_bias", "a": float(d["a"]), "b": float(d["b"])}
+
+
 def live_forecaster(art_dir: Path | None = None):
     """(forecaster, name) for live runs: the F2 GRU; a constant stub only if it cannot load."""
-    art = Path(art_dir) if art_dir is not None else ROOT / "artifacts"
-    f2 = Path(os.environ.get("LIVE_F2_MODEL") or art / "f2_gru.pt")
+    f2 = live_model_path(art_dir)
     try:
         from model.gru_forecaster import GRUForecaster
 
         if f2.exists():
             # live: no session history; arrivals are inferred from CHARGING transitions (0070)
-            return GRUForecaster.from_data(f2, sessions=None), "f2_gru"
+            name = "f2_gru_live" if f2.name == "f2_gru_live.pt" else "f2_gru"
+            fc = GRUForecaster.from_data(f2, sessions=None)
+            cal = live_calibration_for(f2)
+            if cal is not None:
+                fc.model.calibration, fc.model.calibrators = cal, {}
+                log.info(
+                    "live: %s uses the real-data calibration a=%.3f b=%.3f",
+                    name,
+                    cal["a"],
+                    cal["b"],
+                )
+            return fc, name
     except Exception as e:
         log.warning("live: F2 GRU unavailable (%s); using a constant stub", _short_error(e))
     from model.stubs import ConstantForecaster

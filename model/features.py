@@ -42,6 +42,11 @@ FEATURE_COLUMNS = [
     "arrivals_cp_7d",
     "arrivals_cp_28d",
     "mins_since_last_arrival",
+    "loc_arrivals_1h",
+    "loc_arrivals_3h",
+    "loc_same_slot_4w",
+    "loc_rate_7d",
+    "loc_charging_now",
 ]
 
 # Legacy (LightGBM) builders do not track long history: neutral values for the cp_level columns.
@@ -49,6 +54,11 @@ CP_LEVEL_NEUTRAL = {
     "arrivals_cp_7d": 0.0,
     "arrivals_cp_28d": 0.0,
     "mins_since_last_arrival": 40320.0,
+    "loc_arrivals_1h": 0.0,
+    "loc_arrivals_3h": 0.0,
+    "loc_same_slot_4w": 0.0,
+    "loc_rate_7d": 0.0,
+    "loc_charging_now": 0.0,
 }
 
 POWER_CLASS_MAP = {
@@ -105,9 +115,7 @@ class SignalIndex:
                 self.traffic_vals[loc].append(val)
                 self.traffic_indices[loc].append((ts, val))
             elif (
-                signal == "ppcblue_route_intent"
-                and hasattr(row, "eta_ts")
-                and pd.notna(row.eta_ts)
+                signal == "ppcblue_route_intent" and hasattr(row, "eta_ts") and pd.notna(row.eta_ts)
             ):
                 self.intent_recs[loc].append(ts)
                 self.intent_etas[loc].append(row.eta_ts)

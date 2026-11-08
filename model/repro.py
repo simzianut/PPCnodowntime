@@ -38,12 +38,16 @@ def seed_everything(seed: int, deterministic: bool = True) -> None:
 
 
 def resolve_device(device: str = "auto") -> str:
-    """Map auto|cpu|cuda to a concrete torch device string."""
+    """Map auto|cpu|cuda|mps to a concrete torch device string (auto never picks mps)."""
     cuda_ok = torch is not None and torch.cuda.is_available()
     if device == "auto":
         return "cuda" if cuda_ok else "cpu"
     if device == "cuda" and not cuda_ok:
         raise RuntimeError("device=cuda requested but CUDA is not available")
+    if device == "mps":
+        if torch is None or not torch.backends.mps.is_available():
+            raise RuntimeError("device=mps requested but MPS is not available")
+        return device
     if device not in ("cpu", "cuda"):
         raise ValueError(f"unknown device {device!r}")
     return device

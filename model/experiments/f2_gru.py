@@ -36,7 +36,16 @@ DEFAULTS = {
     "num_threads": 8,
     "amp": False,
     "calibration": "isotonic",  # isotonic | temp_bias | auto | none; old calibrate: bool works
+    "lr_schedule": "none",  # none | onecycle (warm-up then cosine decay, per batch)
+    "history_dropout": 0.0,  # share of training windows whose history features are cold-start
 }
+# Arrival-history features that live mode starts without; their cold-start raw values.
+HISTORY_COLUMNS = [
+    "arrivals_cp_1h", "arrivals_cp_3h", "arrivals_same_slot_4w", "arrivals_cp_7d",
+    "arrivals_cp_28d", "mins_since_last_arrival", "loc_arrivals_1h", "loc_arrivals_3h",
+    "loc_same_slot_4w", "loc_rate_7d",
+]  # fmt: skip
+COLD_RAW = {"mins_since_last_arrival": float(fd.MINS_CAP)}
 
 
 class Windows(Dataset):
@@ -86,6 +95,73 @@ class Net(nn.Module):
         z = torch.cat([h[:, -1], self.pc_emb(pc), self.ctx_emb(cx), stat[:, 2:]], -1)
         out = self.mlp(z)
         return out[:, : fd.N_BUCKETS], out[:, fd.N_BUCKETS].clamp(-10.0, 6.0)
+
+
+class Ensemble(nn.Module):
+    """Mean of the members' hazard logits and log-rates (members share features and norm)."""
+
+    def __init__(self, nets: list[nn.Module]):
+        super().__init__()
+        self.nets = nn.ModuleList(nets)
+
+    def forward(self, x, valid, stat):
+        outs = [n(x, valid, stat) for n in self.nets]
+        return torch.stack([o[0] for o in outs]).mean(0), torch.stack([o[1] for o in outs]).mean(0)
+
+
+def net_from_checkpoint(ck: dict) -> nn.Module:
+    """A Net, or an Ensemble when the checkpoint holds `members` (a list of state dicts)."""
+    n_dyn = len(ck["dynamic_features"])
+    if ck.get("members"):
+        nets = []
+        for sd in ck["members"]:
+            n = Net(n_dyn, 2, ck["config"])
+            n.load_state_dict(sd)
+            nets.append(n)
+        return Ensemble(nets)
+    net = Net(n_dyn, 2, ck["config"])
+    net.load_state_dict(ck["state_dict"])
+    return net
+
+
+def checkpoint(net: nn.Module, c: dict, names, dyn_names, norm, cals: dict, cal: dict) -> dict:
+    ck = {
+        "config": dict(c),
+        "features": list(names),
+        "dynamic_features": list(dyn_names),
+        "norm": norm,
+        "calibrators": {k: v.to_dict() for k, v in cals.items()},
+        "calibration": {"kind": cal["kind"], "a": cal["a"], "b": cal["b"]},
+    }
+    if isinstance(net, Ensemble):
+        ck["members"] = [n.state_dict() for n in net.nets]
+        ck["state_dict"] = ck["members"][0]
+    else:
+        ck["state_dict"] = net.state_dict()
+    return ck
+
+
+def cold_start(dyn_names: list[str], norm: dict):
+    """(values, mask) over dynamic columns: normalised cold-start value of each history feature."""
+    vals = np.zeros(len(dyn_names), np.float32)
+    mask = np.zeros(len(dyn_names), bool)
+    for k, c in enumerate(dyn_names):
+        if c not in HISTORY_COLUMNS:
+            continue
+        raw = COLD_RAW.get(c, 0.0)
+        v = np.log1p(raw) if c in fd.COUNT_COLUMNS else raw
+        vals[k] = (v - norm["mu"][k]) / norm["sd"][k]
+        mask[k] = True
+    return torch.from_numpy(vals), torch.from_numpy(mask)
+
+
+def drop_history(batch, p: float, cold: torch.Tensor, mask: torch.Tensor, gen):
+    """Replace the history features of a random share p of windows with cold-start values."""
+    x, valid, *rest = batch
+    drop = torch.rand(x.shape[0], generator=gen) < p
+    sel = drop[:, None, None] & mask[None, None, :]
+    x = torch.where(sel, cold[None, None, :].to(x.dtype), x) * valid.unsqueeze(-1)
+    return (x, valid, *rest)
 
 
 def survival_nll(logits, bucket):
@@ -146,8 +222,8 @@ def predict(net, ds: Windows, dev: str, bs: int = 8192) -> dict:
         x, valid, stat, _, _ = ds[np.arange(a, min(a + bs, len(ds)))]
         logits, lograte = net(x.to(dev), valid.to(dev), stat.to(dev))
         for o, r in zip(outs, probs_from(logits, lograte), strict=True):
-            o.append(r.double().cpu().numpy())
-        lg.append(logits.float().cpu().numpy())
+            o.append(r.cpu().double().numpy())
+        lg.append(logits.cpu().float().numpy())
     res = {k: np.concatenate(o) for k, o in zip(("p15", "p30", "p60", "n60"), outs, strict=True)}
     res["logits"] = np.concatenate(lg)
     return res
@@ -270,8 +346,19 @@ def train(ctx: RunContext) -> dict:
     rng = np.random.default_rng(int(fd.data_params(ctx.config)["sample_seed"]))
     n_val = len(ds["val"])
     val_idx = np.sort(rng.choice(n_val, size=min(int(c["val_max_rows"]), n_val), replace=False))
+    cold, cold_mask = cold_start(dyn_names, norm)
+    p_hist = float(c["history_dropout"])
+    sched = None
+    if c["lr_schedule"] == "onecycle":
+        steps = int(c["epochs"]) * -(-spe // int(c["batch_size"]))
+        sched = torch.optim.lr_scheduler.OneCycleLR(
+            opt, max_lr=float(c["lr"]), total_steps=steps, pct_start=0.1
+        )
+    elif c["lr_schedule"] != "none":
+        raise ValueError(f"unknown lr_schedule {c['lr_schedule']!r}")
     best, best_state, bad = float("inf"), None, 0
     for epoch in range(int(c["epochs"])):
+        hgen = torch_generator(ctx.seed + 7000 + epoch)
         sampler = BatchSampler(
             RandomSampler(
                 range(n_tr), num_samples=spe, generator=torch_generator(ctx.seed + epoch)
@@ -286,6 +373,8 @@ def train(ctx: RunContext) -> dict:
         net.train()
         tot, n = 0.0, 0
         for batch in loader:
+            if p_hist > 0:
+                batch = drop_history(batch, p_hist, cold, cold_mask, hgen)
             opt.zero_grad(set_to_none=True)
             with torch.autocast(dev, enabled=bool(c["amp"])):
                 loss = _loss(net, batch, dev, c["poisson_weight"])
@@ -294,6 +383,8 @@ def train(ctx: RunContext) -> dict:
             nn.utils.clip_grad_norm_(net.parameters(), c["grad_clip"])
             scaler.step(opt)
             scaler.update()
+            if sched is not None:
+                sched.step()
             tot += float(loss) * len(batch[0])
             n += len(batch[0])
         vl = eval_loss(net, ds["val"], val_idx, dev, c["poisson_weight"])
@@ -307,6 +398,14 @@ def train(ctx: RunContext) -> dict:
                 break
     net.load_state_dict(best_state)
     raw = {s: predict(net, ds[s], dev) for s in ("val", "test")}
+    return finish_run(
+        ctx, c, data, names, dyn_names, norm, net, raw, time.monotonic() - t0,
+        {"best_val_loss": round(best, 6)},
+    )  # fmt: skip
+
+
+def finish_run(ctx, c, data, names, dyn_names, norm, net, raw, train_time_s, extra=None) -> dict:
+    """Calibrate on val, evaluate val/test, write forecasts.parquet and model/f2_gru.pt."""
     yva, bva = data.y("val"), data.bucket("val")
     kind = _calibration_kind(ctx.config.get("params") or {})
     selection = None
@@ -319,13 +418,14 @@ def train(ctx: RunContext) -> dict:
     cals = cal["calibrators"]
     final = {s: apply_calibration(cal, r) for s, r in raw.items()}
     metrics = fc.finish(
-        ctx, data, "f2_gru", names, final, time.monotonic() - t0,
+        ctx, data, "f2_gru", names, final, train_time_s,
         {
-            "best_val_loss": round(best, 6),
+            **(extra or {}),
             "calibrated": kind != "none",
             "calibration_chosen": kind,
             "calibration_selection": selection,
             "dynamic_features": dyn_names,
+            "n_params": int(sum(p.numel() for p in net.parameters())),
         },
     )  # fmt: skip
     unc, _ = fc.fix_monotone(raw["test"])
@@ -337,15 +437,6 @@ def train(ctx: RunContext) -> dict:
     }
     ctx.path("model").mkdir(exist_ok=True)
     torch.save(
-        {
-            "state_dict": net.state_dict(),
-            "config": dict(c),
-            "features": names,
-            "dynamic_features": dyn_names,
-            "norm": norm,
-            "calibrators": {k: v.to_dict() for k, v in cals.items()},
-            "calibration": {"kind": kind, "a": cal["a"], "b": cal["b"]},
-        },
-        ctx.path("model", "f2_gru.pt"),
+        checkpoint(net, c, names, dyn_names, norm, cals, cal), ctx.path("model", "f2_gru.pt")
     )
     return metrics

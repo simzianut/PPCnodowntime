@@ -1,0 +1,43 @@
+# F2 GRU live (decision 0083): same recipe as f2_gru_v2 on honest features only (no mock
+# app/maps signals, no traffic): the model served in live mode on real AmpWhere statuses.
+name: f2_gru_live
+kind: forecaster
+model: f2_gru
+seed: 0
+device: auto
+deterministic: true
+data:
+  sessions: sessions.parquet
+  charge_points: charge_points.parquet
+  locations: locations.parquet
+  cp_active_days: cp_active_days.parquet
+  context: context.parquet
+  signals: signals.parquet
+  county_ev: ../seed/county_ev_stats.csv
+params:
+  sample_seed: 20260101
+  n_train_cpdays: 40000
+  n_val_cpdays: 10000
+  n_test_cpdays: 20000
+  max_cps: null
+  feature_groups: [calendar_history, cp_level, site_level]
+  window_slots: 36
+  hidden: 96
+  layers: 1
+  dropout: 0.1
+  mlp_hidden: 96
+  poisson_weight: 0.2
+  lr: 0.002
+  lr_schedule: onecycle
+  history_dropout: 0.1
+  weight_decay: 0.0001
+  epochs: 12
+  batch_size: 2048
+  samples_per_epoch: 3000000
+  val_max_rows: 500000
+  patience: 4
+  grad_clip: 1.0
+  num_workers: 0
+  num_threads: 8
+  amp: true
+  calibration: auto

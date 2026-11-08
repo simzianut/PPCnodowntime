@@ -22,6 +22,31 @@ dundee:
     rapid: DC_50
     ultra_rapid: DC_HPC
 
+# ChargePlace Scotland donor pool (Zenodo 19645933, CC BY 4.0). Opt-in via mapping.donors.
+# Shares lat/lon/start/end/split_date with dundee: the Dundee weather series is reused.
+cps:
+  files:
+    - {name: Sessions_from_ChargePlaceScotland.zip, url: "https://zenodo.org/records/19645933/files/Sessions_from_ChargePlaceScotland.zip?download=1"}
+    - {name: infos_cpids.zip, url: "https://zenodo.org/records/19645933/files/infos_cpids.zip?download=1"}
+  sessions_dir: Sessions_from_ChargePlaceScotland
+  infos_dir: infos_cpids
+  speed_file: CPID_and_charger_speed.xlsx
+  local_authority_file: CPID_and_local_authority.xlsx
+  postcode_file: CPID_and_postcode.xlsx
+  public_private_file: CPID_public_private.xlsx
+  exclude_dundee: true        # drop CPIDs that are in the Dundee donor set (no double counting)
+  exclude_private: true       # drop CPIDs flagged Private (workplace/home units)
+  min_session_s: 120
+  max_session_s: 86400
+  max_lanes: 2
+  download_delay_s: 5
+  user_agent: PPCnodowntime-hackathon (educational; contact via repo)
+  power_class:
+    ac: AC_22
+    rapid: DC_50
+    ultra-rapid: DC_HPC
+  infer_kw_p95: {rapid: 25, ultra-rapid: 60}   # CPIDs missing from the speed file: p95 session mean kW
+
 # County EV statistics (spec 01 section 7). Source licence: OGL-ROU-1.0.
 county_ev:
   url: https://data.gov.ro/dataset/b93e0946-2592-4ed7-a520-e07cba6acd07/resource/3e30eb2a-5079-4421-9701-67cf346f972f/download/parc-auto-combistibil.csv
@@ -33,6 +58,7 @@ county_ev:
 
 # Donor -> RO charge point mapping (spec 01 §4, T7).
 mapping:
+  donors: [dundee]                   # add cps to pool ChargePlace Scotland donors (util_quantile re-ranked over the union)
   seed: 20251107
   max_scale: 3.0                     # cap on target_rate / donor_rate
   min_donor_sessions_per_day: 0.0    # donors at or below this rate are never chosen

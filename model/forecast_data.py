@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from model import repro
 from model.features import CONTEXT_TYPE_MAP, FEATURE_COLUMNS, POWER_CLASS_MAP
 
-FEATURE_VERSION = 2
+FEATURE_VERSION = 3
 SLOTS = 288
 SLOT_NS = 300 * 10**9
 NS = 10**9
@@ -43,12 +43,16 @@ FEATURE_GROUPS: dict[str, list[str]] = {
     "ev_flow": ["maps_ev_count_15m", "weighted_flow_15m"],
     "intents": ["intent_eta_15", "intent_eta_30", "intent_eta_60"],
     "cp_level": ["arrivals_cp_7d", "arrivals_cp_28d", "mins_since_last_arrival"],
+    "site_level": [
+        "loc_arrivals_1h", "loc_arrivals_3h", "loc_same_slot_4w", "loc_rate_7d", "loc_charging_now",
+    ],
 }  # fmt: skip
 STATIC_COLUMNS = ["power_class_code", "context_type_code", "county_ev_per_1000", "cps_at_location"]
 COUNT_COLUMNS = [
     "arrivals_cp_1h", "arrivals_cp_3h", "arrivals_same_slot_4w", "maps_ev_count_15m",
     "weighted_flow_15m", "intent_eta_15", "intent_eta_30", "intent_eta_60",
     "arrivals_cp_7d", "arrivals_cp_28d", "mins_since_last_arrival",
+    "loc_arrivals_1h", "loc_arrivals_3h", "loc_same_slot_4w", "loc_rate_7d", "loc_charging_now",
 ]  # fmt: skip
 
 DEFAULT_PARAMS: dict[str, Any] = {
@@ -213,6 +217,24 @@ def cp_level_features(arr: np.ndarray, t: np.ndarray, history_start: int | None)
     else:
         mins = np.full(len(t), cap)
     return out[0], out[1], mins
+
+
+def same_slot_4w(arr: np.ndarray, t: np.ndarray) -> np.ndarray:
+    """Mean arrivals in a +-30 min window at the same time of day, 1..4 weeks before t."""
+    s4 = np.zeros(len(t))
+    for k in range(1, 5):
+        c = t - k * 7 * 86400 * NS
+        s4 += np.searchsorted(arr, c + 1800 * NS, side="right")
+        s4 -= np.searchsorted(arr, c - 1800 * NS, side="right")
+    return s4 / 4.0
+
+
+def charging_at(arr: np.ndarray, dep: np.ndarray | None, t: np.ndarray) -> np.ndarray:
+    """1.0 where the last session that started at or before t has not departed yet."""
+    if dep is None or not len(arr):
+        return np.zeros(len(t), np.float32)
+    j = np.searchsorted(arr, t, side="right") - 1
+    return ((j >= 0) & (dep[j.clip(0)] > t)).astype(np.float32)
 
 
 # ---------------------------------------------------------------- signals (streamed)
@@ -399,8 +421,13 @@ def _cp_features(
     ctx: ContextGrid,
     sig: SignalTables,
     history_start: int | None = None,
+    sibs: list[tuple] | None = None,
 ):
-    """Features (len(t), 25) and targets for one CP over its slot timestamps t (ns)."""
+    """Features (len(t), len(FEATURE_COLUMNS)) and targets for one CP over slot timestamps t (ns).
+
+    sibs: (arrivals, departures) of every CP at the location (this one included), for
+    loc_charging_now; defaults to this CP alone.
+    """
     n = len(t)
     X = np.zeros((n, len(FEATURE_COLUMNS)), np.float32)
     col = {c: i for i, c in enumerate(FEATURE_COLUMNS)}
@@ -422,18 +449,18 @@ def _cp_features(
     idx_t = np.searchsorted(arr, t, side="right")
     X[:, col["arrivals_cp_1h"]] = idx_t - np.searchsorted(arr, t - 3600 * NS, side="right")
     X[:, col["arrivals_cp_3h"]] = idx_t - np.searchsorted(arr, t - 3 * 3600 * NS, side="right")
-    s4 = np.zeros(n)
-    for k in range(1, 5):
-        c = t - k * 7 * 86400 * NS
-        s4 += np.searchsorted(arr, c + 1800 * NS, side="right")
-        s4 -= np.searchsorted(arr, c - 1800 * NS, side="right")
-    X[:, col["arrivals_same_slot_4w"]] = s4 / 4.0
+    X[:, col["arrivals_same_slot_4w"]] = same_slot_4w(arr, t)
     r7, r28, mins = cp_level_features(arr, t, history_start)
     X[:, col["arrivals_cp_7d"]], X[:, col["arrivals_cp_28d"]] = r7, r28
     X[:, col["mins_since_last_arrival"]] = mins
-    if len(arr):
-        j = idx_t - 1
-        X[:, col["is_charging"]] = (j >= 0) & (dep[j.clip(0)] > t)
+    X[:, col["is_charging"]] = charging_at(arr, dep, t)
+    # site level: arrivals at the location <= t, and sessions active at the siblings
+    li = np.searchsorted(loc_arr, t, side="right")
+    X[:, col["loc_arrivals_1h"]] = li - np.searchsorted(loc_arr, t - 3600 * NS, side="right")
+    X[:, col["loc_arrivals_3h"]] = li - np.searchsorted(loc_arr, t - 3 * 3600 * NS, side="right")
+    X[:, col["loc_same_slot_4w"]] = same_slot_4w(loc_arr, t)
+    X[:, col["loc_rate_7d"]] = cp_level_features(loc_arr, t, history_start)[0]
+    X[:, col["loc_charging_now"]] = sum(charging_at(a, d, t) for a, d in (sibs or [cp_arr]))
     # signals (location level)
     base = np.int64(loc_idx) << LOC_SHIFT
     ev = sum(
@@ -573,6 +600,7 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
     del sess
     cps_i = cps.set_index("cp_id")
     empty = (np.zeros(0, np.int64), np.zeros(0, np.int64))
+    sibs = siblings(cps, by_cp)
     n_rows = {s: int((cpdays["split"] == s).sum()) * SLOTS for s in SPLITS}
     mm_X: dict[str, np.ndarray] = {}
     mm_y: dict[str, np.ndarray] = {}
@@ -616,6 +644,7 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
                 ctx if ctx is not None else ContextGrid(_empty_ctx()),
                 sig if sig is not None else _empty_sig(),
                 hist_start,
+                sibs.get(cp["location_id"]),
             )
             a = (int(g["_row"].iloc[0]) - split_first[s]) * SLOTS
             e = a + len(t)
@@ -633,6 +662,15 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
             mm_X[s].flush()
         (feat_dir / "features.done").write_text("ok")
     cpdays.drop(columns="_row").to_parquet(root / "cpdays.parquet", index=False)
+
+
+def siblings(cps: pd.DataFrame, by_cp: dict[str, tuple]) -> dict[str, list[tuple]]:
+    """location_id -> (arrivals, departures) of each CP there (empty arrays when none)."""
+    empty = (np.zeros(0, np.int64), np.zeros(0, np.int64))
+    out: dict[str, list[tuple]] = {}
+    for cp_id, loc in zip(cps["cp_id"], cps["location_id"], strict=True):
+        out.setdefault(loc, []).append(by_cp.get(cp_id, empty))
+    return out
 
 
 def _empty_ctx() -> pd.DataFrame:

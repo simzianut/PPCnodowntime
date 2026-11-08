@@ -12,14 +12,18 @@ KW = {"epochs": 1, "samples_per_epoch": 3000, "batch_size": 256, "hidden": 8, "m
 COLS = ["ts", "cp_id", "p_arrival_15", "p_arrival_30", "p_arrival_60", "expected_arrivals_60"]
 
 
-@pytest.fixture(params=[None, "cp_level"], ids=["base", "cp_level"])
+@pytest.fixture(params=[None, "cp_level", "v2"], ids=["base", "cp_level", "v2"])
 def run_dir(env, request):  # noqa: F811
     from model.experiments import runner
 
     extra = {}
-    if request.param:
-        groups = [*fd.data_params(_cfg("f2_gru"))["feature_groups"], request.param]
+    if request.param == "cp_level":
+        groups = [*fd.data_params(_cfg("f2_gru"))["feature_groups"], "cp_level"]
         extra = {"feature_groups": groups, "calibration": "auto"}
+    elif request.param == "v2":  # the f2_gru_v2 recipe: site features, one-cycle, cold start
+        groups = [*fd.data_params(_cfg("f2_gru"))["feature_groups"], "cp_level", "site_level"]
+        extra = {"feature_groups": groups, "calibration": "auto", "lr_schedule": "onecycle",
+                 "history_dropout": 0.2}  # fmt: skip
     return runner.run_config(_cfg("f2_gru", **KW, **extra))
 
 
