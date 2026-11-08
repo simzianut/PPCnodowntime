@@ -495,8 +495,8 @@ def test_recommendation_expires_after_ttl():
     assert e.recommendations("rejected")[0]["id"] == 1
 
     e = rec_engine({0: [("L00001-1", "STANDBY")]})
-    e.run_to(3)
-    r = e.step()
+    e.run_to(2)
+    r = e.step()  # ends at 00:15 == expires_at: reported by this step, not the next (T52)
     assert [(x["id"], x["status"]) for x in r.new_recommendations] == [(1, "expired")]
     assert e.states("rl_ppo")[0] == IDLE
 
@@ -504,7 +504,7 @@ def test_recommendation_expires_after_ttl():
     e.run_to(3)  # self.t == expires_at: too late to approve
     with pytest.raises(ValueError):
         e.decide_recommendation(1, approve=True)
-    assert [(x["id"], x["status"]) for x in e.step().new_recommendations] == [(1, "expired")]
+    assert e.step().new_recommendations == []  # already reported
 
 
 def test_listing_never_offers_an_expired_recommendation():
@@ -514,9 +514,19 @@ def test_listing_never_offers_an_expired_recommendation():
     assert [(x["id"], x["status"]) for x in e.recommendations()] == [(1, "expired")]
     with pytest.raises(ValueError):
         e.decide_recommendation(1, approve=True)
-    r = e.step()
-    assert [(x["id"], x["status"]) for x in r.new_recommendations] == [(1, "expired")]
-    assert e.step().new_recommendations == []
+    assert e.step().new_recommendations == []  # the step that reached 00:15 reported it
+
+
+def test_step_reports_expiry_at_its_end_so_callers_never_see_a_stale_pending():
+    e = rec_engine({0: [("L00001-1", "STANDBY")]})
+    seen: dict[int, str] = {}
+    for _ in range(4):
+        for x in e.step().new_recommendations:
+            seen[x["id"]] = x["status"]
+        # what a caller tracking StepResults believes is pending must still be decidable
+        live = {x["id"] for x in e.recommendations("pending")}
+        assert {i for i, s in seen.items() if s == "pending"} == live
+    assert seen == {1: "expired"}
 
 
 def test_one_pending_per_cp():
