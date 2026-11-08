@@ -14,7 +14,8 @@ ENV UV_LINK_MODE=copy \
     PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    DATA_DIR=/app/data \n    MPLCONFIGDIR=/tmp/mpl
+    DATA_DIR=/app/data \
+    MPLCONFIGDIR=/tmp/mpl
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv venv /opt/venv --python /usr/local/bin/python3.12

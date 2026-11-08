@@ -47,7 +47,7 @@ services:
     user: "0:0"
     command: ["sh", "-c", "python -m stations || echo 'seed failed (non-fatal)'"]
     volumes:
-      - ./data:/app/data
+      - ${DATA_HOST_DIR:-./data}:/app/data
     depends_on:
       ppc-migrate:
         condition: service_completed_successfully
@@ -60,8 +60,12 @@ services:
       <<: *api-env
       API_FIXTURES: ${API_FIXTURES:-0}
       RL_AGENT: ${RL_AGENT:-auto}
+      # live mode (decisions 0070, 0072); empty LIVE_CLOCK_START = real time
+      LIVE_CLOCK_START: ${LIVE_CLOCK_START:-}
+      LIVE_CLOCK_SPEED: ${LIVE_CLOCK_SPEED:-1}
+      LIVE_LAG_S: ${LIVE_LAG_S:-60}
     volumes:
-      - ./data:/app/data:ro
+      - ${DATA_HOST_DIR:-./data}:/app/data:ro
       - ./artifacts:/app/artifacts:ro
     depends_on:
       ppc-db:
@@ -99,7 +103,7 @@ services:
       LIVE_POLL_S: ${LIVE_POLL_S:-300}
       TOMTOM_API_KEY: ${TOMTOM_API_KEY:-}
     volumes:
-      - ./data/raw/live:/app/data/raw/live
+      - ${DATA_HOST_DIR:-./data}/raw/live:/app/data/raw/live
     depends_on:
       ppc-migrate:
         condition: service_completed_successfully
