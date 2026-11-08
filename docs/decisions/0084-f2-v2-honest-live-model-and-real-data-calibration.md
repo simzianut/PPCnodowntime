@@ -45,6 +45,15 @@ Smoke runs: 3,000 train CP-days, 3 epochs. The cp_level and site_level features 
 
 **Replay model.** With two hours left, the v2 replay runs (40 min each on the laptop, no cloud box) were dropped: `artifacts/f2_gru.pt` stays the deployed A100 model, which rescored on the regenerated local data at test y30 AUC 0.945 / PR-AUC 0.584 and 54.4% saved with 102 of 3,679 sessions waiting (λ 0.1) on the 8 demo days. `config/train/f2_gru_v2.yaml` and the `f2_v2` suite remain for the next GPU session.
 
+**Promoted live model (10:05).** `artifacts/f2_gru_live.pt` = run `f2_gru_live_ens-1aebd83d-s2`, the average of two seeds of the short recipe (a third seed changed nothing: 0.799 vs 0.801). `artifacts/f2_live_calibration.json`: a = 1.044, b = 0.280, fitted on 37k observed (slot, CP) rows with 60 min of future observed (first poll 22:32 UTC to the last poll at fit time). On the frozen window, as the app serves it:
+
+| Served live model | y30 AUC | y30 PR-AUC | y30 Brier | mean p / observed | AC | DC 50 | HPC |
+|---|---|---|---|---|---|---|---|
+| today: `f2_gru.pt` with mocked signals | 0.725 | 0.014 | 0.0131 | 2.97 | 0.76 | 0.60 | 0.64 |
+| new: `f2_gru_live.pt` + calibration, signals on or off | 0.801 | 0.029 | 0.0066 | 1.39 | 0.85 | 0.69 | 0.81 |
+
+Verified in Docker (`LIVE_SIGNALS=off`, demo clock 2026-11-08 00:50 at 60x): the live run reports `forecaster f2_gru_live`, the calibration in the log, 671 of 671 CPs.
+
 ## Alternatives considered
 - Keep one model and zero the signal features live: in training a missing intent lowers the probability, so the model would under-predict everywhere.
 - Fix the live sampler to be consistent with training: impossible, the training signals know the future.
