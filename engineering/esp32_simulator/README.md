@@ -56,6 +56,35 @@ The hardware setup models the three operational component categories defined in 
 
 ## 4. How to Flash & Run
 
+You can flash the ESP32 using either **Arduino IDE** (C/C++) or **MicroPython** (Python).
+
+---
+
+### Option A: Arduino IDE (Easiest & Recommended)
+
+1. Open **Arduino IDE**.
+2. If you don't have the ESP32 board package installed:
+   * Go to **File -> Preferences**.
+   * Add to *Additional Boards Manager URLs*:
+     `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+   * Go to **Tools -> Board -> Boards Manager**, search for `esp32` by Espressif and click **Install**.
+3. Open the sketch:
+   [`engineering/esp32_simulator/esp32_simulator.ino`](file:///E:/Side%20Projects/PPCnodowntime/engineering/esp32_simulator/esp32_simulator.ino)
+4. In the top menu:
+   * **Tools -> Board -> esp32 -> "ESP32 Dev Module"** (or your board model).
+   * **Tools -> Port -> Select your ESP32 COM port**.
+5. Click **Upload** (the Right Arrow button).
+6. Once uploaded:
+   * Connect your phone or laptop to the Wi-Fi network: **`PPC-Blue-Charger-Sim`**.
+   * Open any browser and go to:
+     ```
+     http://192.168.4.1
+     ```
+
+---
+
+### Option B: MicroPython (`main.py`)
+
 1. **Install tools:**
    ```bash
    pip install esptool mpremote
@@ -72,9 +101,5 @@ The hardware setup models the three operational component categories defined in 
    mpremote reset
    ```
 4. **Operate:**
-   * On your smartphone or laptop, connect to the Wi-Fi network: **`PPC-Blue-Charger-Sim`**.
-   * Open your browser and go to:
-     ```
-     http://192.168.4.1
-     ```
-   * Click **IDLE**, **STANDBY**, **DEEP SLEEP**, **CHARGING**, or **OFFLINE** to toggle states and observe the hardware LEDs.
+   * Connect to **`PPC-Blue-Charger-Sim`**.
+   * Open `http://192.168.4.1` in your browser.
