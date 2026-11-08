@@ -32,7 +32,7 @@ export function ReplayBar({ dashboard }: { dashboard: ReturnType<typeof useDashb
   const running = run?.status === 'running'
   const slot = dragSlot ?? run?.slot ?? 0
   const progress = `${(slot / SLOTS) * 100}%`
-  const clock = dragSlot !== null ? slotClock(dragSlot) : run ? formatClock(run.sim_time) : '--:--'
+  const clock = dragSlot !== null ? slotClock(dragSlot) : run ? formatClock(dashboard.actionClock ?? run.sim_time) : '--:--'
 
   const stateRef = useRef({ run, done, running })
   stateRef.current = { run, done, running }
