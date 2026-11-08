@@ -237,14 +237,17 @@ export function useDashboard() {
     return () => window.clearInterval(timer)
   }, [connectionMode, run?.mode, run?.status, run?.speed, mergeTick])
 
+  // One socket per run, kept across pause/play/seek; closed only when the run is done or replaced.
+  const runId = run?.run_id
+  const runDone = run?.status === 'done'
   useEffect(() => {
-    if (connectionMode !== 'api' || !run || run.status === 'done') return
+    if (connectionMode !== 'api' || !runId || runDone) return
     let stopped = false
     let socket: WebSocket | null = null
     let reconnectTimer = 0
     const connect = () => {
       if (stopped) return
-      socket = new WebSocket(runSocketUrl(run.run_id))
+      socket = new WebSocket(runSocketUrl(runId))
       socket.onopen = () => setConnected(true)
       socket.onmessage = (event) => {
         try { mergeTick(JSON.parse(event.data) as Tick) } catch { setError('Received an unreadable update from the run stream.') }
@@ -254,7 +257,7 @@ export function useDashboard() {
         setConnected(false)
         if (stopped) return
         reconnectTimer = window.setTimeout(() => {
-          void api.getRun(run.run_id).then((current) => {
+          void api.getRun(runId).then((current) => {
             if (stopped) return
             runRef.current = current
             setRun(current)
@@ -268,9 +271,16 @@ export function useDashboard() {
     return () => {
       stopped = true
       window.clearTimeout(reconnectTimer)
-      socket?.close()
+      const s = socket as WebSocket | null
+      if (!s) return
+      s.onmessage = null
+      s.onerror = null
+      s.onclose = null
+      // closing a socket mid-handshake logs a browser error; close it once it opens instead
+      if (s.readyState === WebSocket.CONNECTING) s.onopen = () => s.close()
+      else s.close()
     }
-  }, [connectionMode, run?.run_id, run?.status, mergeTick])
+  }, [connectionMode, runId, runDone, mergeTick])
 
   const control = useCallback(async (action: 'play' | 'pause' | 'speed' | 'seek' | 'focus', value: number | string | null) => {
     if (!runRef.current) return

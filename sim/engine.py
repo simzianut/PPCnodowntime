@@ -400,8 +400,8 @@ class Engine:
                 ps.prev_state[diff] = ps.state[diff]
 
         self.slot += 1
-        if self.done:
-            self._expire(np.inf, changed)
+        # expire at the new boundary now, so a recommendation listed as pending can be decided
+        self._expire(np.inf if self.done else float(self.slot * self.slot_s), changed)
         req = [self._sims[nm] for nm in self.policy_names]
         recs = {r.id: r for r in changed}
         return StepResult(

@@ -89,10 +89,12 @@ def path_d(g) -> str:
     if isinstance(g, (Polygon, MultiPolygon)):
         for poly in getattr(g, "geoms", [g]):
             for ring in [poly.exterior, *poly.interiors]:
-                parts.append("M" + "L".join(f"{fmt(x)},{fmt(y)}" for x, y in ring.coords) + "Z")
+                if len(ring.coords) >= 3:  # clipping can leave empty rings ("MZ", invalid SVG)
+                    parts.append("M" + "L".join(f"{fmt(x)},{fmt(y)}" for x, y in ring.coords) + "Z")
     elif isinstance(g, (LineString, MultiLineString)):
         for line in getattr(g, "geoms", [g]):
-            parts.append("M" + "L".join(f"{fmt(x)},{fmt(y)}" for x, y in line.coords))
+            if len(line.coords) >= 2:
+                parts.append("M" + "L".join(f"{fmt(x)},{fmt(y)}" for x, y in line.coords))
     elif hasattr(g, "geoms"):
         parts.extend(path_d(sub) for sub in g.geoms)
     return "".join(parts)
