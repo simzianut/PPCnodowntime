@@ -24,6 +24,7 @@ Decisions: [0011](../decisions/0011-shared-slot-engine.md), [0017](../decisions/
      - Otherwise the driver uses the compatible CP (own or sibling) that is asleep or WAKING and ready soonest. Wait = remaining wake time (from STANDBY, DEEP_SLEEP or partway through WAKING), attributed to that CP. The CP goes to WAKING, then CHARGING when ready. The departure time moves later by the wait.
      - If every compatible CP is busy charging, the driver queues for the first to free up. It's the same queueing as always-on, so it counts as **not** added wait (decision 0019).
   5. **Account:** add overhead energy per CP, `power(state) × seconds in state`, inside the slot, plus `wake_extra_wh` per wake.
+- **Minute ticks** ([0091](../decisions/0091-minute-ticks-real-time-speeds.md)): `Engine.step()` simulates a whole slot (training, evaluation, gym env). `Engine.step_minute()` advances the clock one minute instead. The slot's first minute runs steps 1–3, and each minute processes only the events inside it (step 4). The energy of step 5 is still added to the metrics at the slot end, so minute-ticked and slot-stepped days end with identical KPIs; mid-slot KPIs include the slot's open part. `run_to_minute(m)` runs whole slots, then the remaining minutes. The live engine applies each observed status change on its own minute.
 - **Policies run side by side:** every policy gets its own copy of the CP states, driven by the **same** sessions and signals. Results are directly comparable.
 - **Determinism:** seeded. The same inputs produce the same results.
 - **Speed target:** one day, all real CPs (~500, decision 0026), 4 policies in under 20 s headless. Use vectorised per-CP arrays where possible.
@@ -90,19 +91,19 @@ Full request and response schemas are in `docs/CONTRACTS.md`. Summary:
 | `POST /api/recommendations/{id}` | `{decision: approve\|reject}` |
 | `GET /api/eval` | Contents of `artifacts/eval_results.json` |
 
-**Replay runner:**
-- An asyncio task advances the engine `speed` slots per second (1–288).
-- After each step it sends one `tick` message: sim time, the KPIs of every policy, and **only the CPs whose state changed** under `focus_policy`.
-- `seek` re-runs the engine from midnight up to the target slot, without sending anything. Past operator decisions are not replayed; their recommendations count as expired.
+**Replay runner** ([0091](../decisions/0091-minute-ticks-real-time-speeds.md)):
+- An asyncio task advances the engine one simulated minute per tick and sleeps `60 / speed` wall seconds minus the time the tick took. `speed` is simulated seconds per wall second: 1, 15, 60 or 300.
+- After each tick it sends one `tick` message: sim time, `minute`, `slot`, the KPIs of every policy, and **only the CPs whose state changed** under `focus_policy` during that minute.
+- `seek` takes a minute of the day, clamped to the run's `window`. It runs the engine forward to that minute, or re-runs it from midnight (from the window start for a collected day) when going back, without sending anything. Past operator decisions are not replayed; their recommendations count as expired.
 
 **Live mode:**
-- Every 5 minutes, read the latest `live_status` into CP states. AVAILABLE becomes IDLE unless the agent has put the CP to sleep.
+- The run ticks minute m once the clock passes m + one slot + `LIVE_LAG_S`. At each slot start it reads the statuses collected so far and feeds the slot's observed events, which then apply on their own minute (decision 0091). AVAILABLE becomes IDLE unless the agent has put the CP to sleep.
 - Build signals with `model.live_signals`, call the policy, and apply or recommend its commands through `stations.store`.
 - Send ticks over the same WebSocket.
 
 **Engine mode (T23, default):** with `API_FIXTURES` unset, `api/engine_mode.py` runs each replay on `sim.Engine` in memory, with no DB. Stations come from `sim.stations_seed.load_stations()`: the real list when `data/processed/` has it, else the open seed. Sessions are real processed data or synthetic sessions on those stations. Live mode returns 400 until T12. Details in [0047](../decisions/0047-engine-backed-api-and-station-loader.md). Autonomy is stored through `stations.store`, and when the DB is up each run writes its focus policy's commands and state changes with its `run_id` ([0049](../decisions/0049-t5-data-in-sim-ron-kpis-run-history.md)).
 
-**Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 ticks and honour play, pause, speed, seek, focus and recommendations. Regenerate with `python -m api.fixtures_gen`; details in [0036](../decisions/0036-api-fixture-mode.md).
+**Fixture mode (T19):** `API_FIXTURES=1` serves every route from `fixtures/api/`, so M5 can integrate before the engine is ready. Stations are the 116 seed locations with provisional IDs (decision 0024). Runs play a recorded day of 288 slots, one tick per minute with each slot's changes on its first minute, and honour play, pause, speed, seek, focus and recommendations. Regenerate with `python -m api.fixtures_gen`; details in [0036](../decisions/0036-api-fixture-mode.md).
 
 ## 7. Config: `config/sim.yaml`
 
@@ -127,5 +128,5 @@ eval_days: all      # or a list of dates
 ## 9. Acceptance criteria
 - With `always_on`, `saved_kwh = 0` and wait = 0. A test checks this.
 - A hand-built 1-CP scenario (arrival during DEEP_SLEEP) gives exactly `deep_sleep_wake_s / 60` minutes of wait.
-- A replay at speed 288 finishes one day in under 10 s and streams ticks without blocking the API.
+- A replay at speed 300 plays 5 simulated minutes per wall second (a day in 4.8 min) and streams ticks without blocking the API. With the wall clock scaled down (`api.replay_clock.WALL_SCALE`), a whole fixture day replays in under 10 s.
 - Every route matches CONTRACTS.md. A test checks the `fixtures/` responses against the Pydantic models.
