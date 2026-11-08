@@ -202,6 +202,29 @@ def test_deep_sleep_arrival_waits_exact_wake_time_and_energy():
     assert tl["forecast"] == [] and tl["intents"] == []
 
 
+def test_minute_ticks_decide_per_slot_and_match_slot_steps():
+    """Decision 0091: one tick per minute, decisions at slot starts, same totals as step()."""
+    data = make_data(DC1, [("L00001-1", at(1), at(2))])
+    pol = Scripted("rl_ppo", {0: [("L00001-1", "DEEP_SLEEP")]})
+    e = engine(data, pol)
+    ticks = []
+    while not e.done:
+        ticks.append(e.step_minute())
+    assert len(ticks) == e.n_minutes == 1440 and len(pol.seen) == 288
+    assert all(r.slot == r.minute // 5 and r.decided == (r.minute % 5 == 0) for r in ticks)
+    arr = [r.minute for r in ticks if r.events["rl_ppo"]]
+    assert arr == [60, 123]  # arrival 01:00, departure 02:03, each on its own minute
+    assert ticks[61].changes["rl_ppo"] == [] and ticks[62].changes["rl_ppo"] == []
+    assert ticks[63].changes["rl_ppo"] == [("L00001-1", State.CHARGING)]  # woke at 01:03
+    kwh = [r.kpis["rl_ppo"]["overhead_kwh"] for r in ticks[:5]]
+    assert kwh == sorted(kwh) and kwh[0] < kwh[4]  # KPIs move inside a slot
+    ref = engine(data, Scripted("rl_ppo", {0: [("L00001-1", "DEEP_SLEEP")]}))
+    assert e.kpis() == ref.run()
+    e2 = engine(data, Scripted("rl_ppo", {0: [("L00001-1", "DEEP_SLEEP")]}))
+    e2.run_to_minute(62)
+    assert (e2.slot, e2.minute) == (12, 62) and e2.step_minute().minute == 62
+
+
 def test_standby_wake_wait_and_end_of_day_cut():
     data = make_data(DC1, [("L00001-1", at(1), at(2)), ("L00001-1", at(23, 59), at(23, 59, 30))])
     pol = Scripted("rl_ppo", {0: [("L00001-1", "STANDBY")], 200: [("L00001-1", "DEEP_SLEEP")]})

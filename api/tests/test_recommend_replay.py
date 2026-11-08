@@ -33,7 +33,7 @@ def rc(small_data, tmp_path):
 def test_listed_pending_recommendations_never_409(rc):
     """The UI approves what GET /api/recommendations lists; expiry used to arrive a step late."""
     body = {"mode": "replay", "date": None, "policies": ["always_on", "naive_quiet_hours"],
-            "focus_policy": "naive_quiet_hours", "lambda": 0.1, "speed": 288}  # fmt: skip
+            "focus_policy": "naive_quiet_hours", "lambda": 0.1, "speed": 300}  # fmt: skip
     rid = rc.post("/api/runs", json=body).json()["run_id"]
     codes: list[int] = []
     pauses, n = 0, 0

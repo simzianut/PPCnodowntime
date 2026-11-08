@@ -107,7 +107,8 @@ def test_control_validation(client):
         {"action": "speed", "value": 0},
         {"action": "speed", "value": 289},
         {"action": "speed", "value": "fast"},
-        {"action": "seek", "value": 10_000},
+        {"action": "seek", "value": "noon"},
+        {"action": "seek", "value": 1.5},
         {"action": "focus", "value": "magic"},
         {"action": "jump"},
     ):
@@ -115,14 +116,16 @@ def test_control_validation(client):
     r = client.post(url, json={"action": "pause"})
     st = RunStatus.model_validate(r.json())
     assert st.status == "paused" and st.paused_reason == "user"
-    r = client.post(url, json={"action": "speed", "value": 120}).json()
-    assert r["speed"] == 120
+    r = client.post(url, json={"action": "speed", "value": 15}).json()
+    assert r["speed"] == 15 and r["window"] == {"start_minute": 0, "end_minute": 240}
+    r = client.post(url, json={"action": "seek", "value": 10_000}).json()  # clamped
+    assert r["minute"] == 239 and r["slot"] == 47
 
 
 def test_timeline(client, short_day):
-    run_id = client.post("/api/runs", json=run_body(speed=288)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=300)).json()["run_id"]
     client.post(f"/api/runs/{run_id}/control", json={"action": "pause"})
-    client.post(f"/api/runs/{run_id}/control", json={"action": "seek", "value": 40})
+    client.post(f"/api/runs/{run_id}/control", json={"action": "seek", "value": 200})
     cp = short_day.cp_ids[0]
     tl = Timeline.model_validate(client.get(f"/api/runs/{run_id}/cp/{cp}/timeline").json())
     assert tl.cp_id == cp and tl.policy.value == "rl_ppo"
@@ -137,8 +140,8 @@ def test_recommendations_routes(client):
     assert client.get("/api/recommendations").json() == []
     assert client.post("/api/recommendations/999", json={"decision": "approve"}).status_code == 404
     assert client.get("/api/recommendations", params={"status": "nope"}).status_code == 400
-    run_id = client.post("/api/runs", json=run_body(speed=288)).json()["run_id"]
-    client.post(f"/api/runs/{run_id}/control", json={"action": "seek", "value": 20})
+    run_id = client.post("/api/runs", json=run_body(speed=300)).json()["run_id"]
+    client.post(f"/api/runs/{run_id}/control", json={"action": "seek", "value": 100})
     recs = client.get("/api/recommendations", params={"run_id": run_id}).json()
     TypeAdapter(list[Recommendation]).validate_python(recs)
     applied = client.get("/api/recommendations", params={"status": "applied"}).json()

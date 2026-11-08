@@ -19,7 +19,7 @@ from sim.tests.test_live import refs_for, row, ts, write_rows
 
 from .conftest import recv, recv_until
 
-T0 = ts("2026-11-08 10:02:30")  # start slot 119 (09:55) is the last complete one
+T0 = ts("2026-11-08 10:02:30")  # start slot 119 (09:55); minute m is due at m + 6 min
 
 
 class FakeClock:
@@ -78,14 +78,14 @@ def test_live_run_steps_on_clock_with_arrival_wait(live):
     assert run.info["forecaster"] == "constant_stub" and run.info["cps_in_run"] == len(cps)
     assert run.info["signals"] == "off" and run.feed.sample(run.engine.t).empty  # decision 0093
     end = time.monotonic() + 10
-    while run.engine.slot < 120:  # slot 119 is due at once: cost_rule sleeps idle CPs (ACT)
+    while run.engine.minute < 597:  # 09:55, 09:56 are due: cost_rule sleeps idle CPs (ACT)
         assert time.monotonic() < end
         time.sleep(0.005)
     applied = c.get("/api/recommendations", params={"run_id": rid}).json()
     assert applied and all(x["status"] == "applied" for x in applied)
     with c.websocket_connect(f"/ws/runs/{rid}") as ws:
         snap = recv(ws)
-        assert snap["type"] == "snapshot" and snap["slot"] == 119
+        assert snap["type"] == "snapshot" and (snap["slot"], snap["minute"]) == (119, 596)
         states = {ch["cp_id"]: ch["state"] for ch in snap["changes"]}
         assert states[cps[1]] == "CHARGING" and states[cps[0]] == "DEEP_SLEEP"
         # 10:01 a car plugs into sleeping cps[0]; the car on cps[1] leaves
@@ -93,21 +93,22 @@ def test_live_run_steps_on_clock_with_arrival_wait(live):
                                       sua=ts("2026-11-08 10:01:00")),
                                   row(ts("2026-11-08 10:05:03"), cps[1], "AVAILABLE",
                                       sua=ts("2026-11-08 10:02:00"))])  # fmt: skip
-        clock.t = ts("2026-11-08 10:06:01")
-        tick = recv(ws)
-        assert tick["slot"] == 120
-        kinds = {(e["type"], e["cp_id"]) for e in tick["events"]}
-        assert ("arrival", cps[0]) in kinds and ("departure", cps[1]) in kinds
-        arr = next(e for e in tick["events"] if e["type"] == "arrival")
+        clock.t = ts("2026-11-08 10:08:01")  # minutes up to 10:02 are due
+        tick, seen = recv_until(ws, lambda m: m.get("minute") == 602)
+        ticks = [m for m in seen if m["type"] == "tick"]
+        assert [m["minute"] for m in ticks] == list(range(597, 603))
+        kinds = {(e["type"], e["cp_id"], m["minute"]) for m in ticks for e in m["events"]}
+        assert {("arrival", cps[0], 601), ("departure", cps[1], 602)} <= kinds  # at their minute
+        arr = next(e for m in ticks for e in m["events"] if e["type"] == "arrival")
         assert arr["wait_min"] == pytest.approx(3.0)  # deep sleep wake 180 s
         k = tick["kpis"]
         assert k["cost_rule"]["waited_sessions"] == 1 and k["always_on"]["wait_min_total"] == 0
         assert k["cost_rule"]["saved_kwh"] > 0
-        clock.t = ts("2026-11-08 10:21:01")  # three slots due: caught up one tick each
-        _, seen = recv_until(ws, lambda m: m.get("slot") == 123)
-        assert [m["slot"] for m in seen if m["type"] == "tick"] == [121, 122, 123]
+        clock.t = ts("2026-11-08 10:21:01")  # caught up one tick per minute, to 10:15
+        _, seen = recv_until(ws, lambda m: m.get("minute") == 615)
+        assert [m["minute"] for m in seen if m["type"] == "tick"] == list(range(603, 616))
     st = RunStatus.model_validate(c.get(f"/api/runs/{rid}").json())
-    assert st.mode == "live" and st.status == "running" and st.slot == 123
+    assert st.mode == "live" and st.status == "running" and (st.slot, st.minute) == (123, 615)
     states = {cp["cp_id"]: cp.get("state") for loc in c.get("/api/stations").json()
               for cp in loc["charge_points"]}  # fmt: skip
     assert states[cps[0]] == "CHARGING"
