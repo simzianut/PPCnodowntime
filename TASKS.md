@@ -8,9 +8,8 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T39] M5 bigger, clearer map legend (3 colours + cluster scale); drop current output / expected wait / anomaly score from station detail | owner: tudor-claude | branch: tudor-claude/T39-legend-station-detail | depends: T34
-  - Tudor took this over from T38 (teodora-codex, PR #10) on his own call; T39 keeps the red/green/yellow scheme from 0067.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
+  - Note from T39 (tudor-claude, Tudor's call): legend and station-detail trim landed via T39 / PR #11 with the 3-colour scheme; PR #10 now conflicts with main.
 - [T35] Deploy: whole stack starts with `docker compose up`; one nginx container (SPA + /api + /ws proxy) is the only entry point for the server's Traefik | owner: vlad-claude | branch: vlad-claude/T35-docker-deploy | depends: T31
 - [T16] M5 frontend scaffold + Romania map with CP states, against fixtures/MSW (spec 05 §3.1) | owner: teodora | branch: teodora/frontend-spec05 | depends: T2
 - [T17] M5 KPI panel + energy-vs-wait curve + replay controls + autonomy switch + recommendations feed (spec 05 §3.2–3.3) | owner: teodora | branch: teodora/frontend-spec05 | depends: T16, T12
@@ -30,6 +29,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T39] M5 bigger, clearer map legend (3 colours + cluster scale); drop current output / expected wait / anomaly score from station detail | owner: tudor-claude | branch: tudor-claude/T39-legend-station-detail | depends: T34
+  - Done: map key has big swatches + hints and a red→green group bar; station panel drops current output / expected wait / anomaly score (decision 0074). Test: open the map, read the bottom-left key, click a station.
 - [T37] Live mode (live part of T12): shadow F2 agent on real AmpWhere statuses, 5-min wall-clock slots, live signals from F0 rates, same KPIs/WS ticks as replay | owner: vlad-claude | branch: vlad-claude/T37-live-mode | depends: T36, T9, T15
   - sim/live.py (LiveStatusReader, LiveEngine), api/live_mode.py (LiveRun, F2 live forecaster, F0-rate signals); POST /api/runs live works, same KPIs/WS ticks; decisions 0070, 0072. Verified end to end via the API: replay 2025-03-12 agent 54.3% saved / 14 of 534 sessions waited (oracle 78.8%); live (replayed 2026-11-07 clock) agent 44.9% saved, forecaster f2_gru, 671/671 CPs matched. Test: `uv run --extra rl --extra train pytest sim/tests/test_live.py api/tests/test_live_mode.py`; demo: `LIVE_CLOCK_START=2026-11-07T21:00:00+02:00 LIVE_CLOCK_SPEED=60 make api`. Real-time live needs the collector running (it stopped 2026-11-07 ~21:30 UTC, DNS errors).
 - [T36] F2 GRU as the agent: promote f2_gru.pt (+ f0_rates), model/gru_forecaster.py (batch + online Forecaster), `predict` command → forecasts.parquet for the 60-day window, RL_AGENT=gru serves rl_ppo with cost rule + F2, API/evaluator limited to forecast days | owner: vlad-claude | branch: vlad-claude/T36-gru-agent | depends: T26, T31
