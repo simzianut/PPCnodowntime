@@ -157,7 +157,7 @@ export function useDashboard() {
       setRun(current)
       setConnected(true)
     } catch (cause) {
-      if (cause instanceof ApiError) {
+      if (cause instanceof ApiError && cause.fromBackend) {
         setError(cause.message)
         return
       }
@@ -194,7 +194,7 @@ export function useDashboard() {
           try {
             created = await api.startRun({ ...payload, mode: 'live', date: null })
           } catch (cause) {
-            if (!(cause instanceof ApiError)) throw cause
+            if (!(cause instanceof ApiError && cause.fromBackend)) throw cause
             setError(`${cause.message}. Showing replay instead.`)
           }
         }
@@ -205,8 +205,9 @@ export function useDashboard() {
         setRun(current)
         setConnected(true)
         api.recommendations(current.run_id).then(setRecommendations).catch(() => undefined)
-      } catch {
+      } catch (cause) {
         if (cancelled) return
+        setError(cause instanceof Error ? `${cause.message}. Showing seed-data demo.` : 'API unavailable. Showing seed-data demo.')
         setLocations(demoLocations)
         setCpState(demoStatesAt(0))
         setEvaluation(demoEval)

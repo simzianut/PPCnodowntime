@@ -7,12 +7,17 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+
+  // 502-504 come from nginx when ppc-api is down: treat them like a network failure.
+  get fromBackend() {
+    return this.status < 502 || this.status > 504
+  }
 }
 
 async function errorDetail(response: Response) {
   const body = await response.json().catch(() => null) as { detail?: unknown } | null
   if (typeof body?.detail === 'string') return body.detail
-  return body?.detail ? JSON.stringify(body.detail) : response.statusText
+  return body?.detail ? JSON.stringify(body.detail) : response.statusText || 'request failed'
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
