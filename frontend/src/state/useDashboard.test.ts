@@ -1,11 +1,12 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../api/client'
+import { ApiError, api } from '../api/client'
 import { demoLocations } from '../api/mock'
 import type { Run } from '../api/types'
 import { useDashboard } from './useDashboard'
 
-vi.mock('../api/client', () => ({
+vi.mock('../api/client', async (importActual) => ({
+  ApiError: (await importActual<typeof import('../api/client')>()).ApiError,
   api: { stations: vi.fn(), evaluation: vi.fn(), autonomy: vi.fn(), policies: vi.fn(), startRun: vi.fn(), getRun: vi.fn(), recommendations: vi.fn() },
   runSocketUrl: () => 'ws://test',
 }))
@@ -34,5 +35,15 @@ describe('useDashboard API mode', () => {
     expect(result.current.connectionMode).toBe('api')
     expect(result.current.evaluation).toEqual({ generated_at: '', test_days: [], results: [] })
     expect(mocked.startRun).toHaveBeenCalledWith(expect.objectContaining({ mode: 'replay', date: null, policies: ['always_on', 'rl_ppo'], focus_policy: 'rl_ppo' }))
+  })
+  it('keeps the current run and shows the reason when starting a run returns a 4xx', async () => {
+    mocked.evaluation.mockRejectedValue(new Error('API 404: Not Found'))
+    const { result } = renderHook(() => useDashboard())
+    await waitFor(() => expect(result.current.run?.run_id).toBe('r1'))
+    mocked.startRun.mockRejectedValueOnce(new ApiError(400, 'API 400: live mode unavailable'))
+    await act(() => result.current.startRun('live', null))
+    expect(result.current.connectionMode).toBe('api')
+    expect(result.current.run?.run_id).toBe('r1')
+    expect(result.current.error).toBe('API 400: live mode unavailable')
   })
 })

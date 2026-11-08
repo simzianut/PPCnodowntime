@@ -12,11 +12,15 @@ KW = {"epochs": 1, "samples_per_epoch": 3000, "batch_size": 256, "hidden": 8, "m
 COLS = ["ts", "cp_id", "p_arrival_15", "p_arrival_30", "p_arrival_60", "expected_arrivals_60"]
 
 
-@pytest.fixture
-def run_dir(env):  # noqa: F811
+@pytest.fixture(params=[None, "cp_level"], ids=["base", "cp_level"])
+def run_dir(env, request):  # noqa: F811
     from model.experiments import runner
 
-    return runner.run_config(_cfg("f2_gru", **KW))
+    extra = {}
+    if request.param:
+        groups = [*fd.data_params(_cfg("f2_gru"))["feature_groups"], request.param]
+        extra = {"feature_groups": groups, "calibration": "auto"}
+    return runner.run_config(_cfg("f2_gru", **KW, **extra))
 
 
 def _days():

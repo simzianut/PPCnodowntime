@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Forecaster training on the GPU server (decisions 0051, 0052, 0059). See docs/TRAINING_GPU.md.
-# Usage: docker/train_forecasters.sh <preflight|build|gpu-check|smoke|main|ablation|ablation-f2|status|pack|chown|all>
+# Usage: docker/train_forecasters.sh <preflight|build|gpu-check|smoke|main|ablation|ablation-f2|f2-improve|status|pack|chown|all>
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -57,6 +57,7 @@ smoke() {
 main_suite() { run suite config/train/suites/forecasters.yaml --continue-on-error; }
 ablation() { run suite config/train/suites/ablation.yaml --continue-on-error; }
 ablation_f2() { run suite config/train/suites/ablation_f2.yaml --continue-on-error; }
+f2_improve() { run suite config/train/suites/f2_improve.yaml --continue-on-error; }
 
 status() {
   for m in runs/*/manifest.json; do
@@ -87,6 +88,7 @@ case "${1:-}" in
   main) main_suite ;;
   ablation) ablation ;;
   ablation-f2) ablation_f2 ;;
+  f2-improve) f2_improve ;;
   status) status ;;
   chown) chown_back ;;
   pack) pack ;;

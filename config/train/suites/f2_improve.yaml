@@ -1,0 +1,28 @@
+name: f2_improve
+# cp_level features and auto calibration (isotonic vs temp_bias picked on val CP-day halves)
+runs:
+  # base_traffic
+  - config: config/train/f2_gru.yaml
+    seeds: [0, 1, 2]
+    set:
+      params.calibration: auto
+      params.feature_groups: [calendar_history, traffic]
+  # base_traffic_cp_level
+  - config: config/train/f2_gru.yaml
+    seeds: [0, 1, 2]
+    set:
+      params.calibration: auto
+      params.feature_groups: [calendar_history, traffic, cp_level]
+  # full_intents
+  - config: config/train/f2_gru.yaml
+    seeds: [0, 1, 2]
+    set:
+      params.calibration: auto
+      params.feature_groups: [calendar_history, traffic, ev_flow, intents]
+  # full_intents_cp_level
+  - config: config/train/f2_gru.yaml
+    seeds: [0, 1, 2]
+    set:
+      params.calibration: auto
+      params.feature_groups: [calendar_history, traffic, ev_flow, intents, cp_level]
+summary_metrics: [test.overall.y15.auc, test.overall.y15.pr_auc, test.overall.y15.brier, test.overall.y30.auc, test.overall.y30.pr_auc, test.overall.y30.brier, test.overall.y60.auc, test.overall.y60.pr_auc, test.overall.y60.brier, test.overall.n60.poisson_deviance]
