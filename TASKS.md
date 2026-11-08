@@ -8,7 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T40] M5 swipe slider snaps flush to the map edge; handle shows only the inward arrow there | owner: tudor-claude | branch: tudor-claude/T40-slider-edge | depends: T39
 - [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
 - [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
@@ -32,6 +31,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T40] M5 swipe slider snaps flush to the map edge; handle shows only the inward arrow there | owner: tudor-claude | branch: tudor-claude/T40-slider-edge | depends: T39
+  - Done: divider snaps flush to either edge, hidden side's line/card vanish, handle shows one inward arrow. Test: drag it all the way left/right.
 - [T39] M5 bigger, clearer map legend (3 colours + cluster scale); drop current output / expected wait / anomaly score from station detail | owner: tudor-claude | branch: tudor-claude/T39-legend-station-detail | depends: T34
   - Done: map key has big swatches + hints and a red→green group bar; station panel drops current output / expected wait / anomaly score (decision 0074). Test: open the map, read the bottom-left key, click a station.
 - [T37] Live mode (live part of T12): shadow F2 agent on real AmpWhere statuses, 5-min wall-clock slots, live signals from F0 rates, same KPIs/WS ticks as replay | owner: vlad-claude | branch: vlad-claude/T37-live-mode | depends: T36, T9, T15
