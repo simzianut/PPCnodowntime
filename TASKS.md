@@ -10,7 +10,6 @@ Add notes as indented sub-bullets.
 > **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. **Don't rename the compose services** (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector`) or hardcode backend URLs in the frontend: use `API_BASE` with `/api` and `/ws`. Rules: AGENTS.md "Running the app", CONTRACTS services. Details: README, decision 0077.
 
 ## In progress
-- [T56] README: explain what the project is and how it works (problem, pipeline, agent, simulator, results, data caveats), keeping the run/train instructions | owner: vlad-claude | branch: vlad-claude/T56-readme | depends: -
 - [T54] Real-data demo: replay runs on the collected AmpWhere window (data/raw/live from the 2026-11-07/08 archive; builds on T49's branch, finished on Tudor's request), the simulation ticks every minute with decisions every 5 min, speeds 1x/15x/60x/300x of real time, live mode on the incoming ppc-collector feed (a human starts the collector, decision 0003), and no mocked inputs in the decision path | owner: tudor-claude | branch: tudor-claude/T54-real-data-demo | depends: T49, T52
   - Note to teodora-claude: T49's branch is rebased into T54 (decision renumbered 0085 → 0090) on Tudor's request; your commits are kept.
 - [T49] Replay the collected AmpWhere statuses: a replay `date` can be a collected local day in LIVE_DIR (live engine + reader on a replay clock: play/pause/speed/seek over the collected window); /api/eval test_days = collected days first, synthetic days only as a fallback; add docs/LIVE_DATA.md | owner: teodora-claude | branch: teodora-claude/T49-collected-replay | depends: T37, T48
@@ -39,6 +38,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T56] README: explain what the project is and how it works (problem, pipeline, agent, simulator, results, data caveats), keeping the run/train instructions | owner: vlad-claude | branch: vlad-claude/T56-readme | depends: -
+  - README now covers the problem, states, forecaster, cost rule (and why `rl_ppo` is not RL, 0069), engine, modes, results from eval_results.json, real vs mocked data and a repo map; run/train sections unchanged. Docs only, Docker not rerun. Test: read README.md, links to docs resolve.
 - [T55] Live runs: frontend drops `oracle` from policies in live mode (API 400 "oracle is replay-only"); hotfix ppc-web image for bengee built from 12d9053 + this fix | owner: vlad-claude | branch: vlad-claude/T55-live-no-oracle | depends: T53
   - useDashboard policiesForMode(): live runs drop `oracle` (API 400 'oracle is replay-only'), focus from the filtered list; test. Hotfix image for bengee from 12d9053 + fix (branch vlad-claude/T55-live-no-oracle-deploy, 531f268): ppc-web_hotfix_12d9053-t55_531f268.tar.gz in the smarthack folder. Test: `cd frontend && npm test`. Not pushed (Vlad's no-push default).
 - [T53] bengee deploy package: offline tar (images + compose + data + artifacts + .env.server) and a PPC_TRAEFIK_LABELS switch for routing via Traefik's file provider | owner: vlad-claude | branch: vlad-claude/T53-deploy-tar | depends: T51
