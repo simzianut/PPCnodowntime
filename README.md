@@ -2,29 +2,33 @@
 
 Energy-saving sleep scheduling for PPC Blue charge points. What and why: `docs/PRD.md`. How we work: `AGENTS.md`.
 
-## Run locally
-Needs Docker, [uv](https://docs.astral.sh/uv/) and Node 20+.
+## Run the app: Docker (the team standard, decision 0077)
+Everyone runs and demos the app with Docker. Needs Docker with **at least 4 GB of memory** (Windows: `memory=4GB` under `[wsl2]` in `%USERPROFILE%\.wslconfig`, then `wsl --shutdown`).
 
 ```
-cp .env.example .env
-make db      # postgres+postgis on :5432, apply db/migrations
-make seed    # M3: load station seed into DB
-make data    # M1: build processed datasets (needs data/raw/)
-make train   # M2: train forecaster + PPO, write artifacts/
-make api     # M4: FastAPI on :8000
-make web     # M5: Vite on :5173
-make test    # pytest + frontend tests
-make lint    # ruff
+cp .env.example .env          # set DATA_HOST_DIR to the folder with the private data (data/processed, data/raw/live)
+docker compose up -d --build  # or: make up
 ```
-
-Repo layout and conventions: `docs/specs/00-foundation.md`. Interfaces: `docs/CONTRACTS.md`.
-
-## Run everything in Docker
-Local: `docker compose up -d --build` (or `make up`), then open http://localhost:8080 (`HTTP_PORT` changes it). nginx (`ppc-web`) is the single entry point and proxies `/api` and `/ws` to `ppc-api`. Needs `data/` and `artifacts/` next to the compose file for real mode; without them set `API_FIXTURES=1`.
+Open **http://localhost:8080**. nginx (`ppc-web`) is the single entry point and proxies `/api` and `/ws` to `ppc-api`; `ppc-db` is Postgres + PostGIS; `ppc-seed`/`ppc-migrate` run once.
+- Real mode needs the private data (`data/processed/`, incl. `forecasts.parquet`) and `artifacts/` (committed). Without data set `API_FIXTURES=1`.
+- The agent is F2 GRU + cost rule (`RL_AGENT=auto`, decision 0069). Check: `docker compose logs ppc-api | grep "served by"`.
+- Live demo on collected statuses: `LIVE_CLOCK_START=2026-11-07T19:30:00+02:00` and `LIVE_CLOCK_SPEED=30` in `.env`. Real-time live needs the collector: `docker compose --profile live up -d ppc-collector` with `AMPWHERE_ENABLED=1` (a human enables it, decision 0003).
+- After changing code: `docker compose up -d --build`, then reload the page (an API restart drops in-memory runs; a stale page falls back to demo data).
+- Stop: `docker compose down`. Logs: `docker compose logs -f ppc-api`.
 
 Server (behind Traefik, decision 0066): `cp .env.example .env`, fill the server block (`COMPOSE_FILE`, `TRAEFIK_NETWORK`, `PPC_HOST`) and a strong `POSTGRES_PASSWORD`, make sure `data/` and `artifacts/` are present, then `docker compose up -d --build`. Nothing is published on the host; Traefik routes to `ppc-web`.
 
-The live collector is off by default: `docker compose --profile live up -d ppc-collector` (or `COMPOSE_PROFILES=live`). AmpWhere stays off unless `AMPWHERE_ENABLED=1`.
+## Development tools (not for running the app)
+Needs [uv](https://docs.astral.sh/uv/) and Node 20+.
+```
+make test    # pytest + frontend tests
+make lint    # ruff
+make data    # M1: build processed datasets (needs data/raw/)
+make train   # M2: train the F2 GRU (model.experiments); GPU training: see below
+```
+`make api` / `make web` still work for debugging a single module, but demos, reviews and "does it work" checks use Docker.
+
+Repo layout and conventions: `docs/specs/00-foundation.md`. Interfaces: `docs/CONTRACTS.md`.
 
 ## Training on the GPU server
 Reproducible runs in Docker (decision 0051). Needs Docker with the NVIDIA container toolkit.

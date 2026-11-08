@@ -7,6 +7,8 @@ Format:
 `- [T<id>] <title> | owner: <person>-<agent> | branch: <branch> | depends: T<id>`
 Add notes as indented sub-bullets.
 
+> **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. Details: README, decision 0077.
+
 ## In progress
 - [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
   - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.

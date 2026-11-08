@@ -40,6 +40,11 @@ Several AI agents (Claude Code, Antigravity, others) work on this repo at the sa
 9. **Keep specs true.** If you build something differently from the spec, update the spec in the same change and link the decision.
 10. **Before moving a task to Done,** ask yourself: "Did I make a choice that isn't written down?" If yes, write the decision first.
 
+## Running the app
+- **Use Docker** (decision 0077): `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Details in README.
+- Verify changes in the Docker stack before moving a task to Done. Don't hand anyone `make api` + `make web` as the way to run the app.
+- Docker needs at least 4 GB of memory.
+
 ## Hard rules
 - Never `git push --force` to `main`. Never rewrite others' commits.
 - Never commit secrets, `.env` files, API keys or tokens.
