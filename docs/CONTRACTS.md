@@ -12,7 +12,9 @@ Version: v0.4, 2026-11-07 (per-CP power from the capacity table, RON KPIs, run h
 | nginx (`ppc-web`) | 80 in the container; host `HTTP_PORT` (8080) locally | deploy | The only entry point: built SPA at `/`, proxies `/api` and `/ws` to `ppc-api:8000`. On the server Traefik routes to it over `TRAEFIK_NETWORK` (decision 0066) |
 | Vite dev server | 5173 | M5 | |
 
-Compose service names carry a `ppc-` prefix (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector` under profile `live`) because they are DNS names on Traefik's shared network.
+Compose service names carry a `ppc-` prefix (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector` under profile `live`) because they are DNS names on Traefik's shared network. Don't rename them, and don't set `container_name:`. A new service is `ppc-<name>`, added to both compose files and this table in one commit (decision 0077).
+
+Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/api/...` and `/ws/...` paths. `VITE_API_URL` is empty in the Docker build (same origin through `ppc-web`) and defaults to `http://localhost:8000` only for the Vite dev server. No other host, port or service name in frontend code.
 
 ## Environment variables
 | Name | Used by | Example | Notes |

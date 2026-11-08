@@ -7,7 +7,7 @@ Format:
 `- [T<id>] <title> | owner: <person>-<agent> | branch: <branch> | depends: T<id>`
 Add notes as indented sub-bullets.
 
-> **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. Details: README, decision 0077.
+> **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. **Don't rename the compose services** (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector`) or hardcode backend URLs in the frontend: use `API_BASE` with `/api` and `/ws`. Rules: AGENTS.md "Running the app", CONTRACTS services. Details: README, decision 0077.
 
 ## In progress
 - [T43] M5 replay clock ticks minute by minute in step with the staggered actions | owner: tudor-claude | branch: tudor-claude/T43-live-clock | depends: T42

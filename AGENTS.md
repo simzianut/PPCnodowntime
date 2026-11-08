@@ -44,6 +44,11 @@ Several AI agents (Claude Code, Antigravity, others) work on this repo at the sa
 - **Use Docker** (decision 0077): `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Details in README.
 - Verify changes in the Docker stack before moving a task to Done. Don't hand anyone `make api` + `make web` as the way to run the app.
 - Docker needs at least 4 GB of memory.
+- **Container naming is fixed. Don't rename or add services ad hoc** (decisions 0066, 0077):
+  - Services are exactly `ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector` (profile `live`). The `ppc-` prefix matters: these names are DNS names on the server's shared Traefik network, and nginx proxies to `ppc-api:8000`.
+  - A new service is called `ppc-<name>` and is added to `docker-compose.yml`, `docker-compose.server.yml` and the CONTRACTS services table in the same commit.
+  - No `container_name:`. Compose's project prefix keeps containers unique.
+- **The frontend talks to the backend only through `API_BASE` in `frontend/src/api/client.ts`**, with paths `/api/...` and `/ws/...`. In Docker `VITE_API_URL` is empty, so calls go same-origin through nginx (`ppc-web`). Never hardcode `localhost:8000`, `ppc-api`, a port or a host in frontend code.
 
 ## Hard rules
 - Never `git push --force` to `main`. Never rewrite others' commits.
