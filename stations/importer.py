@@ -168,6 +168,10 @@ def _overpass(query: str, cfg: dict) -> dict:
 
 
 def _cached(path: Path, query: str, cfg: dict) -> dict:
+    seed = path.parents[2] / "seed" / "osm" / f"{path.name}.gz"
+    if not path.exists() and seed.exists():  # committed OSM copy, decision 0094
+        with gzip.open(seed, "rt", encoding="utf-8") as f:
+            return json.load(f)
     if not path.exists():
         log.info("overpass query -> %s", path)
         path.parent.mkdir(parents=True, exist_ok=True)
