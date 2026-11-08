@@ -54,7 +54,13 @@ def test_stations(ec, small_data):
 
 
 def test_run_create_validation(ec):
-    assert start(ec)
+    rid = start(ec)
+    st = ec.get(f"/api/runs/{rid}").json()
+    assert st["speed"] == 1 and st["window"] == {"start_minute": 0, "end_minute": 1440}
+    for speed in (0, 288, 120):  # decision 0091: 1, 15, 60 or 300 only
+        assert ec.post("/api/runs", json=body(speed=speed)).status_code == 400
+        r = ec.post(f"/api/runs/{rid}/control", json={"action": "speed", "value": speed})
+        assert r.status_code == 400
     assert ec.post("/api/runs", json=body(date="2024-03-20")).status_code == 400
     live = ec.post("/api/runs", json=body(mode="live"))
     assert live.status_code == 400
@@ -65,9 +71,10 @@ def test_ws_pass_through(ec, small_data):
     with ec.websocket_connect(f"/ws/runs/{run_id}") as ws:
         snap = recv(ws)
         assert snap["type"] == "snapshot" and len(snap["changes"]) == len(small_data.cps)
-        ec.post(f"/api/runs/{run_id}/control", json={"action": "speed", "value": 288})
-        done, seen = recv_until(ws, lambda m: m["type"] == "done")
-    assert [m["slot"] for m in seen if m["type"] == "tick"][-1] == 287
+        ec.post(f"/api/runs/{run_id}/control", json={"action": "speed", "value": 300})
+        done, seen = recv_until(ws, lambda m: m["type"] == "done", limit=3000)
+    ticks = [m for m in seen if m["type"] == "tick"]
+    assert (ticks[-1]["slot"], ticks[-1]["minute"]) == (287, 1439)
     k = done["kpis"]["naive_quiet_hours"]
     assert k["saved_kwh"] > 0 and k["overhead_ron"] > 0 and "saved_ron" in k
 
@@ -89,7 +96,7 @@ def test_run_history_and_autonomy_in_store(ec, tmp_path):
         conn.execute(text("INSERT INTO settings VALUES ('autonomy_mode', '\"ACT\"')"))
     store.set_engine(eng)
 
-    run_id = start(ec, speed=288)
+    run_id = start(ec, speed=300)
     t_end = time.monotonic() + 15
     while ec.get(f"/api/runs/{run_id}").json()["status"] != "done":
         assert time.monotonic() < t_end

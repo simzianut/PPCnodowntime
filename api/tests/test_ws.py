@@ -24,7 +24,7 @@ def test_unknown_run_closes_4404(client):
 
 
 def test_snapshot_then_ticks(client, short_day):
-    run_id = client.post("/api/runs", json=run_body(speed=20)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=15)).json()["run_id"]
     with client.websocket_connect(f"/ws/runs/{run_id}") as ws:
         snap = recv(ws)
         assert snap["type"] == "snapshot" and snap["run_id"] == run_id
@@ -35,7 +35,7 @@ def test_snapshot_then_ticks(client, short_day):
 
 
 def test_two_clients(client):
-    run_id = client.post("/api/runs", json=run_body(speed=50)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=60)).json()["run_id"]
     with client.websocket_connect(f"/ws/runs/{run_id}") as a:
         with client.websocket_connect(f"/ws/runs/{run_id}") as b:
             assert recv(a)["type"] == "snapshot" and recv(b)["type"] == "snapshot"
@@ -45,7 +45,7 @@ def test_two_clients(client):
 
 
 def test_controls_send_documented_messages(client, short_day):
-    run_id = client.post("/api/runs", json=run_body(speed=5)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=1)).json()["run_id"]
     with client.websocket_connect(f"/ws/runs/{run_id}") as ws:
         recv(ws)
         st = _control(client, run_id, "pause")
@@ -53,13 +53,14 @@ def test_controls_send_documented_messages(client, short_day):
         msg, _ = recv_until(ws, lambda m: m["type"] == "status")
         assert msg["status"] == "paused" and msg["paused_reason"] == "user"
 
-        _control(client, run_id, "speed", 100)
+        _control(client, run_id, "speed", 300)
         msg, _ = recv_until(ws, lambda m: m["type"] == "status")
-        assert msg["speed"] == 100 and msg["status"] == "paused"
+        assert msg["speed"] == 300 and msg["status"] == "paused"
 
-        _control(client, run_id, "seek", 30)
+        _control(client, run_id, "seek", 150)  # a minute of the day (decision 0091)
         snap, seen = recv_until(ws, lambda m: m["type"] == "snapshot")
-        assert snap["slot"] == 30 and snap["sim_time"].endswith("02:30:00+02:00")
+        assert snap["slot"] == 30 and snap["minute"] == 150
+        assert snap["sim_time"].endswith("02:30:00+02:00")
         assert len(snap["changes"]) == len(short_day.cp_ids)
         assert not [m for m in seen if m["type"] == "tick"]
 
@@ -75,17 +76,18 @@ def test_controls_send_documented_messages(client, short_day):
         msg, _ = recv_until(ws, lambda m: m["type"] == "status")
         assert msg["status"] == "running" and msg["paused_reason"] is None
         tick, _ = recv_until(ws, lambda m: m["type"] == "tick")
-        assert tick["slot"] == 30 and tick["focus_policy"] == "naive_quiet_hours"
+        assert tick["minute"] == 150 and tick["focus_policy"] == "naive_quiet_hours"
 
 
 def test_done_at_speed_288(client):
     run_id = client.post("/api/runs", json=run_body(speed=1)).json()["run_id"]
     with client.websocket_connect(f"/ws/runs/{run_id}") as ws:
         recv(ws)
-        _control(client, run_id, "speed", 288)
+        _control(client, run_id, "speed", 300)
         done, seen = recv_until(ws, lambda m: m["type"] == "done")
     ticks = [m for m in seen if m["type"] == "tick"]
-    assert ticks[-1]["slot"] == SHORT_SLOTS - 1
+    assert ticks[-1]["slot"] == SHORT_SLOTS - 1 and ticks[-1]["minute"] == SHORT_SLOTS * 5 - 1
+    assert all(t["slot"] == t["minute"] // 5 for t in ticks)
     st = client.get(f"/api/runs/{run_id}").json()
     assert st["status"] == "done" and st["kpis"] == done["kpis"] == ticks[-1]["kpis"]
     assert done["kpis"]["always_on"]["saved_kwh"] == 0
@@ -103,7 +105,7 @@ def _wait_paused_for_recs(client, run_id) -> dict:
 def test_recommend_pauses_and_approve_changes_state(client, short_day):
     """Auto-pause, approve -> the CP shows the target on the next tick (decision 0025)."""
     client.put("/api/settings/autonomy", json={"mode": "RECOMMEND"})
-    run_id = client.post("/api/runs", json=run_body(speed=288)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=300)).json()["run_id"]
     st = _wait_paused_for_recs(client, run_id)
     assert st["status"] == "paused"
     with client.websocket_connect(f"/ws/runs/{run_id}") as ws:
@@ -130,23 +132,23 @@ def test_recommend_pauses_and_approve_changes_state(client, short_day):
             assert rej.json()["status"] == "rejected"
 
         _control(client, run_id, "play")
-        tick, _ = recv_until(ws, lambda m: m["type"] == "tick")
-        assert tick["slot"] == slot + 1
+        tick, seen = recv_until(ws, lambda m: m["type"] == "tick" and m["slot"] == slot + 1)
         assert {"cp_id": rec["cp_id"], "state": rec["target_state"]} in tick["changes"]
-        decided = {r["id"]: r["status"] for r in tick["recommendations"]}
+        recs = [r for m in seen if m["type"] == "tick" for r in m["recommendations"]]
+        decided = {r["id"]: r["status"] for r in recs}
         assert decided.get(rec["id"]) == "approved"
 
 
 def test_recommendations_expire(client):
     client.put("/api/settings/autonomy", json={"mode": "RECOMMEND"})
-    run_id = client.post("/api/runs", json=run_body(speed=288)).json()["run_id"]
+    run_id = client.post("/api/runs", json=run_body(speed=300)).json()["run_id"]
     _wait_paused_for_recs(client, run_id)
     with client.websocket_connect(f"/ws/runs/{run_id}") as ws:
         recv(ws)
         pending = client.get(
             "/api/recommendations", params={"run_id": run_id, "status": "pending"}
         ).json()
-        _control(client, run_id, "seek", 10)
+        _control(client, run_id, "seek", 50)
         snap, _ = recv_until(ws, lambda m: m["type"] == "snapshot")
         expired = {r["id"] for r in snap["recommendations"] if r["status"] == "expired"}
         assert {r["id"] for r in pending} <= expired
@@ -159,7 +161,7 @@ def test_full_fixture_day_under_10s(full_client):
     run_id = full_client.post("/api/runs", json=run_body(speed=1)).json()["run_id"]
     with full_client.websocket_connect(f"/ws/runs/{run_id}") as ws:
         recv(ws)
-        _control(full_client, run_id, "speed", 288)
-        recv_until(ws, lambda m: m["type"] == "done", limit=1000)
+        _control(full_client, run_id, "speed", 300)
+        recv_until(ws, lambda m: m["type"] == "done", limit=3000)
         assert full_client.get("/api/health").status_code == 200
     assert time.perf_counter() - t0 < 10

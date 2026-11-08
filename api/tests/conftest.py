@@ -6,6 +6,7 @@ import anyio
 import pytest
 from fastapi.testclient import TestClient
 
+from api import replay_clock
 from api.fixture_mode import FixtureManager
 from api.fixture_store import RecordedDay
 from api.fixtures_gen import build_run_day
@@ -26,6 +27,7 @@ MODELS = {
 @pytest.fixture(autouse=True)
 def _isolated_store(monkeypatch):
     """No real DB in tests, and a fresh in-memory store (autonomy) for each test."""
+    monkeypatch.setattr(replay_clock, "WALL_SCALE", 0.001)  # speed 300: 0.2 ms per minute tick
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("PPC_AUTH", raising=False)
     monkeypatch.delenv("PPC_ACCESS_KEY", raising=False)

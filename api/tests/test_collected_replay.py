@@ -51,7 +51,7 @@ def replay(small_data, tmp_path):
 
 def body(**kw) -> dict:
     return {"mode": "replay", "date": None, "policies": ["always_on", "cost_rule"],
-            "focus_policy": "cost_rule", "lambda": 0.1, "speed": 288, **kw}  # fmt: skip
+            "focus_policy": "cost_rule", "lambda": 0.1, "speed": 300, **kw}  # fmt: skip
 
 
 def wait_done(c, rid: str) -> dict:
@@ -87,7 +87,8 @@ def test_collected_day_is_offered_first_and_replays_to_window_end(replay):
     assert (run.start_slot, run.end_slot) == (119, 124)
     assert run.info["source"] == "collected" and run.info["cps_in_run"] == len(cps)
     st = wait_done(c, run.run_id)
-    assert st["slot"] == 123 and run.engine.slot == 124
+    assert st["window"] == {"start_minute": 595, "end_minute": 620}
+    assert (st["slot"], st["minute"]) == (123, 619) and run.engine.minute == 620
     k = st["kpis"]
     assert k["cost_rule"]["waited_sessions"] == 1 and k["always_on"]["wait_min_total"] == 0
     assert k["cost_rule"]["wait_min_total"] == pytest.approx(3.0)  # deep sleep wake 180 s
@@ -95,8 +96,8 @@ def test_collected_day_is_offered_first_and_replays_to_window_end(replay):
 
     url = f"/api/runs/{run.run_id}/control"
     st = c.post(url, json={"action": "seek", "value": 0}).json()  # clamped to the window start
-    assert st["status"] == "paused" and st["slot"] == 119 and run.gen == 1
-    assert c.post(url, json={"action": "speed", "value": 120}).json()["speed"] == 120
+    assert st["status"] == "paused" and st["minute"] == 595 and run.gen == 1
+    assert c.post(url, json={"action": "speed", "value": 60}).json()["speed"] == 60
     c.post(url, json={"action": "play"})
     assert wait_done(c, run.run_id)["kpis"] == k  # a rebuilt replay gives the same result
 
