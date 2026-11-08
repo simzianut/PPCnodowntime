@@ -23,6 +23,9 @@ dependencies = [
 [project.optional-dependencies]
 rl = ["stable-baselines3>=2.4"]
 train = ["torch==2.6.0", "sb3-contrib>=2.4"]
+cps = [
+    "python-calamine>=0.3",
+]
 
 [dependency-groups]
 dev = [
