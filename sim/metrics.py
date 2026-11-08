@@ -93,13 +93,20 @@ class PolicyMetrics:
     def sleep_share(self) -> float:
         return self.sleep_s / self.cp_s if self.cp_s > 0 else 0.0
 
-    def kpis(self, baseline_wh: float) -> dict:
-        """Kpis dict; savings are measured against `baseline_wh` (always_on, same run)."""
-        saved_wh = baseline_wh - self.overhead_wh
+    def kpis(self, baseline_wh: float, open_part: tuple[float, float, float] | None = None) -> dict:
+        """Kpis dict; savings are measured against `baseline_wh` (always_on, same run).
+
+        `open_part` = (Wh, sleep s, CP s) of a slot in progress, not added yet (decision 0091).
+        """
+        wh, sleep_s, cp_s = open_part or (0.0, 0.0, 0.0)
+        wh += self.overhead_wh
+        sleep_s += self.sleep_s
+        cp_s += self.cp_s
+        saved_wh = baseline_wh - wh
         pct = 100.0 * saved_wh / baseline_wh if baseline_wh > 0 else 0.0
         ron = net_tariff_ron_per_kwh() / 1000.0
         return {
-            "overhead_kwh": _r(self.overhead_wh / 1000.0, 4),
+            "overhead_kwh": _r(wh / 1000.0, 4),
             "saved_kwh": _r(saved_wh / 1000.0, 4),
             "saved_pct": _r(pct, 2),
             "wait_min_total": _r(self.wait_min_total, 3),
@@ -107,7 +114,7 @@ class PolicyMetrics:
             "wait_min_p95": _r(self.wait_p95(), 3),
             "sessions": int(self.sessions),
             "waited_sessions": int(self.waited_sessions),
-            "sleep_share": _r(self.sleep_share(), 4),
-            "overhead_ron": _r(self.overhead_wh * ron, 4),
+            "sleep_share": _r(sleep_s / cp_s if cp_s > 0 else 0.0, 4),
+            "overhead_ron": _r(wh * ron, 4),
             "saved_ron": _r(saved_wh * ron, 4),
         }

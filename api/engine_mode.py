@@ -20,6 +20,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
+from api import replay_clock
 from api.fixture_mode import Client
 from api.fixture_store import with_ron
 from api.models import (
@@ -39,7 +40,7 @@ from model import rl_select
 from model.oracle import HindsightOraclePolicy
 from sim.config import CONFIG_DIR, ROOT, TZ, sim_config
 from sim.data import SimData, data_dir
-from sim.engine import Engine
+from sim.engine import TICK_S, Engine
 from sim.types import STATES, Autonomy, CommandStatus, PolicyName, State
 from stations import store
 
@@ -50,7 +51,7 @@ MAX_RUNS = 10
 PENDING = CommandStatus.pending.value
 EXPIRED = CommandStatus.expired.value
 APPLIED = CommandStatus.applied.value
-HISTORY_FLUSH_TICKS = 12
+HISTORY_FLUSH_TICKS = 60  # minute ticks: one simulated hour
 ORACLE_LIVE_DETAIL = "oracle is replay-only (it reads the true sessions); live runs cannot use it"
 
 
@@ -148,7 +149,7 @@ class EngineRun:
         self.focus = focus
         self.speed = body.speed
         self.status, self.paused_reason = "running", None
-        self.slot = 0
+        self.minute = engine.minute  # minute of the last tick (or seek target / start)
         self.kpis = _kpis(engine.kpis())
         self.states = engine.states(focus)
         self.cp_index = {c: i for i, c in enumerate(engine.cp_ids)}
@@ -168,12 +169,21 @@ class EngineRun:
         self._approved_cps: set[str] = set()
 
     # ---- views
-    def sim_time(self, slot: int | None = None) -> str:
-        k = self.slot if slot is None else slot
-        dt = datetime.fromtimestamp(self._t0 + k * self.engine.slot_s, ZONE)
+    @property
+    def slot(self) -> int:
+        return self.minute // self.engine.slot_minutes
+
+    def window(self) -> tuple[int, int]:
+        """Playable minutes [start, end); the run is done after the tick of minute end - 1."""
+        return 0, self.engine.n_minutes
+
+    def sim_time(self, minute: int | None = None) -> str:
+        m = self.minute if minute is None else minute
+        dt = datetime.fromtimestamp(self._t0 + m * TICK_S, ZONE)
         return dt.isoformat(timespec="seconds")
 
     def status_body(self) -> dict:
+        lo, hi = self.window()
         return {
             "run_id": self.run_id,
             "mode": self.mode,
@@ -181,14 +191,16 @@ class EngineRun:
             "paused_reason": self.paused_reason,
             "sim_time": self.sim_time(),
             "slot": self.slot,
+            "minute": self.minute,
             "speed": self.speed,
             "focus_policy": self.focus,
             "kpis": self.kpis,
+            "window": {"start_minute": lo, "end_minute": hi},
         }
 
     def status_msg(self) -> dict:
         b = self.status_body()
-        del b["kpis"], b["mode"]
+        del b["kpis"], b["mode"], b["window"]
         return {"type": "status", **b}
 
     def snapshot_msg(self, consume: bool = True) -> dict:
@@ -206,6 +218,7 @@ class EngineRun:
             "run_id": self.run_id,
             "sim_time": self.sim_time(),
             "slot": self.slot,
+            "minute": self.minute,
             "kpis": self.kpis,
             "focus_policy": self.focus,
             "changes": [
@@ -261,7 +274,7 @@ class EngineRun:
         events: dict[str, dict[str, str]] = {}
         for ev in res.events.get(self.focus, []):
             events.setdefault(ev["cp_id"], {})[ev["type"]] = ev["ts"]
-        slot_ts = self.sim_time(res.slot)
+        slot_ts = self.sim_time(res.minute)
         for cp, st in res.changes.get(self.focus, []):
             frm, to = STATES[int(prev[self.cp_index[cp]])], State(st)
             if frm == to:
@@ -289,10 +302,10 @@ class EngineRun:
             log.exception("run %s: writing run history failed; history disabled", self.run_id)
             self.history = False
 
-    # ---- stepping
+    # ---- stepping (one simulated minute per tick; policies decide in a slot's first minute)
     def _step_sync(self):
-        res = self.engine.step()
-        return res, self.engine.applied_commands(self.focus, res.slot)
+        res = self.engine.step_minute()
+        return res, self.engine.applied_commands(self.focus, res.slot) if res.decided else []
 
     def _after_step(self, res, applied: list[dict], operator: set[str]) -> list[dict]:
         new_pending = any(d["status"] == PENDING for d in res.new_recommendations)
@@ -304,13 +317,14 @@ class EngineRun:
         if self.history:
             self._hist_states(res, self.states, operator)
             self._hist_ticks += 1
-        self.slot, self.kpis = res.slot, _kpis(res.kpis)
+        self.minute, self.kpis = res.minute, _kpis(res.kpis)
         self.states = self.engine.states(self.focus)
         tick = {
             "type": "tick",
             "run_id": self.run_id,
             "sim_time": self.sim_time(),
             "slot": res.slot,
+            "minute": res.minute,
             "kpis": self.kpis,
             "focus_policy": self.focus,
             "changes": [{"cp_id": c, "state": s.value} for c, s in res.changes.get(self.focus, [])],
@@ -361,25 +375,26 @@ class EngineRun:
             self.broadcast(*msgs)
             if self._hist_ticks >= HISTORY_FLUSH_TICKS or self.status != "running":
                 await self.flush_history()
-            await asyncio.sleep(max(0.0, 1 / self.speed - (time.perf_counter() - t0)))
+            wait = replay_clock.tick_wall_s(self.speed) - (time.perf_counter() - t0)
+            await asyncio.sleep(max(0.0, wait))
 
     # ---- control
-    def _rebuild_to(self, slot: int) -> Engine:
+    def _rebuild_to(self, minute: int) -> Engine:
         eng = Engine(self.mgr.data, self.day, self.policy_objs, forecaster=self.mgr.forecaster,
                      autonomy=self.mgr.autonomy, focus_policy=self.focus)  # fmt: skip
-        eng.run_to(slot)
+        eng.run_to_minute(minute)
         return eng
 
-    async def _seek(self, slot: int) -> None:
-        if slot >= self.engine.slot:
-            await asyncio.to_thread(self.engine.run_to, slot)
+    async def _seek(self, minute: int) -> None:
+        if minute >= self.engine.minute:
+            await asyncio.to_thread(self.engine.run_to_minute, minute)
         else:
-            self.engine = await asyncio.to_thread(self._rebuild_to, slot)
+            self.engine = await asyncio.to_thread(self._rebuild_to, minute)
             self.gen += 1
         self.engine.expire_pending()
         self._expire_known()
         self._approved_cps.clear()
-        self.slot = slot
+        self.minute = minute
         self.kpis = _kpis(self.engine.kpis())
         self.states = self.engine.states(self.focus)
 
@@ -395,18 +410,10 @@ class EngineRun:
                 if self.status != "done":
                     self.set_status("paused", "user")
             elif a == "speed":
-                if isinstance(v, bool) or not isinstance(v, int | float) or v != int(v):
-                    raise HTTPException(400, "speed must be an integer 1-288")
-                if not 1 <= int(v) <= 288:
-                    raise HTTPException(400, "speed must be an integer 1-288")
-                self.speed = int(v)
+                self.speed = replay_clock.check_speed(v)
             elif a == "seek":
-                n = self.engine.n_slots
-                if isinstance(v, bool) or not isinstance(v, int | float) or v != int(v):
-                    raise HTTPException(400, f"seek value must be a slot 0-{n - 1}")
-                if not 0 <= int(v) < n:
-                    raise HTTPException(400, f"seek value must be a slot 0-{n - 1}")
-                await self._seek(int(v))
+                minute = replay_clock.check_minute(v)
+                await self._seek(replay_clock.clamp(minute, self.window()))
                 if self.status == "done":
                     self.set_status("paused", "user")
                 msgs.append(self.snapshot_msg())

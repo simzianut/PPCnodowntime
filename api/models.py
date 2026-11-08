@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date as Date
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,6 +22,8 @@ Confidence = Literal["high", "medium", "low"]
 RunMode = Literal["replay", "live"]
 RunStatusName = Literal["running", "paused", "done"]
 PausedReason = Literal["user", "recommendations"]
+Speed = Literal[1, 15, 60, 300]  # simulated seconds per wall second (decision 0091)
+SPEEDS: tuple[int, ...] = get_args(Speed)
 
 
 class _Strict(BaseModel):
@@ -99,11 +101,16 @@ class RunCreate(_Strict):
     policies: list[PolicyName] = Field(default_factory=lambda: list(PolicyName), min_length=1)
     focus_policy: PolicyName | None = None
     lambda_: float | None = Field(default=None, alias="lambda", gt=0)
-    speed: int = Field(default=60, ge=1, le=288)
+    speed: Speed = 60
 
 
 class RunCreated(_Strict):
     run_id: str
+
+
+class RunWindow(_Strict):
+    start_minute: int
+    end_minute: int
 
 
 class RunStatus(_Strict):
@@ -113,9 +120,11 @@ class RunStatus(_Strict):
     paused_reason: PausedReason | None
     sim_time: datetime
     slot: int
+    minute: int = Field(description="minutes since local midnight of the run day")
     speed: int
     focus_policy: PolicyName
     kpis: dict[PolicyName, Kpis]
+    window: RunWindow
 
 
 class RunControl(_Strict):
@@ -155,6 +164,7 @@ class TickMessage(_Strict):
     run_id: str
     sim_time: datetime
     slot: int
+    minute: int
     kpis: dict[PolicyName, Kpis]
     focus_policy: PolicyName
     changes: list[StateChange]
@@ -174,6 +184,7 @@ class StatusMessage(_Strict):
     speed: int
     focus_policy: PolicyName
     slot: int
+    minute: int
     sim_time: datetime
 
 

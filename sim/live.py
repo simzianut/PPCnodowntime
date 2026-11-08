@@ -15,7 +15,7 @@ import pandas as pd
 
 from sim.config import TZ
 from sim.data import SimData
-from sim.engine import ALWAYS_ON, Engine
+from sim.engine import ALWAYS_ON, TICK_S, Engine
 from sim.types import CHARGING, DEEP_SLEEP, IDLE, OFFLINE, STANDBY, WAKING, SimState
 
 log = logging.getLogger("sim.live")
@@ -314,6 +314,7 @@ class LiveEngine(Engine):
         if not 0 <= start_slot < self.n_slots:
             raise ValueError(f"start_slot must be in 0..{self.n_slots - 1}")
         self.slot = start_slot
+        self.minute = start_slot * self.slot_minutes
         t = float(start_slot * self.slot_s)
         for ps in self._sims.values():
             ps.acct[:] = t
@@ -331,17 +332,16 @@ class LiveEngine(Engine):
         self._arr_cp = np.array([e[1] for e in events], dtype=np.int64)
         self._kind = np.array([e[2] for e in events], dtype=np.int8)
         self._dur = np.full(len(events), np.inf)
-        k = getattr(self, "slot", 0)
-        self._arr_bounds = np.where(np.arange(self.n_slots + 1) <= k, 0, len(events))
 
     def slot_epoch(self, k: int) -> float:
         """Epoch seconds of the start of slot `k` (k = n_slots is the next midnight)."""
         return self._t0 + k * self.slot_s
 
     def feed(self, events: list[tuple[float, str, int]], signals: pd.DataFrame | None = None):
-        """Observed events (epoch, cp_id, kind) of this slot and signals sampled at its start."""
-        s0 = float(self.slot * self.slot_s)
-        s1 = s0 + self.slot_s
+        """Observed events (epoch, cp_id, kind) of the rest of this slot, and signals sampled at
+        its start. Call it once per slot, before its first tick; events apply at their minute."""
+        s0 = float(self.minute * TICK_S)
+        s1 = float((self.slot + 1) * self.slot_s)
         evs = []
         for t, cp, kind in events:
             c = self._index.get(cp)
@@ -366,11 +366,12 @@ class LiveEngine(Engine):
         self._sig_t = np.concatenate([self._sig_t[keep], rel[order]])
         self._obs_cache = None
 
-    def step(self):
-        if not self.done and self.forecaster is not None:
+    def _tick(self, m1: int):
+        if self.minute % self.slot_minutes == 0 and self.forecaster is not None:
             self._observe(self._sims[ALWAYS_ON], self.slot)  # the forecaster sees observed states
-        res = super().step()
-        self._set_events([])
+        res = super()._tick(m1)
+        if self.minute % self.slot_minutes == 0:
+            self._set_events([])  # the slot is over
         return res
 
     def _arrive(self, ps, j: int, t: float, s1: float, heap: list) -> None:

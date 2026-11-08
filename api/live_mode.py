@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 
-from api.engine_mode import HISTORY_FLUSH_TICKS, EngineRun, _kpis, _short_error
+from api.engine_mode import HISTORY_FLUSH_TICKS, EngineRun, _short_error
 from model.live_signals import LiveSignalSampler
 from sim.baselines import hour_of_week
 from sim.config import ROOT, TZ, sim_config
@@ -229,7 +229,10 @@ class SignalFeed:
 
 
 class LiveRun(EngineRun):
-    """A live run: steps slot k once the wall clock passes its end plus the collector lag."""
+    """A live run: ticks minute m once the wall clock passes m + one slot + the collector lag.
+
+    By then the polls covering minute m are read, so its events apply at their own minute.
+    """
 
     def __init__(self, *args, clock, reader: LiveStatusReader, feed: SignalFeed,
                  lag_s: float, poll_s: float, info: dict, **kw) -> None:  # fmt: skip
@@ -238,17 +241,17 @@ class LiveRun(EngineRun):
         self.lag_s, self.poll_s = lag_s, poll_s
         self.info = info
         self.speed = max(1, int(round(getattr(clock, "speed", 1))))
-        self.slot = self.engine.slot
-        self.kpis = _kpis(self.engine.kpis())
 
     def due(self) -> float:
-        return self.engine.slot_epoch(self.engine.slot + 1) + self.lag_s
+        eng = self.engine
+        return eng.minute_epoch(eng.minute) + eng.slot_s + self.lag_s
 
     def _live_step_sync(self, now: float):
         eng = self.engine
-        self.reader.refresh(now)
-        events = self.reader.take_events(eng.slot_epoch(eng.slot), eng.slot_epoch(eng.slot + 1))
-        eng.feed(events, self.feed.sample(eng.t))
+        if eng.minute % eng.slot_minutes == 0:  # a slot starts: read and feed all of it
+            self.reader.refresh(now)
+            s0, s1 = eng.slot_epoch(eng.slot), eng.slot_epoch(eng.slot + 1)
+            eng.feed(self.reader.take_events(s0, s1), self.feed.sample(eng.t))
         return self._step_sync()
 
     async def loop(self) -> None:

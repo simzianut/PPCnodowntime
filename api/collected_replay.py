@@ -139,37 +139,42 @@ class CollectedRun(EngineRun):
         self.start_slot, self.end_slot = window
         self.lag_s = lag_s
         self.info = info
-        self.slot = self.engine.slot
-        self.kpis = _kpis(self.engine.kpis())
+
+    def window(self) -> tuple[int, int]:
+        m = self.engine.slot_minutes
+        return self.start_slot * m, self.end_slot * m
 
     def _feed_slot(self) -> None:
+        """At a slot start: the slot's observed events, applied later at their own minute."""
         eng = self.engine
         s0, s1 = eng.slot_epoch(eng.slot), eng.slot_epoch(eng.slot + 1)
         self.reader.refresh(s1 + self.lag_s)  # what a live run would have read when due
         eng.feed(self.reader.take_events(s0, s1), self.feed.sample(eng.t))
 
     def _step_sync(self):
-        self._feed_slot()
+        if self.engine.minute % self.engine.slot_minutes == 0:
+            self._feed_slot()
         return super()._step_sync()
 
-    def _seek_sync(self, slot: int) -> bool:
-        rebuilt = slot < self.engine.slot
+    def _seek_sync(self, minute: int) -> bool:
+        rebuilt = minute < self.engine.minute
         if rebuilt:
             b = self._rebuild()
             self.engine, self.reader, self.feed, self.policy_objs = b.eng, b.reader, b.feed, b.pols
-        while self.engine.slot < slot:
-            self._feed_slot()
-            self.engine.step()
+        eng = self.engine
+        while eng.minute < minute:
+            if eng.minute % eng.slot_minutes == 0:
+                self._feed_slot()
+            eng.run_to_minute(min(minute, (eng.slot + 1) * eng.slot_minutes))
         return rebuilt
 
-    async def _seek(self, slot: int) -> None:
-        slot = min(max(slot, self.start_slot), self.end_slot)
-        if await asyncio.to_thread(self._seek_sync, slot):
+    async def _seek(self, minute: int) -> None:
+        if await asyncio.to_thread(self._seek_sync, minute):
             self.gen += 1
         self.engine.expire_pending()
         self._expire_known()
         self._approved_cps.clear()
-        self.slot = slot
+        self.minute = minute
         self.kpis = _kpis(self.engine.kpis())
         self.states = self.engine.states(self.focus)
 

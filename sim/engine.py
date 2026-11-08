@@ -1,4 +1,7 @@
-"""Slot engine: one local day, several policies side by side (spec 04 §1, decisions 0018-0026)."""
+"""Slot engine: one local day, several policies side by side (spec 04 §1, decisions 0018-0026).
+
+Policies decide once per slot; the clock can also advance one minute at a time (decision 0091).
+"""
 
 from __future__ import annotations
 
@@ -44,11 +47,15 @@ _SLEEPING = np.zeros(len(STATES), dtype=bool)
 _SLEEPING[[STANDBY, DEEP_SLEEP]] = True
 _PENDING = CommandStatus.pending.value
 _EXPIRED = CommandStatus.expired.value
+TICK_S = 60  # one clock tick = one simulated minute (decision 0091)
 
 
 @dataclass
 class StepResult:
-    """Outcome of one simulated slot."""
+    """Outcome of one step: a whole slot (`step`) or one minute (`step_minute`).
+
+    `overhead_kwh` and `wait_min` cover the slot so far; `events` and `changes` only this step.
+    """
 
     slot: int
     sim_time: datetime
@@ -58,6 +65,8 @@ class StepResult:
     overhead_kwh: dict[str, np.ndarray]
     wait_min: dict[str, np.ndarray]
     new_recommendations: list[dict]
+    minute: int = 0
+    decided: bool = True  # the policies observed and decided in this step (it began the slot)
 
 
 class _AlwaysOn:
@@ -165,10 +174,14 @@ class Engine:
         self.seed = seed
         self.forecaster = forecaster
         self.slot_s = int(cfg.slot_s)
+        if self.slot_s % TICK_S:
+            raise ValueError(f"slot_s must be a whole number of minutes, got {self.slot_s}")
+        self.slot_minutes = self.slot_s // TICK_S
         self._ttl_s = float(cfg.recommendation_ttl_slots * self.slot_s)
         self._t0 = datetime.combine(day, time(0), tzinfo=ZONE).timestamp()
         next_t0 = datetime.combine(day + timedelta(days=1), time(0), tzinfo=ZONE).timestamp()
         self.n_slots = int(next_t0 - self._t0) // self.slot_s  # 276 / 288 / 300 on DST days
+        self.n_minutes = self.n_slots * self.slot_minutes
         self._end = float(self.n_slots * self.slot_s)
         self._slot_dt = [
             datetime.fromtimestamp(self._t0 + k * self.slot_s, ZONE)
@@ -198,7 +211,8 @@ class Engine:
         self._focus = names[0]
         if focus_policy is not None:
             self.focus_policy = focus_policy
-        self.slot = 0
+        self.slot = 0  # slot of the next tick; == minute // slot_minutes
+        self.minute = 0  # the clock: minutes since local midnight simulated so far
         self._ar = np.arange(len(self.cp_ids))
         self._seq = itertools.count()
         self._recs: dict[int, _Cmd] = {}
@@ -296,8 +310,6 @@ class Engine:
         self._arr = df["a"].to_numpy(dtype=float)
         self._dur = np.maximum(df["d"].to_numpy(dtype=float), 0.0)
         self._arr_cp = df["cp"].to_numpy(dtype=np.int64)
-        edges = np.arange(self.n_slots + 1, dtype=float) * self.slot_s
-        self._arr_bounds = np.searchsorted(self._arr, edges, side="left")
 
     def _init_signals(self, signals: pd.DataFrame) -> None:
         col = pd.to_datetime(signals["ts"], utc=True)
@@ -347,7 +359,12 @@ class Engine:
 
     @property
     def t(self) -> datetime:
+        """Start of the current slot."""
         return self._slot_dt[self.slot]
+
+    def minute_epoch(self, m: int) -> float:
+        """Epoch seconds of minute `m` of the day (m = n_minutes is the next midnight)."""
+        return self._t0 + m * TICK_S
 
     @property
     def idle_w(self) -> np.ndarray:
@@ -355,12 +372,61 @@ class Engine:
         return self._pw[:, IDLE].copy()
 
     def step(self) -> StepResult:
-        """Simulate the next slot: observe, decide, apply, events, account."""
+        """Simulate the rest of the current slot (a whole slot from a slot boundary)."""
         if self.done:
             raise RuntimeError("the day is finished")
-        k = self.slot
+        return self._tick((self.slot + 1) * self.slot_minutes)
+
+    def step_minute(self) -> StepResult:
+        """Simulate one minute; the policies decide only in a slot's first minute."""
+        if self.done:
+            raise RuntimeError("the day is finished")
+        return self._tick(self.minute + 1)
+
+    def _tick(self, m1: int) -> StepResult:
+        """Advance the clock to minute `m1`, inside the current slot."""
+        k, m0 = self.slot, self.minute
+        t0, t1 = float(m0 * TICK_S), float(m1 * TICK_S)
+        changed, self._rec_changed = self._rec_changed, []
+        decided = m0 == k * self.slot_minutes
+        if decided:
+            self._begin_slot(k, changed)
+        ev0 = {nm: 0 if decided else len(ps.events) for nm, ps in self._sims.items()}
+
+        changes: dict[str, list[tuple[str, State]]] = {}
+        a, b = np.searchsorted(self._arr, (t0, t1), side="left").tolist()
+        closes = m1 % self.slot_minutes == 0
+        for ps in self._sims.values():
+            self._events(ps, t1, a, b)
+            if closes:
+                self._close_slot(ps, t1)
+            if not ps.hidden:
+                diff = np.flatnonzero(ps.state != ps.prev_state)
+                changes[ps.name] = [(self.cp_ids[c], STATES[ps.state[c]]) for c in diff.tolist()]
+                ps.prev_state[diff] = ps.state[diff]
+
+        self.minute = m1
+        self.slot = m1 // self.slot_minutes
+        # expire at the new time now, so a recommendation listed as pending can be decided
+        self._expire(np.inf if self.done else t1, changed)
+        req = [self._sims[nm] for nm in self.policy_names]
+        recs = {r.id: r for r in changed}
+        return StepResult(
+            slot=k,
+            sim_time=self._slot_dt[k] if decided else datetime.fromtimestamp(self._t0 + t0, ZONE),
+            kpis=self.kpis(),
+            changes=changes,
+            events={ps.name: ps.events[ev0[ps.name] :] for ps in req},
+            overhead_kwh={ps.name: ps.slot_wh / 1000.0 for ps in req},
+            wait_min={ps.name: ps.wait for ps in req},
+            new_recommendations=[self._rec_dict(r) for r in recs.values()],
+            minute=m0,
+            decided=decided,
+        )
+
+    def _begin_slot(self, k: int, changed: list[_Cmd]) -> None:
+        """Slot start: events at the boundary, expiry, approved commands, observe/decide/apply."""
         s0 = float(k * self.slot_s)
-        s1 = s0 + self.slot_s
         n = len(self.cp_ids)
         for ps in self._sims.values():
             ps.slot_wh = np.zeros(n)
@@ -368,7 +434,6 @@ class Engine:
             ps.wait = np.zeros(n)
             ps.events = []
             self._events(ps, np.nextafter(s0, np.inf), 0, 0)  # departures/wakes at exactly s0
-        changed, self._rec_changed = self._rec_changed, []
         self._expire(s0, changed)
         self._apply_approved(s0)
 
@@ -389,32 +454,6 @@ class Engine:
             else:
                 self._apply(ps, idx, tgt, reasons, s0, record=True)
 
-        changes: dict[str, list[tuple[str, State]]] = {}
-        a, b = int(self._arr_bounds[k]), int(self._arr_bounds[k + 1])
-        for ps in self._sims.values():
-            self._events(ps, s1, a, b)
-            self._close_slot(ps, s1)
-            if not ps.hidden:
-                diff = np.flatnonzero(ps.state != ps.prev_state)
-                changes[ps.name] = [(self.cp_ids[c], STATES[ps.state[c]]) for c in diff.tolist()]
-                ps.prev_state[diff] = ps.state[diff]
-
-        self.slot += 1
-        # expire at the new boundary now, so a recommendation listed as pending can be decided
-        self._expire(np.inf if self.done else float(self.slot * self.slot_s), changed)
-        req = [self._sims[nm] for nm in self.policy_names]
-        recs = {r.id: r for r in changed}
-        return StepResult(
-            slot=k,
-            sim_time=self._slot_dt[k],
-            kpis=self.kpis(),
-            changes=changes,
-            events={ps.name: ps.events for ps in req},
-            overhead_kwh={ps.name: ps.slot_wh / 1000.0 for ps in req},
-            wait_min={ps.name: ps.wait for ps in req},
-            new_recommendations=[self._rec_dict(r) for r in recs.values()],
-        )
-
     def run_to(self, slot: int) -> None:
         """Step until `self.slot == slot`; going backwards is not allowed."""
         if slot < self.slot or slot > self.n_slots:
@@ -422,14 +461,28 @@ class Engine:
         while self.slot < slot:
             self.step()
 
+    def run_to_minute(self, minute: int) -> None:
+        """Advance the clock to `minute`, a slot at a time where it can; never backwards."""
+        if minute < self.minute or minute > self.n_minutes:
+            raise ValueError(f"cannot run to minute {minute} from minute {self.minute}")
+        while self.minute < minute:
+            self._tick(min(minute, (self.slot + 1) * self.slot_minutes))
+
     def run(self) -> dict[str, dict]:
         """Run to the end of the day and return the KPIs."""
         self.run_to(self.n_slots)
         return self.kpis()
 
     def kpis(self) -> dict[str, dict]:
-        base = self._sims[ALWAYS_ON].metrics.overhead_wh
-        return {nm: self._sims[nm].metrics.kpis(base) for nm in self.policy_names}
+        """KPIs up to the clock; mid-slot they include the open part of the slot."""
+        if self.minute % self.slot_minutes == 0:
+            base = self._sims[ALWAYS_ON].metrics.overhead_wh
+            return {nm: self._sims[nm].metrics.kpis(base) for nm in self.policy_names}
+        base = self._sims[ALWAYS_ON].metrics.overhead_wh + self._open_part(self._sims[ALWAYS_ON])[0]
+        return {
+            nm: self._sims[nm].metrics.kpis(base, self._open_part(self._sims[nm]))
+            for nm in self.policy_names
+        }
 
     def states(self, policy: str) -> np.ndarray:
         return self._sims[policy].state.copy()
@@ -439,7 +492,7 @@ class Engine:
 
     def recommendations(self, status: str | None = None) -> list[dict]:
         """Recommendation dicts in id order; pending ones past `expires_at` become expired."""
-        self._expire(float(self.slot * self.slot_s), self._rec_changed)
+        self._expire(float(self.minute * TICK_S), self._rec_changed)
         return [
             self._rec_dict(r)
             for r in self._recs.values()
@@ -449,7 +502,7 @@ class Engine:
     def decide_recommendation(self, rec_id: int, approve: bool) -> dict:
         """Approve (applied at the start of the next slot) or reject a pending recommendation."""
         rec = self._recs[int(rec_id)]
-        self._expire(float(self.slot * self.slot_s), self._rec_changed)
+        self._expire(float(self.minute * TICK_S), self._rec_changed)
         if rec.status != _PENDING:
             raise ValueError(f"recommendation {rec_id} is {rec.status}")
         del self._pending[(rec.policy, rec.cp)]
@@ -480,7 +533,7 @@ class Engine:
         """States, arrivals, intents, forecast and commands of one CP up to the current slot."""
         ps = self._sims[policy]
         c = self._index[cp_id]
-        now = float(self.slot * self.slot_s)
+        now = float(self.minute * TICK_S)
         hist = ps.hist_states[c]
         iv: list[list] = []
         for i, (a, s) in enumerate(hist):
@@ -505,7 +558,7 @@ class Engine:
         ]
         forecast = []
         if ps.p30 is not None:
-            for k in range(self.slot):
+            for k in range(-(-self.minute // self.slot_minutes)):  # slots begun so far
                 v = ps.p30[k, c]
                 if not np.isnan(v):
                     forecast.append(
@@ -697,6 +750,15 @@ class Engine:
         ps.acct[:] = s1
         ps.metrics.add_energy_wh(float(ps.slot_wh.sum()))
         ps.metrics.add_time(len(self.cp_ids) * self.slot_s, ps.slot_sleep_s)
+
+    def _open_part(self, ps: _PolicySim) -> tuple[float, float, float]:
+        """(Wh, sleep s, CP s) of the current slot up to the clock, not yet in `ps.metrics`."""
+        t = float(self.minute * TICK_S)
+        dt = t - ps.acct
+        st = ps.state
+        wh = float(ps.slot_wh.sum() + (self._pw[self._ar, st] * dt).sum() / 3600.0)
+        sleep_s = ps.slot_sleep_s + float(dt[_SLEEPING[st]].sum())
+        return wh, sleep_s, len(self.cp_ids) * (t - self.slot * self.slot_s)
 
     def _set(self, ps: _PolicySim, c: int, s: int, t: float) -> None:
         old = int(ps.state[c])
