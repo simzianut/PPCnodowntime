@@ -15,6 +15,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.responses import JSONResponse
 
+from api import replay_clock
 from api.fixture_store import FIXTURES_DIR, RecordedDay, load_json
 from api.models import (
     AutonomyBody,
@@ -30,9 +31,10 @@ from api.models import (
     Timeline,
 )
 from sim.config import sim_config
+from sim.engine import TICK_S
 from sim.types import STATE_INDEX, Autonomy, CommandStatus, PolicyName, State
 
-LIVE_SLOT_INTERVAL_S = 5.0
+LIVE_TICK_INTERVAL_S = 1.0  # fixture live runs: one minute tick per second
 CLIENT_QUEUE_MAX = 5000
 MAX_RUNS = 50
 CHARGING_CODE, WAKING_CODE = STATE_INDEX[State.CHARGING], STATE_INDEX[State.WAKING]
@@ -84,7 +86,9 @@ class Run:
         self.lambda_ = body.lambda_ or sim_config().default_lambda
         self.speed = body.speed
         self.status, self.paused_reason = "running", None
-        self.n_done, self.slot = start, start
+        self.mps = self.day.slot_s // TICK_S
+        self.n_done = start  # recorded slots applied so far
+        self.minute = self.clock = start * self.mps  # last tick's minute; next minute to tick
         self.override: dict[int, int] = {}
         self.approved: list[RecEntry] = []
         self.changed: list[RecEntry] = []
@@ -100,8 +104,13 @@ class Run:
         return PolicyName.rl_ppo if "rl_ppo" in self.policies else PolicyName(self.policies[-1])
 
     # ---- views
-    def sim_time(self, slot: int | None = None) -> datetime:
-        return self.day.ts((self.slot if slot is None else slot) * self.day.slot_s, self.run_date)
+    @property
+    def slot(self) -> int:
+        return self.minute // self.mps
+
+    def sim_time(self, minute: int | None = None) -> datetime:
+        m = self.minute if minute is None else minute
+        return self.day.ts(m * TICK_S, self.run_date)
 
     def displayed(self) -> np.ndarray:
         st = self.day.state_at(self.focus, self.n_done).copy()
@@ -120,14 +129,16 @@ class Run:
             "paused_reason": self.paused_reason,
             "sim_time": _iso(self.sim_time()),
             "slot": self.slot,
+            "minute": self.minute,
             "speed": self.speed,
             "focus_policy": self.focus,
             "kpis": self.kpis(),
+            "window": {"start_minute": 0, "end_minute": self.day.n_slots * self.mps},
         }
 
     def status_msg(self) -> dict:
         b = self.status_body()
-        del b["kpis"], b["mode"]
+        del b["kpis"], b["mode"], b["window"]
         return {"type": "status", **b}
 
     def snapshot_msg(self, consume: bool = True) -> dict:
@@ -142,6 +153,7 @@ class Run:
             "run_id": self.run_id,
             "sim_time": _iso(self.sim_time()),
             "slot": self.slot,
+            "minute": self.minute,
             "kpis": self.kpis(),
             "focus_policy": self.focus,
             "changes": [
@@ -167,7 +179,7 @@ class Run:
 
     # ---- recommendations
     def _new_rec(self, cp: int, slot: int, from_s: State, target: State, reason: str, status):
-        ts = self.sim_time(slot)
+        ts = self.sim_time(slot * self.mps)
         ttl = self.mgr.ttl_slots * self.day.slot_s
         rec = Recommendation(
             id=self.mgr.next_rec_id(),
@@ -212,18 +224,54 @@ class Run:
 
     # ---- engine step
     def step(self) -> list[dict]:
-        """Process slot `n_done` and return the messages to broadcast."""
-        day, p, k = self.day, self.focus, self.n_done
+        """Tick the next minute and return the messages to broadcast.
+
+        The recorded day has slots: a slot's changes all land on its first minute.
+        """
+        m = self.clock
         recommend = self.mgr.autonomy == Autonomy.RECOMMEND
+        changes: list[dict] = []
+        events: list[dict] = []
+        new_pending = 0
+        if m % self.mps == 0 and self.n_done < self.day.n_slots:
+            changes, events, new_pending = self._apply_slot(recommend)
+        self.minute, self.clock = m, m + 1
+        tick = {
+            "type": "tick",
+            "run_id": self.run_id,
+            "sim_time": _iso(self.sim_time()),
+            "slot": self.slot,
+            "minute": m,
+            "kpis": self.kpis(),
+            "focus_policy": self.focus,
+            "changes": changes,
+            "events": events,
+            "recommendations": [e.rec.model_dump(mode="json") for e in self.changed],
+        }
+        self.changed = []
+        msgs = [tick]
+        if self.clock >= self.day.n_slots * self.mps:
+            self.expire_pending()
+            self.changed = []
+            self.set_status("done")
+            msgs += [self.status_msg(), {"type": "done", "kpis": self.kpis()}]
+        elif new_pending and recommend and self.mode == "replay":
+            self.set_status("paused", "recommendations")
+            msgs.append(self.status_msg())
+        return msgs
+
+    def _apply_slot(self, recommend: bool) -> tuple[list[dict], list[dict], int]:
+        """Apply recorded slot `n_done`: (changes, events, number of new pending recs)."""
+        day, p, k = self.day, self.focus, self.n_done
         prev = self.displayed()
-        t_k = self.sim_time(k)
+        t_k = self.sim_time(k * self.mps)
         for e in self.approved:
             if e.rec.policy == p and int(prev[e.cp]) not in (CHARGING_CODE, WAKING_CODE):
                 self.override[e.cp] = STATE_INDEX[State(e.rec.target_state)]
         self.approved = []
         self.expire_pending(before=t_k)
 
-        self.n_done, self.slot = k + 1, k
+        self.n_done = k + 1
         rec_st = day.state_at(p, self.n_done)
         cmds = day.commands[p][k]
         new_pending = 0
@@ -267,28 +315,7 @@ class Run:
         events.sort(key=lambda x: x[0])
         for t, ev in events:
             ev["ts"] = _iso(day.ts(t, self.run_date))
-        tick = {
-            "type": "tick",
-            "run_id": self.run_id,
-            "sim_time": _iso(t_k),
-            "slot": k,
-            "kpis": self.kpis(),
-            "focus_policy": p,
-            "changes": changes,
-            "events": [ev for _, ev in events],
-            "recommendations": [e.rec.model_dump(mode="json") for e in self.changed],
-        }
-        self.changed = []
-        msgs = [tick]
-        if self.n_done >= day.n_slots:
-            self.expire_pending()
-            self.changed = []
-            self.set_status("done")
-            msgs += [self.status_msg(), {"type": "done", "kpis": self.kpis()}]
-        elif new_pending and recommend and self.mode == "replay":
-            self.set_status("paused", "recommendations")
-            msgs.append(self.status_msg())
-        return msgs
+        return changes, [ev for _, ev in events], new_pending
 
     def set_status(self, status: str, reason: str | None = None) -> None:
         self.status, self.paused_reason = status, reason
@@ -308,15 +335,17 @@ class Run:
             if self.status != "running":
                 continue
             self.broadcast(*self.step())
-            interval = LIVE_SLOT_INTERVAL_S if self.mode == "live" else 1 / self.speed
-            await asyncio.sleep(interval)
+            live = self.mode == "live"
+            wait = LIVE_TICK_INTERVAL_S if live else replay_clock.tick_wall_s(self.speed)
+            await asyncio.sleep(wait)
 
     # ---- control
-    def seek(self, slot: int) -> None:
+    def seek(self, minute: int) -> None:
         self.expire_pending()
         self.override.clear()
         self.approved = []
-        self.n_done, self.slot = slot, slot
+        self.n_done = -(-minute // self.mps)  # a slot whose first minute has passed is applied
+        self.minute = self.clock = minute
 
     def control(self, body: RunControl) -> list[dict]:
         a, v = body.action, body.value
@@ -331,20 +360,12 @@ class Run:
         elif a == "speed":
             if self.mode == "live":
                 raise HTTPException(400, "speed is fixed in live mode")
-            if isinstance(v, bool) or not isinstance(v, int | float) or v != int(v):
-                raise HTTPException(400, "speed must be an integer 1-288")
-            if not 1 <= int(v) <= 288:
-                raise HTTPException(400, "speed must be an integer 1-288")
-            self.speed = int(v)
+            self.speed = replay_clock.check_speed(v)
         elif a == "seek":
             if self.mode == "live":
                 raise HTTPException(400, "seek is not available in live mode")
-            n = self.day.n_slots
-            if isinstance(v, bool) or not isinstance(v, int | float) or v != int(v):
-                raise HTTPException(400, f"seek value must be a slot 0-{n - 1}")
-            if not 0 <= int(v) < n:
-                raise HTTPException(400, f"seek value must be a slot 0-{n - 1}")
-            self.seek(int(v))
+            minute = replay_clock.check_minute(v)
+            self.seek(replay_clock.clamp(minute, (0, self.day.n_slots * self.mps)))
             if self.status == "done":
                 self.set_status("paused", "user")
             msgs.append(self.snapshot_msg())
