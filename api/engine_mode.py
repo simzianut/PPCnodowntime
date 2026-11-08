@@ -480,6 +480,9 @@ class EngineManager:
         self._live_fc = None
         self._live_rates: tuple[dict, str] | None = None
         self._live_traffic: dict | None = None
+        # replay of collected days (decision 0085): on when the manager loads real data itself
+        self.collected_dir: Path | None = None
+        self.synthetic = False
 
     # ---- loading
     def load(self) -> None:
@@ -492,9 +495,11 @@ class EngineManager:
         if self._given is not None:
             data = self._given
         else:
-            from sim.data import load_default
+            from sim.data import load_default, processed_available
 
             log.info("real mode: loading sim data (synthetic if data/processed is missing)...")
+            self.synthetic = not processed_available()
+            self.collected_dir = self.live_dir
             data = load_default()
         self.stations = build_stations(data)
         self.loc_ids = {s["location_id"] for s in self.stations}
@@ -625,6 +630,20 @@ class EngineManager:
             self._live_traffic = typical_traffic()
         return self._live_traffic
 
+    def collected_windows(self) -> dict[date, tuple[int, int]]:
+        if self.collected_dir is None:
+            return {}
+        from api.collected_replay import collected_windows
+
+        return collected_windows(self.collected_dir, sim_config().slot_s)
+
+    def replay_days(self, windows: dict[date, tuple[int, int]]) -> list[date]:
+        """Collected days, then real test days; synthetic days only when nothing else (0085)."""
+        if not windows:
+            return list(self.test_days)
+        real = [] if self.synthetic else [d for d in self.test_days if d not in windows]
+        return sorted(windows) + real
+
     def make_policies(self, names: list[str], lam: float, forecaster=None) -> list:
         from sim.baselines import AlwaysOn
 
@@ -664,10 +683,19 @@ class EngineManager:
             from api.live_mode import create_live_run
 
             return self._add_run(await create_live_run(self, body, names, focus, lam))
+        windows = await asyncio.to_thread(self.collected_windows)
+        offered = self.replay_days(windows)
+        day = (offered[0] if offered else None) if body.date is None else body.date
+        if day in windows:
+            from api.collected_replay import create_collected_run
+
+            run = await create_collected_run(self, body, names, focus, lam, day, windows[day])
+            return self._add_run(run)
         if not self.test_days:
             raise HTTPException(400, "the loaded data has no test days")
-        day = self.test_days[0] if body.date is None else body.date
         if day not in self.test_days:
+            if windows:
+                raise HTTPException(400, f"date must be one of {[d.isoformat() for d in offered]}")
             days = [d.isoformat() for d in self.test_days]
             if self.covered is not None:
                 rng = f"{days[0]}..{days[-1]}" if days else "none"
@@ -857,8 +885,9 @@ def build_router(mgr: EngineManager) -> APIRouter:
             body = json.loads(mgr.eval_path.read_text())
         except FileNotFoundError as e:
             raise HTTPException(404, "eval_results.json not found") from e
-        await mgr.ready()  # only offer days POST /api/runs accepts (decision 0083)
-        body["test_days"] = [d.isoformat() for d in mgr.test_days]
+        await mgr.ready()  # only offer days POST /api/runs accepts (decisions 0083, 0085)
+        windows = await asyncio.to_thread(mgr.collected_windows)
+        body["test_days"] = [d.isoformat() for d in mgr.replay_days(windows)]
         return JSONResponse(body)
 
     @r.websocket("/ws/runs/{run_id}")

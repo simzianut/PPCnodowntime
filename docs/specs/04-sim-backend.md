@@ -2,7 +2,7 @@
 
 Owner folders: `sim/` (engine, Gymnasium environment, baselines, evaluator), `api/` (FastAPI) and `config/sim.yaml`. One engine serves three uses:
 - **RL training:** headless and fast.
-- **Replay:** a test day played back at any speed, with all policies side by side.
+- **Replay:** a test day played back at any speed, with all policies side by side. A collected AmpWhere day replays the same way on its observed statuses ([0085](../decisions/0085-replay-collected-days.md), `api/collected_replay.py`).
 - **Live mode:** the agent acting on the real statuses collected today.
 
 Decisions: [0011](../decisions/0011-shared-slot-engine.md), [0017](../decisions/0017-shared-sim-types.md) (types in `sim/types.py`, observation builder `sim/obs.py`), [0018](../decisions/0018-engine-transition-rules.md) (transitions), [0019](../decisions/0019-arrival-handling-and-wait.md) (arrivals), [0020](../decisions/0020-lambda-unit-and-reward.md) (λ unit), [0021](../decisions/0021-precomputed-forecasts.md) (forecast table), [0022](../decisions/0022-naive-baseline-window.md) (naive window), [0023](../decisions/0023-gym-env-defaults.md) (gym env), [0024](../decisions/0024-synthetic-sim-data.md) (synthetic data), [0025](../decisions/0025-recommend-in-replay.md) (RECOMMEND in replay), [0026](../decisions/0026-engine-run-defaults.md) (run defaults).
