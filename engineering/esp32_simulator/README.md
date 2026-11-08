@@ -20,19 +20,21 @@ The hardware setup models the three operational component categories defined in 
 3. **Rest of the Components (Red LED 2 on `GPIO 19`):**
    * Represents the AC/DC SiC power stacks, LCL input filters, liquid cooling pump, and cabinet heaters.
    * Driven via hardware PWM at $1\text{ kHz}$.
+4. **Acoustic Audio Notification (Passive Buzzer on `GPIO 21`):**
+   * **Nordic EV Departure Chime:** Plays a distinctive 5-note descending pentatonic cascade ($E_6 \rightarrow C\#_6 \rightarrow B_5 \rightarrow F\#_5 \rightarrow E_4$, frequencies `1318 Hz` $\rightarrow$ `1108 Hz` $\rightarrow$ `987 Hz` $\rightarrow$ `740 Hz` $\rightarrow$ `330 Hz`, $\approx 475\text{ ms}$) whenever the charger enters `DEEP_SLEEP`.
 
 ---
 
-## 2. State-to-PWM Truth Table
+## 2. State-to-PWM & Audio Truth Table
 
-| Charger State ([`stations/state.py`](file:///E:/Side%20Projects/PPCnodowntime/stations/state.py)) | Blue LED (PPC Logo, `GPIO 23`) | Red LED 1 (Important, `GPIO 18`) | Red LED 2 (Rest, `GPIO 19`) | Physical System Condition |
-| :--- | :---: | :---: | :---: | :--- |
-| **`CHARGING`** | **100% ON** | **BRIGHT ($100\%$ PWM)** | **BRIGHT ($100\%$ PWM)** | Active EV session; full screen brightness, cooling pump active, SiC power conversion active. |
-| **`IDLE`** | **100% ON** | **DIMMED ($65\%$ PWM)** | **DIMMED ($65\%$ PWM)** | Hot-standby; screen ready, contactors closed, DC bus energized ($800\text{ V}$). Immediate plug-in ($0\text{ s}$). |
-| **`STANDBY`** | **100% ON** | **DIMMED MORE ($25\%$ PWM)** | **OFF ($0\%$ PWM)** | Fast-wake low power; screen/holster dimmed to night levels, power stack auxiliary rails cut. |
-| **`DEEP_SLEEP`** | **100% ON** | **OFF ($0\%$ PWM)** | **OFF ($0\%$ PWM)** | Maximum cost-saving mode; contactors OPEN, screen OFF, zero reactive power ($Q_c$) injection. |
-| **`WAKING`** *(Transient)* | **100% ON** | **PULSING ($10\%\leftrightarrow 80\%$)** | **$0\%$ for $4.0\text{ s} \rightarrow 65\%$** | Soft-start pre-charge sequence ($5.5\text{ s}$ from Deep Sleep, $1.5\text{ s}$ from Standby). |
-| **`OFFLINE`** *(Fault)* | **100% ON** | **RAPID BLINK ($10\text{ Hz}$)** | **OFF ($0\%$ PWM)** | Safety RCD/E-Stop trip; power isolated, logo stays ON for site safety. |
+| Charger State ([`stations/state.py`](file:///E:/Side%20Projects/PPCnodowntime/stations/state.py)) | Blue LED (PPC Logo, `GPIO 23`) | Red LED 1 (Important, `GPIO 18`) | Red LED 2 (Rest, `GPIO 19`) | Passive Buzzer (`GPIO 21`) | Physical System Condition |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **`CHARGING`** | **100% ON** | **BRIGHT ($100\%$ PWM)** | **BRIGHT ($100\%$ PWM)** | *Silent* | Active EV session; full screen brightness, cooling pump active, SiC power conversion active. |
+| **`IDLE`** | **100% ON** | **DIMMED ($65\%$ PWM)** | **DIMMED ($65\%$ PWM)** | *Silent* | Hot-standby; screen ready, contactors closed, DC bus energized ($800\text{ V}$). Immediate plug-in ($0\text{ s}$). |
+| **`STANDBY`** | **100% ON** | **DIMMED MORE ($25\%$ PWM)** | **OFF ($0\%$ PWM)** | *Silent* | Fast-wake low power; screen/holster dimmed to night levels, power stack auxiliary rails cut. |
+| **`DEEP_SLEEP`** | **100% ON** | **OFF ($0\%$ PWM)** | **OFF ($0\%$ PWM)** | **Nordic Chime** ($475\text{ ms}$) | Maximum cost-saving mode; contactors OPEN, screen OFF, zero reactive power ($Q_c$) injection. |
+| **`WAKING`** *(Transient)* | **100% ON** | **PULSING ($10\%\leftrightarrow 80\%$)** | **$0\%$ for $4.0\text{ s} \rightarrow 65\%$** | *Silent* | Soft-start pre-charge sequence ($5.5\text{ s}$ from Deep Sleep, $1.5\text{ s}$ from Standby). |
+| **`OFFLINE`** *(Fault)* | **100% ON** | **RAPID BLINK ($10\text{ Hz}$)** | **OFF ($0\%$ PWM)** | *Silent* | Safety RCD/E-Stop trip; power isolated, logo stays ON for site safety. |
 
 ---
 
@@ -42,6 +44,7 @@ The hardware setup models the three operational component categories defined in 
 * **1× ESP32 Development Board** (ESP32-WROOM-32 / NodeMCU-32S / DevKit V1)
 * **1× 5 mm Blue LED** (PPC Logo Backlight)
 * **2× 5 mm Red LEDs** (Red 1: Important Components; Red 2: Rest of Components)
+* **1× Passive Buzzer** ($3.3\text{ V}\text{--}5\text{ V}$, piezo or electromagnetic transducer)
 * **3× $330\text{ }\Omega$ Resistors** (or $470\text{ }\Omega$, $0.25\text{ W}$)
 * **1× Breadboard + male-to-male DuPont jumper wires**
 * **1× USB Cable** (for $5\text{ V}$ power from laptop or USB adapter)
@@ -51,6 +54,7 @@ The hardware setup models the three operational component categories defined in 
 * **ESP32 `GPIO 23`** $\rightarrow 330\text{ }\Omega$ Resistor $\rightarrow$ **Blue LED Anode (+)** $\rightarrow$ Cathode (-) to `GND`.
 * **ESP32 `GPIO 18`** $\rightarrow 330\text{ }\Omega$ Resistor $\rightarrow$ **Red LED 1 Anode (+)** $\rightarrow$ Cathode (-) to `GND`.
 * **ESP32 `GPIO 19`** $\rightarrow 330\text{ }\Omega$ Resistor $\rightarrow$ **Red LED 2 Anode (+)** $\rightarrow$ Cathode (-) to `GND`.
+* **ESP32 `GPIO 21`** $\rightarrow$ **Passive Buzzer Positive (+)** $\rightarrow$ Buzzer Negative (-) to `GND`.
 
 ---
 

@@ -7,6 +7,7 @@ Features:
 3. Blue LED (PPC Logo): Always 100% ON.
 4. Red LED 1 (Important Components): State-dependent PWM (0% to 100%).
 5. Red LED 2 (Rest of Components): State-dependent PWM (0% to 100%).
+6. Passive Buzzer: Nordic EV Departure Chime played on transition to DEEP_SLEEP.
 """
 
 import socket
@@ -20,6 +21,7 @@ from machine import PWM, Pin
 PIN_BLUE_LOGO = 23  # Always 100% ON (PPC Blue Logo Backlight)
 PIN_RED_IMPORTANT = 18  # Red LED 1: HMI Screen, RFID, Holster
 PIN_RED_REST = 19  # Red LED 2: AC/DC Power Modules, Cooling
+PIN_BUZZER = 21  # Passive Buzzer: Nordic EV Departure Chime on DEEP_SLEEP
 
 # --- Hardware PWM Setup (1 kHz frequency, 10-bit resolution: 0-1023) ---
 blue_led = Pin(PIN_BLUE_LOGO, Pin.OUT)
@@ -27,6 +29,7 @@ blue_led.value(1)  # Locked 100% ON in all states
 
 pwm_red1 = PWM(Pin(PIN_RED_IMPORTANT), freq=1000, duty=0)
 pwm_red2 = PWM(Pin(PIN_RED_REST), freq=1000, duty=0)
+pwm_buzzer = PWM(Pin(PIN_BUZZER), freq=1000, duty=0)
 
 # --- State-to-Duty Mapping (10-bit: 0 to 1023) ---
 # CHARGING: Both Bright (100% = 1023)
@@ -55,6 +58,22 @@ def set_led_pwm(duty1: int, duty2: int):
     """Updates hardware PWM duty cycles for both Red LEDs."""
     pwm_red1.duty(duty1)
     pwm_red2.duty(duty2)
+
+
+def play_nordic_chime():
+    """Plays Nordic EV Departure Chime on GPIO 21 passive buzzer."""
+    # E6 (1318 Hz) -> C#6 (1108 Hz) -> B5 (987 Hz) -> F#5 (740 Hz) -> E4 (330 Hz)
+    notes = [1318, 1108, 987, 740, 330]
+    durations_ms = [65, 65, 65, 80, 220]
+    pauses_ms = [15, 15, 15, 20, 0]
+
+    for i in range(len(notes)):
+        pwm_buzzer.freq(notes[i])
+        pwm_buzzer.duty(512)
+        time.sleep_ms(durations_ms[i])
+        pwm_buzzer.duty(0)
+        if pauses_ms[i] > 0:
+            time.sleep_ms(pauses_ms[i])
 
 
 def apply_state(new_state: str, cause: str = "webapp") -> dict:
@@ -93,6 +112,8 @@ def apply_state(new_state: str, cause: str = "webapp") -> dict:
     d1, d2 = DUTY_MAP.get(current_state, (0, 0))
     set_led_pwm(d1, d2)
     print(f"[{cause.upper()}] {prev} -> {current_state} | Red1: {d1}/1023, Red2: {d2}/1023")
+    if current_state == "DEEP_SLEEP":
+        play_nordic_chime()
     return {"ok": True, "state": current_state}
 
 

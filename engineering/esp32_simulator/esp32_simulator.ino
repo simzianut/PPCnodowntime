@@ -22,6 +22,7 @@
 const int PIN_BLUE_LOGO = 23;      // Always 100% ON
 const int PIN_RED_IMPORTANT = 18;  // Red LED 1: HMI Screen, RFID, Holster
 const int PIN_RED_REST = 19;       // Red LED 2: AC/DC Power Modules, Cooling
+const int PIN_BUZZER = 21;         // Passive Buzzer: Nordic EV Departure Chime on DEEP_SLEEP
 
 // --- Web Server on Port 80 ---
 WebServer server(80);
@@ -67,8 +68,8 @@ void updateOutputs() {
       red2Duty = 255;
       break;
     case IDLE:
-      red1Duty = 166;
-      red2Duty = 166;
+      red1Duty = 100;
+      red2Duty = 100;
       break;
     case STANDBY:
       red1Duty = 64;
@@ -89,6 +90,21 @@ void updateOutputs() {
 
   analogWrite(PIN_RED_IMPORTANT, red1Duty);
   analogWrite(PIN_RED_REST, red2Duty);
+}
+
+void playNordicChime() {
+  // Nordic EV Departure Chime:
+  // Rapid 5-note pentatonic descending cascade with subtle staccato decay:
+  // E6 (1318 Hz) -> C#6 (1108 Hz) -> B5 (987 Hz) -> F#5 (740 Hz) -> E4 (330 Hz)
+  const int notes[]     = { 1318, 1108,  987,  740,  330 };
+  const int durations[] = {   65,   65,   65,   80,  220 };
+  const int pauses[]    = {   15,   15,   15,   20,    0 };
+
+  for (int i = 0; i < 5; i++) {
+    tone(PIN_BUZZER, notes[i], durations[i]);
+    delay(durations[i] + pauses[i]);
+  }
+  noTone(PIN_BUZZER);
 }
 
 bool applyState(String targetStr) {
@@ -118,6 +134,9 @@ bool applyState(String targetStr) {
   currentState = target;
   updateOutputs();
   Serial.println("[STATE] -> " + stateToString(currentState));
+  if (currentState == DEEP_SLEEP) {
+    playNordicChime();
+  }
   return true;
 }
 
@@ -243,6 +262,8 @@ void setup() {
   pinMode(PIN_BLUE_LOGO, OUTPUT);
   pinMode(PIN_RED_IMPORTANT, OUTPUT);
   pinMode(PIN_RED_REST, OUTPUT);
+  pinMode(PIN_BUZZER, OUTPUT);
+  noTone(PIN_BUZZER);
 
   // Initial State: IDLE
   updateOutputs();

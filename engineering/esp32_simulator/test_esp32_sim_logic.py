@@ -14,6 +14,10 @@ class SimLogic:
         self.current_state = initial_state
         self.wake_target = initial_state
         self.duty1, self.duty2 = DUTY_MAP[initial_state]
+        self.chime_played_count = 0
+
+    def play_nordic_chime(self):
+        self.chime_played_count += 1
 
     def apply_state(self, new_state: str) -> dict:
         new_state = new_state.upper()
@@ -35,6 +39,8 @@ class SimLogic:
 
         self.current_state = new_state
         self.duty1, self.duty2 = DUTY_MAP.get(new_state, (0, 0))
+        if self.current_state == "DEEP_SLEEP":
+            self.play_nordic_chime()
         return {"ok": True, "state": self.current_state}
 
     def complete_wake(self):
@@ -98,3 +104,12 @@ def test_cannot_sleep_while_charging():
     assert res["ok"] is False
     assert res["reason"] == "busy_charging"
     assert sim.current_state == "CHARGING"
+    assert sim.chime_played_count == 0
+
+
+def test_deep_sleep_triggers_nordic_chime():
+    sim = SimLogic("IDLE")
+    res = sim.apply_state("DEEP_SLEEP")
+    assert res["ok"] is True
+    assert sim.current_state == "DEEP_SLEEP"
+    assert sim.chime_played_count == 1
