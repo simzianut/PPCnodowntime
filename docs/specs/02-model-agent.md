@@ -52,7 +52,7 @@ Each must be under 20 MB.
 - **Leakage guard:** the `session_id` column in signals is never a feature. All features use only data at or before `t`.
 - **Evaluation**, on the test split (2024–2025): AUC and Brier score per horizon and per `power_class`, plus reliability plots. Written to `forecaster_meta.json` and to `model/reports/`.
 - **Validation against live data:** compare predicted occupancy by hour with occupancy observed in `live_status` for the hackathon hours. Report the gap; it is not a training target.
-- **Two F2 models (decision 0084):** `artifacts/f2_gru.pt` (all feature groups, used for replay and the evaluator) and `artifacts/f2_gru_live.pt` (`calendar_history + cp_level + site_level`, no mocked app/maps signals and no traffic), which live mode serves. The live model's hazard logits get an affine calibration fitted on the real AmpWhere arrivals (`python -m model.live_calibration`, `artifacts/f2_live_calibration.json`). Training uses cold-start augmentation so the model has seen the empty history a live run starts with.
+- **Two F2 models (decisions 0084, 0085):** `artifacts/f2_gru.pt` (since 0085 the three-seed `f2_gru_v2` ensemble trained on a Colab A100) (all feature groups, used for replay and the evaluator) and `artifacts/f2_gru_live.pt` (`calendar_history + cp_level + site_level`, no mocked app/maps signals and no traffic), which live mode serves. The live model's hazard logits get an affine calibration fitted on the real AmpWhere arrivals (`python -m model.live_calibration`, `artifacts/f2_live_calibration.json`). Training uses cold-start augmentation so the model has seen the empty history a live run starts with.
 
 ## 3. Cost-rule policy (must-have, fallback and comparison)
 
