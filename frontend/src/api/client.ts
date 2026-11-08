@@ -2,12 +2,25 @@ import type { Autonomy, CpTimeline, EvalData, Location, PolicyName, Recommendati
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+export class ApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+async function errorDetail(response: Response) {
+  const body = await response.json().catch(() => null) as { detail?: unknown } | null
+  if (typeof body?.detail === 'string') return body.detail
+  return body?.detail ? JSON.stringify(body.detail) : response.statusText
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
-  if (!response.ok) throw new Error(`API ${response.status}: ${response.statusText}`)
+  if (!response.ok) throw new ApiError(response.status, `API ${response.status}: ${await errorDetail(response)}`)
   return response.json() as Promise<T>
 }
 

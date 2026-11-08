@@ -98,10 +98,10 @@ function RecommendationFeed({ dashboard }: { dashboard: ReturnType<typeof useDas
   const { recommendations, locations, decideRecommendation, run } = dashboard
   return <section className="panel-section">
     <div className="section-head"><h2>Recommendations</h2><span>{recommendations.length} pending</span></div>
-    {run?.paused_reason === 'recommendations' && <p className="notice">Replay paused until these are reviewed.</p>}
+    {run?.paused_reason === 'recommendations' && <p className="notice">{run.mode === 'live' ? 'Live actions' : 'Replay'} paused until these are reviewed.</p>}
     {recommendations.length
       ? <div className="rec-list">{recommendations.map((item) => <RecommendationRow key={item.id} item={item} onDecide={decideRecommendation} locations={locations} />)}</div>
-      : <p className="empty">Nothing to review. New recommendations appear here as the replay runs.</p>}
+      : <p className="empty">Nothing to review. New recommendations appear here as the {run?.mode === 'live' ? 'live network updates' : 'replay runs'}.</p>}
   </section>
 }
 
