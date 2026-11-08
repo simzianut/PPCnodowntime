@@ -854,9 +854,12 @@ def build_router(mgr: EngineManager) -> APIRouter:
     @r.get("/api/eval")
     async def eval_results():
         try:
-            return JSONResponse(json.loads(mgr.eval_path.read_text()))
+            body = json.loads(mgr.eval_path.read_text())
         except FileNotFoundError as e:
             raise HTTPException(404, "eval_results.json not found") from e
+        await mgr.ready()  # only offer days POST /api/runs accepts (decision 0083)
+        body["test_days"] = [d.isoformat() for d in mgr.test_days]
+        return JSONResponse(body)
 
     @r.websocket("/ws/runs/{run_id}")
     async def ws_run(websocket: WebSocket, run_id: str):
