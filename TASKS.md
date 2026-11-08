@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T40] M5 swipe slider snaps flush to the map edge; handle shows only the inward arrow there | owner: tudor-claude | branch: tudor-claude/T40-slider-edge | depends: T39
 - [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
 - [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
