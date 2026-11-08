@@ -62,6 +62,7 @@ export function useDashboard() {
     const pending = stagger.pending
     stagger.pending = {}
     if (apply && Object.keys(pending).length) setCpState((current) => ({ ...current, ...pending }))
+    if (!apply) setActionClock(null)
   }, [])
   useEffect(() => () => flushStagger(false), [flushStagger])
 
@@ -94,14 +95,19 @@ export function useDashboard() {
     const approved = pendingStatesRef.current
     pendingStatesRef.current = {}
     setCpState((current) => ({ ...current, ...(groups.get(0) ?? {}), ...approved }))
-    if (tick.sim_time) setActionClock(shiftClock(tick.sim_time, -SLOT_MIN + 1))
+    const simTime = tick.sim_time
+    if (simTime) {
+      setActionClock(shiftClock(simTime, -SLOT_MIN + 1))
+      for (let minute = 1; minute < SLOT_MIN; minute++) {
+        staggerRef.current.timers.push(window.setTimeout(() => setActionClock(shiftClock(simTime, -SLOT_MIN + 1 + minute)), (minute / SLOT_MIN) * spreadMs))
+      }
+    }
     groups.delete(0)
     for (const [bucket, group] of groups) {
       Object.assign(staggerRef.current.pending, group)
       staggerRef.current.timers.push(window.setTimeout(() => {
         for (const cpId of Object.keys(group)) delete staggerRef.current.pending[cpId]
         setCpState((current) => ({ ...current, ...group }))
-        if (tick.sim_time) setActionClock(shiftClock(tick.sim_time, -SLOT_MIN + 1 + Math.floor((bucket / STAGGER_BUCKETS) * SLOT_MIN)))
       }, (bucket / STAGGER_BUCKETS) * spreadMs))
     }
     if (tick.recommendations?.length) {
