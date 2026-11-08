@@ -1,4 +1,4 @@
-"""Fit the live model's hazard calibration on real AmpWhere arrivals (decision 0083).
+"""Fit the live model's hazard calibration on real AmpWhere arrivals (decision 0084).
 
 Replays the collector's statuses through the online GRUForecaster exactly as a live run does
 (empty history at start, mocked signals from F0 rates), collects the raw hazard logits per CP

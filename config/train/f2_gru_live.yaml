@@ -1,4 +1,4 @@
-# F2 GRU live (decision 0083): same recipe as f2_gru_v2 on honest features only (no mock
+# F2 GRU live (decision 0084): same recipe as f2_gru_v2 on honest features only (no mock
 # app/maps signals, no traffic): the model served in live mode on real AmpWhere statuses.
 name: f2_gru_live
 kind: forecaster

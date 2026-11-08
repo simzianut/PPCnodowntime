@@ -33,8 +33,8 @@ Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/
 | `LIVE_DIR` | M4 API | `./data/raw/live` | Where live runs read the collector's `statuses-YYYYMMDD.jsonl` (default `$DATA_DIR/raw/live`, decision 0072) |
 | `LIVE_LAG_S` | M4 API | `60` | Seconds after a slot ends before a live run steps it |
 | `LIVE_CLOCK_START`, `LIVE_CLOCK_SPEED` | M4 API | `2026-11-07T21:00:00+02:00`, `60` | Demo only: live runs replay collected statuses from that time at that speed. Unset = real time |
-| `LIVE_F2_MODEL`, `LIVE_F0_RATES` | M4 API | `artifacts/f2_gru_live.pt` if present else `artifacts/f2_gru.pt`, `artifacts/f0_rates.parquet` | Override the live forecaster and live-signal rate files. `f2_gru_live.pt` is the honest live model (no mock-signal features, decision 0083) |
-| `LIVE_F2_CALIBRATION` | M4 API | `artifacts/f2_live_calibration.json` | Affine hazard calibration fitted on real AmpWhere arrivals (`python -m model.live_calibration`, decision 0083). Applied only when its `model` field equals the live model's file name |
+| `LIVE_F2_MODEL`, `LIVE_F0_RATES` | M4 API | `artifacts/f2_gru_live.pt` if present else `artifacts/f2_gru.pt`, `artifacts/f0_rates.parquet` | Override the live forecaster and live-signal rate files. `f2_gru_live.pt` is the honest live model (no mock-signal features, decision 0084) |
+| `LIVE_F2_CALIBRATION` | M4 API | `artifacts/f2_live_calibration.json` | Affine hazard calibration fitted on real AmpWhere arrivals (`python -m model.live_calibration`, decision 0084). Applied only when its `model` field equals the live model's file name |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 | `POSTGRES_PASSWORD` | compose | `ppc` | Password for `ppc-db`; the compose `DATABASE_URL` is built from it. Must be a real secret on the server (decision 0066). Never commit |
 | `HTTP_PORT` | compose | `8080` | Host port of `ppc-web` locally. Not used on the server |
@@ -61,7 +61,7 @@ Migrations: plain SQL files `db/migrations/NNNN_slug.sql`, applied by `make db` 
   - `run <config.yaml> [--seed N] [--set key.path=value ...] [--overwrite]`: one training run.
   - `suite <suite.yaml>`: several runs (e.g. ablation, seeds), plus one summary table.
   - `promote <runs/run_id> [--as <file>]`: copies that run's model into `artifacts/` under the existing artifact names (`--as f2_gru_live.pt` for the live model). Never automatic.
-  - `ensemble <runs/a> <runs/b> ... --name <name>`: averages the hazard logits of F2 runs that share features and normalisation, calibrates on the shared val split and writes a new run dir (`runs/<name>-<sha8>-s0/`, checkpoint key `members`) that `promote` accepts (decision 0083).
+  - `ensemble <runs/a> <runs/b> ... --name <name>`: averages the hazard logits of F2 runs that share features and normalisation, calibrates on the shared val split and writes a new run dir (`runs/<name>-<sha8>-s0/`, checkpoint key `members`) that `promote` accepts (decision 0084).
 - **Docker:** `docker/train.Dockerfile`, `docker-compose.train.yml`.
   - Example: `GPU_ID=1 docker compose -f docker-compose.train.yml run --rm train run config/train/f2_gru.yaml --seed 0`
   - Make: `make train-docker CONFIG=config/train/f2_gru.yaml SEED=0 GPU_ID=1`

@@ -1,5 +1,5 @@
 name: f2_v2
-# decision 0083: v2 recipe on the full feature set (replay) and on honest features (live), 3 seeds
+# decision 0084: v2 recipe on the full feature set (replay) and on honest features (live), 3 seeds
 # each; the deployed baseline config is rerun once for a same-data comparison. Members of each
 # triple are averaged with `python -m model.experiments ensemble` afterwards.
 runs:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# F2 v2 training on a rented cloud GPU box without Docker (decision 0083). See docs/TRAINING_GPU.md.
+# F2 v2 training on a rented cloud GPU box without Docker (decision 0084). See docs/TRAINING_GPU.md.
 # Laptop:  docker/pack_cloud.sh        -> ppc_cloud_<sha>.tar.gz (code + private data; never publish)
 # Box:     tar xzf ppc_cloud_*.tar.gz && cd ppc_cloud && docker/train_cloud.sh all
 # Usage:   docker/train_cloud.sh <setup|check|smoke|suite|ensemble|pack|all>

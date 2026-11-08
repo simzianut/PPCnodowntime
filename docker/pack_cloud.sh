@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package code (HEAD) + the private data the F2 trainers read for a cloud GPU box (decision 0083).
+# Package code (HEAD) + the private data the F2 trainers read for a cloud GPU box (decision 0084).
 # Output: ppc_cloud_<sha>.tar.gz in the repo root (gitignored). Contains private data: never publish.
 set -euo pipefail
 cd "$(dirname "$0")/.."

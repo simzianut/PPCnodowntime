@@ -92,7 +92,7 @@ def live_model_path(art_dir: Path | None = None) -> Path:
 
 
 def live_calibration_for(model_file: Path) -> dict | None:
-    """Affine hazard calibration fitted on real AmpWhere arrivals (decision 0083), if it matches."""
+    """Affine hazard calibration fitted on real AmpWhere arrivals (decision 0084), if it matches."""
     p = Path(
         os.environ.get("LIVE_F2_CALIBRATION") or model_file.parent / "f2_live_calibration.json"
     )

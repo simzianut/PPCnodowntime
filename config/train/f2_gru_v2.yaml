@@ -1,4 +1,4 @@
-# F2 GRU v2 (decision 0083): cp_level + site_level features, one-cycle LR, cold-start
+# F2 GRU v2 (decision 0084): cp_level + site_level features, one-cycle LR, cold-start
 # augmentation, auto calibration. Full feature set (mock signals), for replay / evaluation.
 name: f2_gru_v2
 kind: forecaster
