@@ -38,6 +38,7 @@ DEFAULTS = {
     "calibration": "isotonic",  # isotonic | temp_bias | auto | none; old calibrate: bool works
     "lr_schedule": "none",  # none | onecycle (warm-up then cosine decay, per batch)
     "history_dropout": 0.0,  # share of training windows whose history features are cold-start
+    "cold_day_share": 0.0,  # share of training CP-days whose history starts at the day start
 }
 # Arrival-history features that live mode starts without; their cold-start raw values.
 HISTORY_COLUMNS = [
@@ -326,6 +327,15 @@ def train(ctx: RunContext) -> dict:
     names = fd.feature_names(fd.data_params(ctx.config)["feature_groups"])
     data = fd.get_dataset(ctx.config, ctx.log)
     prep = {s: _prep(data.X(s, names), names) for s in fd.SPLITS}
+    cold_share = float(c["cold_day_share"])
+    if cold_share > 0:  # replace a seeded share of train CP-days by their cold-start rows
+        _, dyn_cold, _ = _prep(data.X_cold(names), names)
+        n_cd = len(prep["train"][1]) // fd.SLOTS
+        rng = np.random.default_rng([int(fd.data_params(ctx.config)["sample_seed"]), 777])
+        pick = np.repeat(rng.random(n_cd) < cold_share, fd.SLOTS)
+        prep["train"][1][pick] = dyn_cold[pick]
+        ctx.log.info("cold-start days: %d of %d train CP-days", int(pick.sum()) // fd.SLOTS, n_cd)
+        del dyn_cold
     dyn_names = prep["train"][0]
     mu = prep["train"][1].mean(0)
     sd = prep["train"][1].std(0) + 1e-6

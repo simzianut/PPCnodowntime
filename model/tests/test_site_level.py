@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 import torch
 
 from model import forecast_data as fd
@@ -67,3 +68,23 @@ def test_cold_start_dropout_keeps_padding_and_uses_cold_values():
     assert torch.allclose(y[:, 1:, 1], cold[1].expand(10, 2))
     y0, *_ = f2_gru.drop_history((x, valid, torch.zeros(10)), 0.0, cold, mask, g)
     assert torch.all(y0[:, 1:, :] == 1)
+
+
+def test_cutoff_hides_earlier_arrivals_from_history_only():
+    t0 = 1000 * 86400 * NS
+    t = np.array([t0 + 2 * H])
+    a = (np.array([t0 - 3 * H, t0 + H]), np.array([t0 - 2 * H, t0 + 5 * H]))  # one before day start
+    loc_arr = a[0]
+    kw = dict(ctx=fd.ContextGrid(fd._empty_ctx()), sig=fd._empty_sig())
+    warm, y, b, _ = fd._cp_features(
+        t, _cp(), 0, a, loc_arr, kw["ctx"], kw["sig"], t0 - 10 * 86400 * NS
+    )
+    cold, yc, bc, _ = fd._cp_features(
+        t, _cp(), 0, a, loc_arr, kw["ctx"], kw["sig"], t0 - 10 * 86400 * NS, cutoff=t0
+    )
+    assert warm[0, C["arrivals_cp_3h"]] == 1 and cold[0, C["arrivals_cp_3h"]] == 1
+    assert warm[0, C["arrivals_cp_28d"]] == pytest.approx(2 / (10 + 2 / 24), rel=1e-5)
+    assert cold[0, C["arrivals_cp_28d"]] == 1.0  # 1 arrival since the day start, < 1 day -> 1 day
+    assert cold[0, C["is_charging"]] == 1 and cold[0, C["loc_charging_now"]] == 1
+    np.testing.assert_array_equal(y, yc)
+    np.testing.assert_array_equal(b, bc)

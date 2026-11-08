@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from model import repro
 from model.features import CONTEXT_TYPE_MAP, FEATURE_COLUMNS, POWER_CLASS_MAP
 
-FEATURE_VERSION = 3
+FEATURE_VERSION = 4
 SLOTS = 288
 SLOT_NS = 300 * 10**9
 NS = 10**9
@@ -422,16 +422,22 @@ def _cp_features(
     sig: SignalTables,
     history_start: int | None = None,
     sibs: list[tuple] | None = None,
+    cutoff: int | None = None,
 ):
     """Features (len(t), len(FEATURE_COLUMNS)) and targets for one CP over slot timestamps t (ns).
 
     sibs: (arrivals, departures) of every CP at the location (this one included), for
     loc_charging_now; defaults to this CP alone.
+    cutoff: arrivals before it are invisible to the history features (a live run that started
+    at `cutoff`, decision 0084); states, targets and signals still see everything.
     """
     n = len(t)
     X = np.zeros((n, len(FEATURE_COLUMNS)), np.float32)
     col = {c: i for i, c in enumerate(FEATURE_COLUMNS)}
     arr, dep = cp_arr
+    arr_full, loc_full = arr, loc_arr
+    if cutoff is not None:
+        arr, loc_arr, history_start = arr[arr >= cutoff], loc_arr[loc_arr >= cutoff], cutoff
     sec = t // NS
     hour = (sec % 86400) / 3600.0
     ang = 2.0 * np.pi * hour / 24.0
@@ -453,7 +459,7 @@ def _cp_features(
     r7, r28, mins = cp_level_features(arr, t, history_start)
     X[:, col["arrivals_cp_7d"]], X[:, col["arrivals_cp_28d"]] = r7, r28
     X[:, col["mins_since_last_arrival"]] = mins
-    X[:, col["is_charging"]] = charging_at(arr, dep, t)
+    X[:, col["is_charging"]] = charging_at(arr_full, dep, t)
     # site level: arrivals at the location <= t, and sessions active at the siblings
     li = np.searchsorted(loc_arr, t, side="right")
     X[:, col["loc_arrivals_1h"]] = li - np.searchsorted(loc_arr, t - 3600 * NS, side="right")
@@ -481,6 +487,8 @@ def _cp_features(
     X[:, col["intent_eta_15"]], X[:, col["intent_eta_30"]] = it[:, 0], it[:, 1]
     X[:, col["intent_eta_60"]] = it[:, 2]
     # targets: first arrival strictly after t
+    arr, loc_arr = arr_full, loc_full
+    idx_t = np.searchsorted(arr, t, side="right")
     nxt = arr[idx_t.clip(0, max(len(arr) - 1, 0))] if len(arr) else np.zeros(n, np.int64)
     has = idx_t < len(arr)
     delta = np.where(has, nxt - t, np.iinfo(np.int64).max)
@@ -516,9 +524,13 @@ class ForecastData:
     def X_mmap(self, split: str) -> np.ndarray:
         return np.load(self.feat_dir / f"{split}_X.npy", mmap_mode="r")
 
-    def X(self, split: str, names: list[str]) -> np.ndarray:
+    def X_cold(self, names: list[str]) -> np.ndarray:
+        """Train features as a live run starting at each day's start would see them."""
+        return self.X("train", names, self.feat_dir / "train_X_cold.npy")
+
+    def X(self, split: str, names: list[str], path: Path | None = None) -> np.ndarray:
         """Selected feature columns as an in-RAM float32 array (chunked read)."""
-        mm = self.X_mmap(split)
+        mm = self.X_mmap(split) if path is None else np.load(path, mmap_mode="r")
         cols = [FEATURE_COLUMNS.index(c) for c in names]
         out = np.empty((mm.shape[0], len(cols)), np.float32)
         for a in range(0, mm.shape[0], 1_000_000):
@@ -604,12 +616,16 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
     n_rows = {s: int((cpdays["split"] == s).sum()) * SLOTS for s in SPLITS}
     mm_X: dict[str, np.ndarray] = {}
     mm_y: dict[str, np.ndarray] = {}
+    mm_cold = None
     if feat_dir is not None:
         feat_dir.mkdir(parents=True, exist_ok=True)
         for s in SPLITS:
             mm_X[s] = np.lib.format.open_memmap(
                 feat_dir / f"{s}_X.npy", "w+", np.float32, (n_rows[s], len(FEATURE_COLUMNS))
             )
+        mm_cold = np.lib.format.open_memmap(
+            feat_dir / "train_X_cold.npy", "w+", np.float32, (n_rows["train"], len(FEATURE_COLUMNS))
+        )
     for s in SPLITS:
         mm_y[s] = (
             np.zeros((n_rows[s], 3), np.uint8),
@@ -650,6 +666,15 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
             e = a + len(t)
             if feat_dir is not None:
                 mm_X[s][a:e] = X
+                if s == "train":  # the same rows as a live run that started at each day's start
+                    for j, d0 in enumerate(day):
+                        Xc, *_ = _cp_features(
+                            t[j * SLOTS : (j + 1) * SLOTS], cp, loc_index[cp["location_id"]],
+                            cp_arr, loc_arr, ctx if ctx is not None else ContextGrid(_empty_ctx()),
+                            sig if sig is not None else _empty_sig(), hist_start,
+                            sibs.get(cp["location_id"]), cutoff=int(d0),
+                        )  # fmt: skip
+                        mm_cold[a + j * SLOTS : a + (j + 1) * SLOTS] = Xc
             mm_y[s][0][a:e], mm_y[s][1][a:e], mm_y[s][2][a:e] = y, b, n60
     if do_targets:
         for s in SPLITS:
@@ -660,6 +685,7 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
     if feat_dir is not None:
         for s in SPLITS:
             mm_X[s].flush()
+        mm_cold.flush()
         (feat_dir / "features.done").write_text("ok")
     cpdays.drop(columns="_row").to_parquet(root / "cpdays.parquet", index=False)
 
