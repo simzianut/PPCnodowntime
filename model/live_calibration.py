@@ -105,11 +105,13 @@ def first_arrival_bucket(arr: np.ndarray, observed: np.ndarray) -> np.ndarray:
 
 class _Recorder:
     def __init__(self, inner: GRUForecaster) -> None:
-        self.inner, self.logits, self.ids = inner, [], []
+        self.inner, self.logits, self.served, self.ids = inner, [], [], []
 
     def predict(self, state):
         df = self.inner.predict(state)
         self.logits.append(self.inner.model.last_raw["logits"].astype(np.float32))
+        cols = ["p_arrival_15", "p_arrival_30", "p_arrival_60"]
+        self.served.append(df[cols].to_numpy(np.float32))
         self.ids.append(list(df["cp_id"]))
         return df
 
@@ -149,9 +151,11 @@ def replay(model_file: Path, live_dir: Path, with_signals: bool = True):
     bucket = first_arrival_bucket(arr, observed)[: len(rec.logits)]
     idx = {c: j for j, c in enumerate(cps)}
     L = np.full((len(rec.logits), len(cps), N_BUCKETS), np.nan, np.float32)
-    for i, (lg, ids) in enumerate(zip(rec.logits, rec.ids, strict=True)):
+    P = np.full((len(rec.logits), len(cps), 3), np.nan, np.float32)
+    for i, (lg, sv, ids) in enumerate(zip(rec.logits, rec.served, rec.ids, strict=True)):
         pos = np.array([idx.get(c, -1) for c in ids])
         L[i, pos[pos >= 0]] = lg[pos >= 0]
+        P[i, pos[pos >= 0]] = sv[pos >= 0]
     ok = (bucket >= 0) & ~np.isnan(L[:, :, 0])
     info = {
         "day": str(day),
@@ -162,11 +166,14 @@ def replay(model_file: Path, live_dir: Path, with_signals: bool = True):
         "first_poll": datetime.fromtimestamp(polls[0], UTC).isoformat(timespec="minutes"),
         "last_poll": datetime.fromtimestamp(polls[-1], UTC).isoformat(timespec="minutes"),
     }
+    info["served"] = P[ok]  # the checkpoint's own calibration, as the app serves it
     return L[ok], bucket[ok], info
 
 
-def _scores(logits: np.ndarray, bucket: np.ndarray, a: float, b: float) -> dict:
+def _scores(logits: np.ndarray, bucket: np.ndarray, a: float, b: float, probs=None) -> dict:
     p = f2_gru.affine_probs(logits, a, b)
+    if probs is not None:
+        p = {f"p{h}": probs[:, i].astype(np.float64) for i, h in enumerate((15, 30, 60))}
     out = {}
     for h, k in ((15, 3), (30, 6), (60, 12)):
         y = (bucket < k).astype(float)
@@ -182,6 +189,7 @@ def _scores(logits: np.ndarray, bucket: np.ndarray, a: float, b: float) -> dict:
 
 def fit(model_file: Path, live_dir: Path, out: Path | None) -> dict:
     logits, bucket, info = replay(model_file, live_dir)
+    served = info.pop("served")
     if int((bucket < N_BUCKETS).sum()) < 10:
         raise SystemExit(f"only {int((bucket < N_BUCKETS).sum())} arrivals observed; not fitting")
     half = len(logits) // 2
@@ -194,11 +202,13 @@ def fit(model_file: Path, live_dir: Path, out: Path | None) -> dict:
         "b": round(b, 6),
         "fitted_at": datetime.now(UTC).isoformat(timespec="seconds"),
         **info,
-        "before": _scores(logits, bucket, 1.0, 0.0),
+        "served_before": _scores(logits, bucket, 1.0, 0.0, served),
+        "raw_before": _scores(logits, bucket, 1.0, 0.0),
         "after": _scores(logits, bucket, a, b),
         "holdout_second_half": {
             "fit_first_half": [round(a1, 4), round(b1, 4)],
-            "before": _scores(logits[half:], bucket[half:], 1.0, 0.0),
+            "served_before": _scores(logits[half:], bucket[half:], 1.0, 0.0, served[half:]),
+            "raw_before": _scores(logits[half:], bucket[half:], 1.0, 0.0),
             "after": _scores(logits[half:], bucket[half:], a1, b1),
         },
     }
