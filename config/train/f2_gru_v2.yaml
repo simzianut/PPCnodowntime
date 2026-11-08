@@ -39,5 +39,5 @@ params:
   grad_clip: 1.0
   num_workers: 0
   num_threads: 8
-  amp: true
+  amp: false
   calibration: auto
