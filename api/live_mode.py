@@ -70,9 +70,9 @@ def clock_from_env():
 
 
 def live_signals_mode() -> str:
-    """LIVE_SIGNALS: `mock` (default, decision 0070) or `off` (no mocked intents, decision 0084)."""
-    v = (os.environ.get("LIVE_SIGNALS") or "mock").strip().lower()
-    return "off" if v in ("off", "0", "false", "none") else "mock"
+    """LIVE_SIGNALS: `off` (default, decision 0093) or an explicit `mock` opt-in (decision 0070)."""
+    v = (os.environ.get("LIVE_SIGNALS") or "off").strip().lower()
+    return "mock" if v == "mock" else "off"
 
 
 def describe_clock(clock) -> str:
@@ -118,30 +118,25 @@ def live_calibration_for(model_file: Path) -> dict | None:
 
 
 def live_forecaster(art_dir: Path | None = None):
-    """(forecaster, name) for live runs: the F2 GRU; a constant stub only if it cannot load."""
+    """(forecaster, name) for live runs: the F2 GRU; raises if it cannot load (decision 0093)."""
     f2 = live_model_path(art_dir)
+    if not f2.exists():
+        raise RuntimeError(f"live forecaster {f2} is missing; no stub is used (decision 0093)")
+    from model.gru_forecaster import GRUForecaster
+
+    # live: no session history; arrivals are inferred from CHARGING transitions (0070)
+    name = "f2_gru_live" if f2.name == "f2_gru_live.pt" else "f2_gru"
     try:
-        from model.gru_forecaster import GRUForecaster
-
-        if f2.exists():
-            # live: no session history; arrivals are inferred from CHARGING transitions (0070)
-            name = "f2_gru_live" if f2.name == "f2_gru_live.pt" else "f2_gru"
-            fc = GRUForecaster.from_data(f2, sessions=None)
-            cal = live_calibration_for(f2)
-            if cal is not None:
-                fc.model.calibration, fc.model.calibrators = cal, {}
-                log.info(
-                    "live: %s uses the real-data calibration a=%.3f b=%.3f",
-                    name,
-                    cal["a"],
-                    cal["b"],
-                )
-            return fc, name
+        fc = GRUForecaster.from_data(f2, sessions=None)
     except Exception as e:
-        log.warning("live: F2 GRU unavailable (%s); using a constant stub", _short_error(e))
-    from model.stubs import ConstantForecaster
-
-    return ConstantForecaster(), "constant_stub"
+        raise RuntimeError(f"live forecaster {f2.name} failed to load ({_short_error(e)})") from e
+    cal = live_calibration_for(f2)
+    if cal is not None:
+        fc.model.calibration, fc.model.calibrators = cal, {}
+        log.info("live: %s uses the real-data calibration a=%.3f b=%.3f", name, cal["a"], cal["b"])
+    else:
+        log.warning("live: %s runs without the real-data calibration", name)
+    return fc, name
 
 
 # ---- signal rates: F0 seasonal rate, else hour-of-week rate from training sessions
@@ -181,6 +176,7 @@ def typical_traffic(base: Path | None = None) -> dict[str, np.ndarray]:
     """Mapbox typical traffic index by location and hour of week (decision 0028), if built."""
     p = (base or data_dir()) / "processed" / "traffic_typical.parquet"
     if not p.exists():
+        log.warning("live: %s missing; LIVE_SIGNALS=mock would use traffic 0.5", p)
         return {}
     t = pd.read_parquet(p, columns=["location_id", "hour_of_week", "typical_index"])
     out: dict[str, np.ndarray] = {}
@@ -200,7 +196,7 @@ class SignalFeed:
         self.locations = locations
         self.rates, self.traffic = rates, traffic
         self.slot_s = slot_s
-        self.enabled = enabled  # LIVE_SIGNALS=off: no mocked intents or Maps counts (0084)
+        self.enabled = enabled  # only LIVE_SIGNALS=mock samples intents/Maps counts (0093)
         self.sampler = LiveSignalSampler(seed=seed)
 
     def n60(self, loc: str, t: datetime) -> float:
@@ -327,7 +323,7 @@ async def create_live_run(mgr: EngineManager, body: RunCreate, names: list[str],
                          autonomy=mgr.autonomy, focus_policy=focus)  # fmt: skip
         rates, rate_src = mgr.get_live_rates()
         feed = SignalFeed(sorted(set(eng._locs)), rates, mgr.get_live_traffic(), eng.slot_s,
-                          enabled=live_signals_mode() != "off")  # fmt: skip
+                          enabled=live_signals_mode() == "mock")  # fmt: skip
         return pols, eng, feed, fc_name, rate_src
 
     try:

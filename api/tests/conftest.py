@@ -29,6 +29,7 @@ def _isolated_store(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("PPC_AUTH", raising=False)
     monkeypatch.delenv("PPC_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("LIVE_SIGNALS", raising=False)
     store.set_engine(None)
     store.reset_memory_store()
     yield

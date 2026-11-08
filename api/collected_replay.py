@@ -17,7 +17,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from api.engine_mode import EngineRun, _kpis, _short_error
-from api.live_mode import SignalFeed
+from api.live_mode import SignalFeed, live_signals_mode
 from sim.config import TZ, sim_config
 from sim.live import LiveEngine, LiveStatusReader, _epoch
 
@@ -124,7 +124,8 @@ def _build(mgr: EngineManager, refs, day: date, window: tuple[int, int], names: 
     eng = WindowEngine(data, day, pols, initial=initial, start_slot=start, end_slot=end,
                        forecaster=fc, autonomy=mgr.autonomy, focus_policy=focus)  # fmt: skip
     rates, rate_src = mgr.get_live_rates()
-    feed = SignalFeed(sorted(set(eng._locs)), rates, mgr.get_live_traffic(), eng.slot_s)
+    feed = SignalFeed(sorted(set(eng._locs)), rates, mgr.get_live_traffic(), eng.slot_s,
+                      enabled=live_signals_mode() == "mock")  # fmt: skip
     return Built(eng, reader, feed, pols, fc_name, rate_src)
 
 
@@ -202,8 +203,8 @@ async def create_collected_run(mgr: EngineManager, body: RunCreate, names: list[
         raise HTTPException(500, f"collected replay creation failed ({_short_error(e)})") from e
     eng = b.eng
     info = {**b.reader.summary(), "source": "collected", "forecaster": b.forecaster,
-            "signal_rates": b.rates, "cps_in_run": len(eng.cp_ids), "start_slot": window[0],
-            "end_slot": eng.end_slot,
+            "signal_rates": b.rates, "signals": live_signals_mode(),
+            "cps_in_run": len(eng.cp_ids), "start_slot": window[0], "end_slot": eng.end_slot,
             "state_counts": np.bincount(eng.states(focus), minlength=6).tolist()}  # fmt: skip
     win = (window[0], eng.end_slot)
     run = CollectedRun(mgr, body, day, names, focus, lam, b.pols, eng, built=b, rebuild=rebuild,

@@ -94,6 +94,8 @@ choose s ∈ {IDLE, STANDBY, DEEP_SLEEP} maximising E_save(s) − C_wait(s)
 
 ## 5. Live-mode signal sampling (must-have)
 
+Since decision [0093](../decisions/0093-no-mocked-inputs-in-decision-path.md) live runs and collected-day replays feed no signals by default (`LIVE_SIGNALS=off`); this sampler runs only with the explicit `LIVE_SIGNALS=mock` opt-in.
+
 In live mode there is no future ground truth. `model.live_signals.sample(location, t)` therefore does the following:
 - Draws `ppcblue_route_intent` events from `Poisson(p_app × n60_forecast)`, with etas spread over the next 60 min.
 - Draws `maps_ev_count` and `maps_ice_count` using the same formulas as spec 01 §5, with the forecast in place of true arrivals.
