@@ -26,12 +26,13 @@ Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/
 | `AMPWHERE_ENABLED` | M1 | `0` | Must be explicitly enabled by a human, see decision 0003 |
 | `PPC_FEED_URL`, `PPC_FEED_TOKEN` | M1, M3 | — | Only if PPC provides a feed. Never commit the values. |
 | `VITE_API_URL` | M5 | `http://localhost:8000` | Build time. Unset = `http://localhost:8000` (dev). Empty string = same origin (`/api`, `ws(s)://<page host>/ws`), used by the `ppc-web` image (decision 0066) |
+| `VITE_DEMO` | M5 | `1` | Frontend build flag. Unset by default; `1` enables the simulated demo (decision 0092) |
 | `TOMTOM_API_KEY` | M1, M2 | — | Live traffic index (decision 0028). Never commit. |
 | `MAPBOX_TOKEN` | M1 | — | One-off typical-traffic build (decision 0028). Never commit. |
 | `GPU_ID` | M2 training (Docker) | `1` | Host GPU index (as in `nvidia-smi`) the training container may see. Default `0`. Inside the container it is always `cuda:0` (decision 0051) |
 | `RL_AGENT` | M4 API, evaluator | `auto` | Which agent serves `rl_ppo`: `gru` (cost rule driven by F2 GRU forecasts, decision 0069), `ppo`, `maskppo`, `ddqn`, or `auto` = gru if `artifacts/f2_gru.pt` exists, else ppo |
 | `LIVE_DIR` | M4 API | `./data/raw/live` | Where live runs read the collector's `statuses-YYYYMMDD.jsonl` (default `$DATA_DIR/raw/live`, decision 0072) |
-| `LIVE_LAG_S` | M4 API | `60` | Seconds after a slot ends before a live run steps it |
+| `LIVE_LAG_S` | M4 API | `60` | Collector lag. A live run ticks minute m once its clock passes m + one slot + `LIVE_LAG_S` (decision 0091); a collected-day replay feeds a slot with the rows read by slot end + `LIVE_LAG_S` |
 | `LIVE_CLOCK_START`, `LIVE_CLOCK_SPEED` | M4 API | `2026-11-07T21:00:00+02:00`, `60` | Demo only: live runs replay collected statuses from that time at that speed. Unset = real time |
 | `LIVE_F2_MODEL`, `LIVE_F0_RATES` | M4 API | `artifacts/f2_gru_live.pt` if present else `artifacts/f2_gru.pt`, `artifacts/f0_rates.parquet` | Override the live forecaster and live-signal rate files. `f2_gru_live.pt` is the honest live model (no mock-signal features, decision 0084) |
 | `LIVE_SIGNALS` | M4 API | `off` | Live runs and collected-day replays: `off` feeds no signals (no intents, EV flow or traffic), so every decision comes from the real statuses and the trained GRU (decision 0093). `mock` is an explicit opt-in that samples PPC Blue intents and Maps counts from the F0 rates (decision 0070); any other value means `off`. Reported as `signals` in the run info. The live forecaster is required: if it cannot load, run creation returns 500 (no constant stub, decision 0093) |
@@ -262,14 +263,17 @@ Body / response: `{"mode": "ACT" | "RECOMMEND"}`. Stored through `stations.store
 Run history (decision 0049): when the DB is reachable, each engine run writes its focus policy's commands (at their final status) and state changes to `commands` and `state_events` with its `run_id`, through `stations.store.record_run_history`. Without a DB nothing is written.
 
 ### POST /api/runs
-Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
-Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a replayable day, `oracle` in a live run or on a collected day, live without a running collector feed).
+Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 1|15|60|300}`
+Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a replayable day, `oracle` in a live run or on a collected day, live without a running collector feed, `speed` not one of 1, 15, 60, 300).
+**Clock (decision 0091).** A run ticks once per simulated **minute**; policies still observe and decide once per 5-minute slot, on the slot's first minute. `speed` is simulated seconds per wall second: `1` is real time, `300` plays 5 simulated minutes per wall second (a whole day in 4.8 min).
 `date: null` in a replay means the first day of `GET /api/eval` `test_days`.
 Replay `date` must be a test day covered by `data/processed/forecasts.parquet` when that file exists (the 60-day F2 window, decision 0069), or a **collected day** (decision 0090).
-A collected day is a Europe/Bucharest local day with at least one whole 5-minute slot between the first and last poll in `LIVE_DIR/statuses-*.jsonl`. Its replay runs the live engine and reader on those statuses: the window is slot `ceil(first poll)` to slot `floor(last poll)`, the run starts at the window's first slot and is `done` at its last. `play`, `pause`, `speed` and `seek` work as in any replay, and `seek` is clamped to the window. Signals follow `LIVE_SIGNALS` as in live mode (default `off`: none, decision 0093). `oracle` returns 400 on a collected day (it needs sessions), and so does a day with no status matched through `source_refs`. Live runs (decision 0070) step once per wall-clock 5-minute slot on real statuses; KPIs and WS ticks have the replay shapes and are shadow estimates. Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
+A collected day is a Europe/Bucharest local day with at least one whole 5-minute slot between the first and last poll in `LIVE_DIR/statuses-*.jsonl`. Its replay runs the live engine and reader on those statuses: the window is slot `ceil(first poll)` to slot `floor(last poll)` (reported in minutes as `window`, e.g. 2026-11-08 → 35..685), the run starts at the window's first minute and is `done` at its end. Each observed status change is applied on its own minute (`source_updated_at` when inside the poll window, else the poll `ts`). `play`, `pause`, `speed` and `seek` work as in any replay, and `seek` is clamped to the window. Signals follow `LIVE_SIGNALS` as in live mode (default `off`: none, decision 0093). `oracle` returns 400 on a collected day (it needs sessions), and so does a day with no status matched through `source_refs`. Live runs (decision 0070) tick each minute in wall-clock time, one slot + `LIVE_LAG_S` (~6 min) behind real time so the polls covering that minute have been read; KPIs and WS ticks have the replay shapes and are shadow estimates. Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
 
 ### GET /api/runs/{run_id}
-Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}}`
+Response 200: `{"run_id", "mode", "status": "running"|"paused"|"done", "paused_reason": "user"|"recommendations"|null, "sim_time": "ISO", "slot": 0, "minute": 0, "speed": 60, "focus_policy", "kpis": {PolicyName: Kpis}, "window": {"start_minute": 0, "end_minute": 1440}}`
+- `minute`: minutes since local midnight of the run day (0–1439; up to 1379 / 1499 on DST days), the minute of the last tick (or the start / seek target before one). `slot` = `minute // 5`. `sim_time` is that minute's start.
+- `window`: the playable minutes `[start_minute, end_minute)`. A collected day: its collected window (e.g. 2026-11-08 → 35..685). Other replays and live runs: `0`..minutes in the day. The last tick is `end_minute − 1`, then the run is `done`.
 
 In RECOMMEND mode only `focus_policy`'s commands become recommendations; other policies act. A replay pauses itself with `paused_reason: "recommendations"` when new pending recommendations appear; `play` resumes it. Recommendations expire after `recommendation_ttl_slots` of sim time. Approved commands apply at the start of the next slot (decision 0025).
 
@@ -279,11 +283,14 @@ Response 200: `StationRunSummary`. Errors: 404 (run or location not found).
 
 ### POST /api/runs/{run_id}/control
 Request: `{"action": "play"|"pause"|"speed"|"seek"|"focus", "value": number|string|null}`. Response 200: same body as GET run.
+- `speed`: `1`, `15`, `60` or `300` (simulated seconds per wall second); anything else is 400.
+- `seek`: a **minute** of the run day (integer), clamped to `[start_minute, end_minute − 1]`; a non-integer is 400. The engine replays whole slots up to the target, then the remaining minutes; nothing is sent until the new `snapshot`.
+- In live runs `speed` and `seek` return 400.
 
 ### WS /ws/runs/{run_id}
-The server sends one message per engine step:
+The server sends one message per simulated minute (decision 0091):
 ```json
-{"type": "tick", "run_id": "uuid", "sim_time": "2024-03-12T03:05:00+02:00", "slot": 37,
+{"type": "tick", "run_id": "uuid", "sim_time": "2024-03-12T03:07:00+02:00", "slot": 37, "minute": 187,
  "kpis": {"always_on": {}, "naive_quiet_hours": {}, "cost_rule": {}, "rl_ppo": {}},
  "focus_policy": "rl_ppo",
  "changes": [{"cp_id": "L00012-1", "state": "STANDBY"}],
@@ -291,8 +298,9 @@ The server sends one message per engine step:
             {"type": "departure", "cp_id": "L00012-1", "ts": "ISO"}],
  "recommendations": [/* Recommendation, only new or changed ones. In ACT mode the focus policy's applied commands also appear here with status "applied", for the activity log. */]}
 ```
+A tick covers `[minute, minute + 1)`: `sim_time` is that minute's start, `slot` = `minute // 5`, `changes` and `events` are the ones inside that minute, and `kpis` are totals up to its end. Commands (applied or pending recommendations) appear only on a slot's first minute; operator decisions show up on the next tick. In fixture mode a slot's recorded changes all land on its first minute.
 The first message after connecting is `{"type": "snapshot", ...}`: the same as a tick, but `changes` lists every CP. The last message is `{"type": "done", "kpis": {...}}`.
-Whenever the run's status, speed or focus changes, the server sends `{"type": "status", "run_id", "status", "paused_reason", "speed", "focus_policy", "slot", "sim_time"}`. After a `seek` or `focus`, it sends a new `snapshot`.
+Whenever the run's status, speed or focus changes, the server sends `{"type": "status", "run_id", "status", "paused_reason", "speed", "focus_policy", "slot", "minute", "sim_time"}`. After a `seek` or `focus`, it sends a new `snapshot`.
 
 ### GET /api/runs/{run_id}/cp/{cp_id}/timeline
 Response 200:
