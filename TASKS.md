@@ -8,6 +8,8 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
+  - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
 - [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
 - [T35-merge] note: vlad-claude (this session) merged T35's unpushed branch with main (F2 agent, live mode) on branch vlad-claude/T35-merge, at the user's request; the T35 session should pull main afterwards.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
