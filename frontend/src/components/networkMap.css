@@ -67,11 +67,11 @@
 .nm-tick-what { color: var(--nm-muted); white-space: nowrap; }
 .nm-tick-w { min-width: 46px; text-align: right; color: var(--nm-ink); }
 
-.nm .nm-legend { left: 12px; bottom: 12px; width: min(640px, calc(100% - 330px)); display: grid; grid-template-columns: minmax(170px, .85fr) minmax(250px, 1.15fr); align-items: center; gap: 13px 20px; padding: 14px 16px; }
+.nm .nm-legend { left: 12px; bottom: 12px; z-index: 7; width: min(560px, calc(100% - 330px)); display: grid; grid-template-columns: minmax(120px, .8fr) minmax(190px, 1.2fr); align-items: center; gap: 10px 14px; padding: 10px 12px; }
 .nm-legend-group { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 .nm-legend-group > strong { color: var(--nm-ink); font-size: 12px; font-weight: 600; }
-.nm-gradient { display: flex; align-items: center; gap: 8px; color: var(--nm-muted); font-size: 11px; white-space: nowrap; }
-.nm-gradient i { flex: 1; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #ef4444, #16a34a); }
+.nm-gradient { width: 100%; display: flex; align-items: center; gap: 8px; color: var(--nm-muted); font-size: 11px; white-space: nowrap; }
+.nm-gradient i { display: block; flex: 1; min-width: 44px; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #ef4444, #16a34a); }
 .nm-legend-asleep small { color: var(--nm-muted); font-size: 10px; line-height: 1.35; }
 .nm-legend-statuses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
 .nm-legend-statuses span { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11px; color: var(--nm-ink); white-space: nowrap; }
@@ -88,10 +88,14 @@
   .nm-card strong { font-size: 18px; }
   .nm-counts, .nm-ticker { display: none; }
   .nm .nm-controls { top: auto; bottom: 12px; }
-  .nm .nm-legend { left: 10px; right: 60px; bottom: 10px; width: auto; grid-template-columns: 1fr; gap: 10px; padding: 10px 11px; }
-  .nm-legend-statuses { gap: 6px 8px; }
+  .nm .nm-legend { left: 10px; right: 60px; bottom: 10px; width: auto; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 8px 12px; padding: 8px 10px; }
+  .nm-legend-statuses { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 7px; }
   .nm-legend-statuses span { gap: 5px; font-size: 10px; }
   .nm-legend-statuses i { width: 9px; height: 9px; }
-  .nm-legend-group > strong { font-size: 11px; }
+  .nm-legend-group > strong { font-size: 10px; }
   .nm-legend-asleep small { font-size: 9px; }
+}
+@media (max-width: 480px) {
+  .nm .nm-legend { grid-template-columns: 1fr; }
+  .nm-legend-statuses { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

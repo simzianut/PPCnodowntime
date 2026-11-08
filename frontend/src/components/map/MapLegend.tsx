@@ -7,7 +7,7 @@ export function MapLegend() {
       <section className="nm-legend-group nm-legend-asleep" aria-label="Cluster color meaning">
         <strong>Cluster color · Average asleep share</strong>
         <div className="nm-gradient" aria-label="Low to high average asleep share"><span>Low</span><i /><span>High</span></div>
-        <small>Charging and offline connectors are excluded. With no eligible connectors, patches use yellow when any are charging; otherwise grey.</small>
+        <small>Mean asleep share; charging and offline connectors are excluded.</small>
       </section>
       <section className="nm-legend-group nm-legend-status" aria-label="Station status colors">
         <strong>Station pin · Dominant connector status</strong>
