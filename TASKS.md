@@ -10,6 +10,7 @@ Add notes as indented sub-bullets.
 > **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. **Don't rename the compose services** (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector`) or hardcode backend URLs in the frontend: use `API_BASE` with `/api` and `/ws`. Rules: AGENTS.md "Running the app", CONTRACTS services. Details: README, decision 0077.
 
 ## In progress
+- [T46] E2E: merge T44 into main, real model data (F2 forecasts + private sessions/signals) in the Docker app, frontend on the real API | owner: tudor-claude | branch: tudor-claude/T46-e2e | depends: T44, T36, T35
 - [T44] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic/temp_bias/auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T44-gru-improve | depends: T26, T36
   - Renumbered from T41 (tudor-claude also used T41 for the demo sim); decision 0079.
   - Note: T38 (vlad-claude) also edits model/; T44 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
