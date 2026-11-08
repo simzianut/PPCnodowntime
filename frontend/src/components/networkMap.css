@@ -67,9 +67,15 @@
 .nm-tick-what { color: var(--nm-muted); white-space: nowrap; }
 .nm-tick-w { min-width: 46px; text-align: right; color: var(--nm-ink); }
 
-.nm-legend { left: 12px; bottom: 12px; display: flex; gap: 14px; padding: 6px 10px; }
-.nm-legend span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--nm-ink); white-space: nowrap; }
-.nm-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.nm-legend { left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; font-size: 13px; color: var(--nm-ink); }
+.nm-legend ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.nm-legend li { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.nm-legend li i { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #0f172a47; }
+.nm-legend b { font-weight: 600; }
+.nm-legend li span, .nm-legend-scale span { color: var(--nm-muted); }
+.nm-legend-scale { display: grid; gap: 5px; padding-top: 10px; border-top: 1px solid var(--line); }
+.nm-legend-scale i { height: 10px; border-radius: 999px; background: linear-gradient(90deg, #EF4444, #16A34A); }
+.nm-legend-scale > span { display: flex; justify-content: space-between; font-size: 12px; }
 
 .nm .nm-controls { left: auto; right: 12px; top: 12px; }
 
@@ -82,5 +88,7 @@
   .nm-card strong { font-size: 18px; }
   .nm-counts, .nm-ticker { display: none; }
   .nm .nm-controls { top: auto; bottom: 12px; }
-  .nm-legend { gap: 10px; }
+  .nm-legend { gap: 8px; padding: 8px 10px; font-size: 12px; }
+  .nm-legend li span { display: none; }
+  .nm-legend li i { width: 12px; height: 12px; }
 }

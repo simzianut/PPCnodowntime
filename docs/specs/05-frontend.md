@@ -36,7 +36,7 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 
 ### 3.1 Romania map with charge-point states
 - Each **location** is one flat dot on a quiet base: no state rings, no cluster numbers ([decision 0064](../decisions/0064-map-live-actions-with-swipe.md)).
-- Map colours and legend (4 only): idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey.
+- Map colours and legend (4 only): idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey. The map key shows each with a large swatch and a short hint, plus a red → green bar ("all idle" → "all asleep") for groups of stations ([decision 0074](../decisions/0074-bigger-legend-trim-station-detail.md)).
 - A selected station is drawn larger and centred in the right ("with agent") half, so the divider handle never covers it. The map remains interactive while the sidebar changes between overview and station details.
 - Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within 44 px on screen at country zoom, shrinking to 14 px from about 8× zoom so stations separate as you zoom in ([decision 0064](../decisions/0064-map-live-actions-with-swipe.md)). Clicking a cluster zooms in and centres it in the with-agent half. Cluster colour = mean over member stations of asleep / (asleep + idle) CPs, interpolated red → green in RGB (never via yellow); charging and offline CPs are ignored, and an all-charging cluster is yellow. Clicking it zooms in. Locations at the same spot (within 12 px at max zoom) fan out into a tight ring on a faint disc, without legs.
 - **Live actions:** a ripple + label per transition (green "−W" on sleep, red on wake, yellow on charge start), an action ticker showing the latest 3 actions, expandable ("Show all N") to a scrollable list of every action since the run started or the last seek back ([decision 0068](../decisions/0068-deslop-control-room-style.md)), and sleep/wake counters. Transitions come from diffing `cpState` between ticks; a seek or policy switch (>50% of CPs changing) resets with no animation.
@@ -65,7 +65,7 @@ Opens when a location is clicked (`GET /api/runs/{run_id}/cp/{cp_id}/timeline` f
 - Per CP: power class, connectors, and a **state timeline bar** for the day.
 - A chart of the forecast `p30` as a line against actual arrivals as ticks, with route-intent markers.
 - The list of the agent's commands for this location, each with its reason and status.
-- Run summary metrics from `GET /api/runs/{run_id}/locations/{location_id}/summary`: current metered kW, expected wait in minutes, and a unitless anomaly score. Null or unavailable fields display as “—”, waits 1 dp, anomaly 2 dp; rated `max_kw` is never used as current output.
+- No run summary metrics (current output, expected wait, anomaly score) are shown ([decision 0074](../decisions/0074-bigger-legend-trim-station-detail.md)).
 
 ## 4. State management
 - One WebSocket per run, with auto-reconnect. On reconnect, call `GET /api/runs/{id}` to resync.
