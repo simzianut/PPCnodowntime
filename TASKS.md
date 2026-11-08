@@ -8,7 +8,6 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
-- [T41] M5 demo (mock) mode runs a real little simulation: agent sleeps/wakes CPs by time-of-day demand, charging sessions, KPIs from the states, seek works | owner: tudor-claude | branch: tudor-claude/T41-demo-sim | depends: T40
 - [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
   - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
 - [T38] Remove LightGBM: drop the dependency, F1 trainer + legacy model/forecaster.py/train.py + artifacts, F1 fallbacks in evaluator and live mode; app imports stay torch/GRU only | owner: vlad-claude | branch: vlad-claude/T35-merge | depends: T36
@@ -34,6 +33,8 @@ Add notes as indented sub-bullets.
 ## Blocked
 
 ## Done
+- [T41] M5 demo (mock) mode runs a real little simulation: agent sleeps/wakes CPs by time-of-day demand, charging sessions, KPIs from the states, seek works | owner: tudor-claude | branch: tudor-claude/T41-demo-sim | depends: T40
+  - Done: demoSim.ts simulates a day with a rule-based stand-in agent; ticker, map and KPIs move together; seek works (decision 0075). Test: no backend, open app, 288x.
 - [T40] M5 swipe slider snaps flush to the map edge; handle shows only the inward arrow there | owner: tudor-claude | branch: tudor-claude/T40-slider-edge | depends: T39
   - Done: divider snaps flush to either edge, hidden side's line/card vanish, handle shows one inward arrow. Test: drag it all the way left/right.
 - [T39] M5 bigger, clearer map legend (3 colours + cluster scale); drop current output / expected wait / anomaly score from station detail | owner: tudor-claude | branch: tudor-claude/T39-legend-station-detail | depends: T34
