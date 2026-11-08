@@ -10,6 +10,7 @@ h1, h2, h3, p, dl, dd { margin: 0; }
 .conn::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--quiet); vertical-align: 1px; }
 .conn-lost::before { background: #dc2626; }
 .conn-demo::before { background: #eab308; }
+.conn-offline::before { background: #dc2626; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 20px; }
 .autonomy { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .seg { display: flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }

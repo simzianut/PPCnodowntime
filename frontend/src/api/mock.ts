@@ -1,7 +1,7 @@
 import Papa from 'papaparse'
 import stationCsv from '../../../data/seed/stations_open.csv?raw'
 import { simulateDay, SLOTS, type DemoDay } from './demoSim'
-import { POLICIES, type Autonomy, type CpTimeline, type EvalData, type EvalResult, type Kpis, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from './types'
+import { FULL_DAY, POLICIES, type Autonomy, type CpTimeline, type EvalData, type EvalResult, type Kpis, type Location, type PolicyName, type Recommendation, type Run, type RunRequest, type State, type Tick } from './types'
 
 interface StationRow {
   name: string
@@ -119,6 +119,10 @@ export function resolveDemoRecommendation(id: number, decision: 'approve' | 'rej
   return item
 }
 
+export const DAY_MIN = 1440
+const pad = (n: number) => String(n).padStart(2, '0')
+export const demoSimTime = (date: string, minute: number) => `${date}T${pad(Math.floor(minute / 60))}:${pad(minute % 60)}:00+02:00`
+
 export function createDemoRun(request: RunRequest): Run {
   pendingRecommendations = []
   const run: Run = {
@@ -126,8 +130,10 @@ export function createDemoRun(request: RunRequest): Run {
     mode: request.mode,
     status: 'running',
     paused_reason: null,
-    sim_time: `${request.date ?? '2024-03-12'}T00:00:00+02:00`,
+    sim_time: demoSimTime(request.date ?? '2024-03-12', 0),
     slot: 0,
+    minute: 0,
+    window: FULL_DAY,
     speed: request.speed,
     focus_policy: request.focus_policy,
     kpis: demoKpisAt(0),
@@ -135,22 +141,25 @@ export function createDemoRun(request: RunRequest): Run {
   return run
 }
 
+/** One simulated minute; CP states and recommendations only change at 5-min slot boundaries. */
 export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; tick: Tick } {
   if (run.status !== 'running') {
-    return { run, tick: { type: 'status', run_id: run.run_id, status: run.status, paused_reason: run.paused_reason, sim_time: run.sim_time, slot: run.slot, speed: run.speed, focus_policy: run.focus_policy } }
+    return { run, tick: { type: 'status', run_id: run.run_id, status: run.status, paused_reason: run.paused_reason, sim_time: run.sim_time, slot: run.slot, minute: run.minute, speed: run.speed, focus_policy: run.focus_policy } }
   }
-  const slot = run.mode === 'live' ? run.slot + 1 : Math.min(288, run.slot + 1)
-  const clockSlot = run.mode === 'live' ? slot % 288 : slot
-  const seed = slot * 19
+  const live = run.mode === 'live'
+  const minute = live ? run.minute + 1 : Math.min(DAY_MIN, run.minute + 1)
+  const slot = live ? run.slot + (minute % 5 === 0 ? 1 : 0) : Math.floor(minute / 5)
+  const newSlot = slot !== run.slot
+  const clockMinute = live ? minute % DAY_MIN : minute
   const candidates = demoLocations.flatMap((location) => location.charge_points)
   const { cps, states } = day()
   const before = states[dayIndex(run.slot)]
   const after = states[dayIndex(slot)]
-  const changes: Tick['changes'] = cps.flatMap((cp, i) => before[i] === after[i] ? [] : [{ cp_id: cp.cp_id, state: after[i] }])
-  const sim_time = `${run.sim_time.slice(0, 10)}T${String(Math.floor(clockSlot * 5 / 60)).padStart(2, '0')}:${String(clockSlot * 5 % 60).padStart(2, '0')}:00+02:00`
+  const changes: Tick['changes'] = newSlot ? cps.flatMap((cp, i) => before[i] === after[i] ? [] : [{ cp_id: cp.cp_id, state: after[i] }]) : []
+  const sim_time = demoSimTime(run.sim_time.slice(0, 10), clockMinute)
   let newRecommendations: Recommendation[] = []
-  if (autonomyMode === 'RECOMMEND' && slot % 34 === 0) {
-    const changedCp = candidates[(seed + 12) % candidates.length]
+  if (newSlot && autonomyMode === 'RECOMMEND' && slot % 34 === 0) {
+    const changedCp = candidates[(slot * 19 + 12) % candidates.length]
     const recommendation: Recommendation = {
       id: nextRecommendationId++,
       ts: sim_time,
@@ -165,17 +174,19 @@ export function advanceDemoRun(run: Run, autonomyMode: Autonomy): { run: Run; ti
     pendingRecommendations = [...pendingRecommendations, recommendation]
     newRecommendations = [recommendation]
   }
+  const done = !live && minute >= DAY_MIN
   const nextRun: Run = {
     ...run,
-    status: run.mode === 'live' ? 'running' : newRecommendations.length ? 'paused' : slot >= 288 ? 'done' : run.status,
+    status: live ? 'running' : newRecommendations.length ? 'paused' : done ? 'done' : run.status,
     paused_reason: newRecommendations.length ? 'recommendations' : run.paused_reason,
     slot,
+    minute: live ? minute % DAY_MIN : minute,
     sim_time,
     kpis: demoKpisAt(slot),
   }
   return {
     run: nextRun,
-    tick: { type: run.mode !== 'live' && slot === 288 ? 'done' : 'tick', run_id: run.run_id, sim_time, slot, kpis: nextRun.kpis, focus_policy: run.focus_policy, status: nextRun.status, paused_reason: nextRun.paused_reason, changes, recommendations: newRecommendations },
+    tick: { type: done ? 'done' : 'tick', run_id: run.run_id, sim_time, slot, minute: nextRun.minute, kpis: nextRun.kpis, focus_policy: run.focus_policy, status: nextRun.status, paused_reason: nextRun.paused_reason, changes, recommendations: newRecommendations },
   }
 }
 

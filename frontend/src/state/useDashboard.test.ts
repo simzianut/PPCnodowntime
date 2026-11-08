@@ -12,7 +12,7 @@ vi.mock('../api/client', async (importActual) => ({
 }))
 
 const mocked = vi.mocked(api)
-const run: Run = { run_id: 'r1', mode: 'replay', status: 'running', paused_reason: null, sim_time: '2024-03-12T00:00:00+02:00', slot: 0, speed: 60, focus_policy: 'rl_ppo', kpis: {} }
+const run: Run = { run_id: 'r1', mode: 'replay', status: 'running', paused_reason: null, sim_time: '2024-03-12T00:00:00+02:00', slot: 0, minute: 0, window: { start_minute: 0, end_minute: 1440 }, speed: 60, focus_policy: 'rl_ppo', kpis: {} }
 
 class FakeSocket { onopen = null; onmessage = null; onerror = null; onclose = null; close() {} }
 
@@ -45,5 +45,14 @@ describe('useDashboard API mode', () => {
     expect(result.current.connectionMode).toBe('api')
     expect(result.current.run?.run_id).toBe('r1')
     expect(result.current.error).toBe('API 400: live mode unavailable')
+  })
+  it('shows a backend-unreachable state instead of demo data when the API is down', async () => {
+    mocked.stations.mockRejectedValue(new TypeError('Failed to fetch'))
+    mocked.evaluation.mockRejectedValue(new TypeError('Failed to fetch'))
+    const { result } = renderHook(() => useDashboard())
+    await waitFor(() => expect(result.current.connectionMode).toBe('offline'))
+    expect(result.current.error).toMatch(/Backend unreachable/)
+    expect(result.current.locations).toEqual([])
+    expect(result.current.run).toBeNull()
   })
 })

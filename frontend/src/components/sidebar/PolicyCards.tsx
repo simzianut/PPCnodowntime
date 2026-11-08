@@ -1,6 +1,6 @@
 import type { Kpis } from '../../api/types'
 import type { useDashboard } from '../../state/useDashboard'
-import { format, formatClock, formatDate } from './shared'
+import { format, formatClock, formatDate, minuteClock } from './shared'
 import './policyCards.css'
 
 type Row = { label: string; cell: (kpi: Kpis, baseline: boolean) => string }
@@ -16,8 +16,10 @@ export function PolicyCards({ dashboard }: { dashboard: ReturnType<typeof useDas
   const { run } = dashboard
   const base = run?.kpis.always_on
   const agent = run?.kpis.rl_ppo
+  const from = minuteClock(run?.window?.start_minute ?? 0)
+  const to = run ? formatClock(run.sim_time) : from
   return <section className="panel-section">
-    <div className="section-head"><h2>Totals so far</h2><span>{run ? `${formatDate(run.sim_time.slice(0, 10))}${formatClock(run.sim_time) === '00:00' ? '' : `, 00:00–${formatClock(run.sim_time)}`}` : ''}</span></div>
+    <div className="section-head"><h2>Totals so far</h2><span>{run ? `${formatDate(run.sim_time.slice(0, 10))}${to === from ? '' : `, ${from}–${to}`}` : ''}</span></div>
     <table className="kpi-table">
       <thead><tr><th scope="col"><span className="sr-only">Metric</span></th><th scope="col">Without agent</th><th scope="col" className="is-agent">With RL agent</th></tr></thead>
       <tbody>{ROWS.map((row) => <tr key={row.label}>

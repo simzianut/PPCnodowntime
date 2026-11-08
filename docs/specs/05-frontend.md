@@ -7,6 +7,7 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 - Map: an inline SVG base map, `frontend/public/map/romania.svg` (decision 0045), with its own pan, zoom and clustering code in `frontend/src/map/geo.ts` ([decision 0046](../decisions/0046-interactive-svg-map.md)). No tile server, no map library.
 - Recharts for the charts. Plain CSS variables for the white-only PPC theme: Inter (Google Fonts), neutral greys, one accent blue `#0B5CAD`, hairlines instead of cards, 3 px radius, no shadows, no decorative motion ([decision 0068](../decisions/0068-deslop-control-room-style.md)).
 - API base from `VITE_API_URL` (default `http://localhost:8000`).
+- `VITE_DEMO=1` (build time) or `?demo` in the URL runs the seed-data demo without a backend. Without it the app never shows demo data ([decision 0092](../decisions/0092-frontend-minute-clock-no-silent-demo.md)).
 - Develop against `API_FIXTURES=1` on the backend, or against an MSW mock built from `fixtures/`.
 
 ## 2. Layout
@@ -25,9 +26,9 @@ Owner folder: `frontend/`. A single-page React app that shows the agent running 
 │                                                               │ Agent mode Act|Review│
 │                                                               │ + recommendations    │
 ├───────────────────────────────────────────────────────────────┴──────────────────────┤
-│ Replay bar: clock · ⟲ · −1h ▶/❚❚ +1h · scrubber w/ hour ticks · speed chips · date · Live │
+│ Replay bar: clock · ⟲ · −1h ▶/❚❚ +1h · scrubber over run window · speed chips · date · Live │
 └───────────────────────────────────────────────────────────────────────────────────────┘
-Header: PPC logo and "PPC | Charging network" left, location and charge-point counts, SmartHack logo in grey right. A connection status appears only when something is wrong: "Connecting…", "Not connected · showing demo data" or "Not connected" ([decision 0068](../decisions/0068-deslop-control-room-style.md)). Demo data is a small deterministic day simulation with a rule-based stand-in agent ([decision 0075](../decisions/0075-demo-mode-day-simulation.md)). A 32% left sidebar contains the KPI table, the energy chart, recommendations, agent mode and replay controls; the 68% right side is the interactive map. Selecting a station replaces the overview in the sidebar, keeps replay controls visible, and centers the map on that station.
+Header: PPC logo and "PPC | Charging network" left, location and charge-point counts, SmartHack logo in grey right. A connection status appears only when something is wrong: "Connecting…", "Backend unreachable", "Not connected", or "Demo mode · simulated seed data" ([decision 0068](../decisions/0068-deslop-control-room-style.md)). If the API can't be reached the app shows no data, explains why in the error banner and retries every 5 s. It never falls back to demo data on its own ([decision 0092](../decisions/0092-frontend-minute-clock-no-silent-demo.md)). The demo, only on explicit opt-in (§1), is a small deterministic day simulation with a rule-based stand-in agent ([decision 0075](../decisions/0075-demo-mode-day-simulation.md)). A 32% left sidebar contains the KPI table, the energy chart, recommendations, agent mode and replay controls; the 68% right side is the interactive map. Selecting a station replaces the overview in the sidebar, keeps replay controls visible, and centers the map on that station.
 ```
 
 On phone width the panels stack under the map, and the replay bar stays pinned to the bottom.
@@ -39,10 +40,10 @@ On phone width the panels stack under the map, and the replay bar stays pinned t
 - Map colours and legend (4 only): idle = red (awake, not charging, incl. WAKING), asleep = green (STANDBY, DEEP_SLEEP), charging = yellow, offline = grey. The map key shows each with a large swatch and a short hint, plus a red → green bar ("all idle" → "all asleep") for groups of stations ([decision 0074](../decisions/0074-bigger-legend-trim-station-detail.md)).
 - A selected station is drawn larger and centred in the right ("with agent") half, so the divider handle never covers it. The map remains interactive while the sidebar changes between overview and station details.
 - Pan by drag, zoom by wheel, pinch, double-click, the +/− buttons or the keyboard. Nearby locations cluster within 44 px on screen at country zoom, shrinking to 14 px from about 8× zoom so stations separate as you zoom in ([decision 0064](../decisions/0064-map-live-actions-with-swipe.md)). Clicking a cluster zooms in and centres it in the with-agent half. Cluster colour = mean over member stations of asleep / (asleep + idle) CPs, interpolated red → green in RGB (never via yellow); charging and offline CPs are ignored, and an all-charging cluster is yellow. Clicking it zooms in. Locations at the same spot (within 12 px at max zoom) fan out into a tight ring on a faint disc, without legs.
-- **Live actions:** a ripple + label per transition (green "−W" on sleep, red on wake, yellow on charge start), an action ticker showing the latest 3 actions, expandable ("Show all N") to a scrollable list of every action since the run started or the last seek back ([decision 0068](../decisions/0068-deslop-control-room-style.md)), and sleep/wake counters. Transitions come from diffing `cpState` between ticks; a tick's changes are staggered across the slot so they appear live, each with its own minute, and the replay clock ticks minute by minute with them ([decision 0076](../decisions/0076-stagger-actions-within-slot.md), [0078](../decisions/0078-replay-clock-ticks-per-minute.md)); a seek or policy switch (>50% of CPs changing) resets with no animation.
+- **Live actions:** a ripple + label per transition (green "−W" on sleep, red on wake, yellow on charge start), an action ticker showing the latest 3 actions, expandable ("Show all N") to a scrollable list of every action since the run started or the last seek back ([decision 0068](../decisions/0068-deslop-control-room-style.md)), and sleep/wake counters. Transitions come from diffing `cpState` between ticks. The server sends one tick per simulated minute and the agent decides at 5-minute slot boundaries, so changes are applied as they arrive, stamped with the tick's `sim_time`, with no client-side staggering ([decision 0092](../decisions/0092-frontend-minute-clock-no-silent-demo.md), superseding 0076/0078). A seek or policy switch (>50% of CPs changing) resets with no animation.
 - **Swipe slider:** left half is the always-on counterfactual (every non-charging CP idle, kW burned), right half the shown policy (kW burned, % less idle power). The divider is draggable and keyboard-movable and does not pan the map. Within 28 px of either edge it snaps flush to that edge (Home/End too): the line and the far-side card disappear and the handle becomes a half-pill tab showing only the inward arrow; a selected station is then centred in the whole map. Watts come from `frontend/src/map/energy.ts` ([decision 0067](../decisions/0067-cluster-energy-saved-blobs.md)). `NetworkMap` takes `run` for this.
 - The station marker icon is `#station-icon` in the SVG file. Lines drawn in its `#lines` layer show up in the app.
-- Tick updates arrive as diffs. Apply them to an in-memory `cpState` map. Only the marker layer re-renders, never the base map. Target: 60 fps panning while a replay runs at 288×.
+- Tick updates arrive as diffs. Apply them to an in-memory `cpState` map. Only the marker layer re-renders, never the base map. Target: 60 fps panning while a replay runs at 300×.
 - Locations with `confidence = low` get a dashed outline.
 
 ### 3.2 Policy comparison KPIs
@@ -52,7 +53,7 @@ Two policies only: Always on (baseline) and RL agent (`rl_ppo`). Runs request ju
 - No energy-vs-wait trade-off curve and no map policy selector: `focus_policy` is always `rl_ppo`.
 
 ### 3.3 Replay controls + autonomy switch
-- Replay bar ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md)): big sim clock, big play/pause, restart, ±1 h skip, a scrubber with hour ticks that sends `seek`, speed chips, and a compact date pill limited to the test days from `/api/eval`. Keyboard: Space plays/pauses, ←/→ skip.
+- Replay bar ([decision 0065](../decisions/0065-sidebar-two-policies-separate-wait.md), [0092](../decisions/0092-frontend-minute-clock-no-silent-demo.md)): big sim clock (`HH:MM` from the run's `minute`), big play/pause, restart (to the window start), ±1 h skip (±60 minutes, clamped to the window), a scrubber in minutes over `run.window` with hour ticks and both edges labelled (e.g. 00:35 … 11:25 for the collected day) that sends `seek` in minutes, speed chips 1× / 15× / 60× / 300× real time (default 60×), and a compact date pill limited to the test days from `/api/eval` (collected days first). Keyboard: Space plays/pauses, ←/→ skip.
 - Live mode toggle (low-key, in the bar): starts a `mode: live` run. The scrubber is hidden in live mode.
 - **Autonomy switch** (`PUT /api/settings/autonomy`):
   - Shown as an "Agent mode: Act | Review" segmented control.
@@ -82,6 +83,6 @@ Opens when a location is clicked (`GET /api/runs/{run_id}/cp/{cp_id}/timeline` f
 
 ## 6. Acceptance criteria
 - Works end to end with `API_FIXTURES=1` before the engine exists.
-- A replay at 288× of a full day on all CPs stays smooth and the numbers match `GET /api/runs/{id}` at the end.
+- A replay at 300× of the full run window on all CPs stays smooth and the numbers match `GET /api/runs/{id}` at the end.
 - Approving a recommendation changes that CP's colour on the next tick.
 - Every payload type is generated from or checked against CONTRACTS.md (hand-written TS types in `frontend/src/api/types.ts`, kept in sync).
