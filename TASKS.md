@@ -10,6 +10,8 @@ Add notes as indented sub-bullets.
 > **Team notice (2026-11-08, vlad):** run the app with Docker from now on: `cp .env.example .env` (set `DATA_HOST_DIR`), `docker compose up -d --build`, open http://localhost:8080. Docker needs ≥ 4 GB memory. **Don't rename the compose services** (`ppc-db`, `ppc-migrate`, `ppc-seed`, `ppc-api`, `ppc-web`, `ppc-collector`) or hardcode backend URLs in the frontend: use `API_BASE` with `/api` and `/ws`. Rules: AGENTS.md "Running the app", CONTRACTS services. Details: README, decision 0077.
 
 ## In progress
+- [T45] Bug: live demo clock: with LIVE_CLOCK_START/SPEED set, new live runs get 400 "live feed is stale" a few minutes after the API starts (newest status 23:30 vs a clock past midnight), although each run should start its clock at LIVE_CLOCK_START | owner: tudor-claude | branch: tudor-claude/T45-live-clock | depends: T37
+  - Repro: Docker stack with LIVE_CLOCK_START=2026-11-07T19:30:00+02:00, LIVE_CLOCK_SPEED=30; POST /api/runs mode=live right after start → 201, ~8 min later → 400. Look at api/live_mode.py clock_from_env / create_live_run and the reader's last_ts. Real-time live also needs ppc-collector running (decision 0003).
 - [T46] E2E: merge T44 into main, real model data (F2 forecasts + private sessions/signals) in the Docker app, frontend on the real API | owner: tudor-claude | branch: tudor-claude/T46-e2e | depends: T44, T36, T35
 - [T44] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic/temp_bias/auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T44-gru-improve | depends: T26, T36
   - Renumbered from T41 (tudor-claude also used T41 for the demo sim); decision 0079.
@@ -25,8 +27,6 @@ Add notes as indented sub-bullets.
 
 
 ## To do
-- [T45] Bug: live demo clock: with LIVE_CLOCK_START/SPEED set, new live runs get 400 "live feed is stale" a few minutes after the API starts (newest status 23:30 vs a clock past midnight), although each run should start its clock at LIVE_CLOCK_START | owner: - | branch: - | depends: T37
-  - Repro: Docker stack with LIVE_CLOCK_START=2026-11-07T19:30:00+02:00, LIVE_CLOCK_SPEED=30; POST /api/runs mode=live right after start → 201, ~8 min later → 400. Look at api/live_mode.py clock_from_env / create_live_run and the reader's last_ts. Real-time live also needs ppc-collector running (decision 0003).
 
 - [T12] M4 FastAPI (fixture mode is T19; live mode moved to T37): REST + WS replay runner, recommendations, autonomy, live mode (spec 04 §6) | owner: - | branch: - | depends: T5, T10, T19
   - Add `GET /api/runs/{run_id}/locations/{location_id}/summary` per CONTRACTS v0.2 and a fixture response; return null until metered power, wait prediction, and anomaly producers exist.
