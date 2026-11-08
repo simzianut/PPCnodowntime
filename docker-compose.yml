@@ -5,13 +5,20 @@ x-api: &api
     context: .
     dockerfile: docker/api.Dockerfile
   image: ppc-api:latest
+  # Caps for a shared production host (decision 0087). API_CPUS must be a whole number.
+  cpus: ${API_CPUS:-4}
+  mem_limit: ${API_MEM_LIMIT:-8g}
   environment: &api-env
     DATABASE_URL: postgresql+psycopg://ppc:${POSTGRES_PASSWORD:-ppc}@ppc-db:5432/ppc
     DATA_DIR: /app/data
+    OMP_NUM_THREADS: ${API_CPUS:-4}
+    MKL_NUM_THREADS: ${API_CPUS:-4}
 
 services:
   ppc-db:
     image: postgis/postgis:16-3.4
+    cpus: ${DB_CPUS:-1}
+    mem_limit: ${DB_MEM_LIMIT:-1g}
     environment:
       POSTGRES_USER: ppc
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ppc}
@@ -59,6 +66,9 @@ services:
     environment:
       <<: *api-env
       API_FIXTURES: ${API_FIXTURES:-0}
+      # Access key (decision 0087): set PPC_ACCESS_KEY in .env, else a key is generated and logged.
+      PPC_AUTH: ${PPC_AUTH:-on}
+      PPC_ACCESS_KEY: ${PPC_ACCESS_KEY:-}
       RL_AGENT: ${RL_AGENT:-auto}
       # live mode (decisions 0070, 0072); empty LIVE_CLOCK_START = real time
       LIVE_CLOCK_START: ${LIVE_CLOCK_START:-}
@@ -86,6 +96,8 @@ services:
       context: .
       dockerfile: docker/web.Dockerfile
     image: ppc-web:latest
+    cpus: ${WEB_CPUS:-0.5}
+    mem_limit: ${WEB_MEM_LIMIT:-256m}
     ports:
       - "${HTTP_PORT:-8080}:80"
     depends_on:
