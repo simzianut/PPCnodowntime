@@ -86,3 +86,4 @@ Append-only. Newest at the bottom. Format: `- NNNN | YYYY-MM-DD | who | title`.
 - [0076](decisions/0076-stagger-actions-within-slot.md) | 2026-11-08 | tudor + tudor-claude | Frontend staggers each tick's CP changes across the slot (stable per-CP offsets) so agent actions appear live with their own minute; cosmetic timing
 - [0077](decisions/0077-docker-is-the-standard.md) | 2026-11-08 | vlad + vlad-claude | Docker is the standard way to run, demo and check the app (http://localhost:8080); native make api/web only for debugging
 - [0078](decisions/0078-replay-clock-ticks-per-minute.md) | 2026-11-08 | tudor + tudor-claude | Replay clock ticks minute by minute in step with the staggered agent actions (supersedes part of 0076)
+- [0081](decisions/0081-live-clock-per-run.md) | 2026-11-08 | tudor + tudor-claude | Live demo clock starts at LIVE_CLOCK_START for each new run; clocks describe themselves in the stale-feed 400 and run info so a missing env var is obvious

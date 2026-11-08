@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import time
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
+from api import live_mode
 from api.engine_mode import EngineManager
 from api.main import create_app
 from api.models import Recommendation, RunStatus
@@ -147,3 +149,26 @@ def test_live_controls_and_errors(live, tmp_path):
     mgr.live_dir = tmp_path / "nothing"
     r = c.post("/api/runs", json=body())
     assert r.status_code == 400 and "no live statuses" in r.json()["detail"]
+
+
+def test_env_clock_starts_each_live_run_at_start(live, monkeypatch):
+    c, mgr, _, _ = live
+    mono = [1000.0]  # only live_mode's monotonic is fake; asyncio keeps the real one
+    fake = SimpleNamespace(time=time.time, monotonic=lambda: mono[0])
+    monkeypatch.setattr(live_mode, "time", fake)
+    monkeypatch.setenv("LIVE_CLOCK_START", "2026-11-08T10:02:30")
+    monkeypatch.setenv("LIVE_CLOCK_SPEED", "30")
+    mgr.live_clock = EngineManager().live_clock  # the real default, not the fixture's fake
+    r1 = c.post("/api/runs", json=body())
+    assert r1.status_code == 201, r1.text
+    c.post(f"/api/runs/{r1.json()['run_id']}/control", json={"action": "pause"})
+    mono[0] += 8 * 60  # run 1's clock is now 4 h past START; run 2 must still start at START
+    r2 = c.post("/api/runs", json=body())
+    assert r2.status_code == 201, r2.text
+    run2 = mgr.runs[r2.json()["run_id"]]
+    assert run2.clock.now() == pytest.approx(T0)
+    assert run2.info["clock"] == "demo from 2026-11-08T10:02:30+02:00 at 30x"
+    monkeypatch.setenv("LIVE_CLOCK_START", "2026-11-08T11:30:00")
+    r3 = c.post("/api/runs", json=body())
+    detail = r3.json()["detail"]
+    assert r3.status_code == 400 and "clock: demo from 2026-11-08T11:30:00" in detail
