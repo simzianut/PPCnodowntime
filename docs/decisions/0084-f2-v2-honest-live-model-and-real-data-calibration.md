@@ -30,6 +30,17 @@ The deployed model (`f2_gru-c75aafc1-s2`, 0071) was measured on the real PPC Blu
 6. **Promotion rule.** `f2_gru.pt` is replaced by the v2 ensemble only if it beats the deployed model on test PR-AUC and Brier for y15, y30 and y60 on the same (regenerated) data; the baseline config is rerun once in the suite for that comparison. `f2_gru_live.pt` is promoted from the live ensemble, then calibrated on the real statuses and re-measured with the live evaluation. `forecasts.parquet` and `eval_results.json` are regenerated after a promotion.
 7. **Training runs** on a rented cloud GPU without Docker: `docker/pack_cloud.sh` packs HEAD plus the seven private data files, `docker/train_cloud.sh all` runs setup, check, smoke, the `f2_v2` suite, the ensembles and packs the results. `device: mps` is accepted for Apple-silicon fallback runs (never chosen by `auto`; run with `deterministic=false`).
 
+## Measurements on the real window (2026-11-07 22:35 to 11-08 06:10 UTC, 671 CPs, forecasts as served, no mocked signals)
+
+| Model | y30 AUC | y30 PR-AUC | mean p / observed | AC | DC 50 | HPC |
+|---|---|---|---|---|---|---|
+| deployed `f2_gru.pt`, signals removed | 0.797 | 0.028 | 0.42 | 0.78 | 0.70 | 0.79 |
+| live feature set, row-level history dropout 0.1 (full run) | 0.755 | 0.023 | 1.39 | 0.79 | 0.63 | 0.74 |
+| calendar + history only, cold-start days 0.5 (smoke run) | 0.793 | 0.040 | 1.02 | 0.83 | 0.70 | 0.80 |
+| live feature set, cold-start days 0.5 (smoke run) | 0.809 | 0.041 | 0.39 | 0.84 | 0.73 | 0.79 |
+
+Smoke runs: 3,000 train CP-days, 3 epochs. The cp_level and site_level features help only once the warm-up is in the training distribution; the row-level dropout alone made them harmful live. The level (mean p / observed) is what the real-data calibration fixes.
+
 ## Alternatives considered
 - Keep one model and zero the signal features live: in training a missing intent lowers the probability, so the model would under-predict everywhere.
 - Fix the live sampler to be consistent with training: impossible, the training signals know the future.
