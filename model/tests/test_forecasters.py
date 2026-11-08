@@ -270,22 +270,6 @@ def test_f0_end_to_end_and_deterministic(env):
     assert m["features"] == []
 
 
-def test_f1_end_to_end_artifact_format_and_same_seed_identical(env):
-    from model.forecaster import DemandForecaster
-
-    kw = {"num_boost_round": 15, "min_data_in_leaf": 5, "num_leaves": 7}
-    d1 = runner.run_config(_cfg("f1_lgbm", **kw))
-    _check_outputs(d1, 10)
-    first = (d1 / "metrics.json").read_text()
-    d2 = runner.run_config(_cfg("f1_lgbm", **kw), overwrite=True)
-    assert (d2 / "metrics.json").read_text() == first
-    f = DemandForecaster.load(d1 / "model")
-    assert f.features == fd.feature_names(list(fd.FEATURE_GROUPS))
-    assert (d1 / "model" / "feature_importance.json").exists()
-    # ablation: dropping groups shrinks the feature list
-    d3 = runner.run_config(_cfg("f1_lgbm", feature_groups=["calendar_history"], **kw))
-    assert len(json.loads((d3 / "metrics.json").read_text())["features"]) == 16
-
 
 def test_f2_end_to_end_and_same_seed_identical(env):
     kw = {"epochs": 1, "samples_per_epoch": 3000, "batch_size": 256, "hidden": 8, "mlp_hidden": 8}

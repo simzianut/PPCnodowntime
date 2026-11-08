@@ -1,12 +1,21 @@
-.PHONY: db migrate db-down seed data train api web test lint train-image train-image-verify train-docker train-suite-docker train-local figures figures-local
+.PHONY: up down logs db migrate db-down seed data train api web test lint train-image train-image-verify train-docker train-suite-docker train-local figures figures-local
 
-PSQL = docker compose exec -T -e PGOPTIONS=--client-min-messages=warning db psql -U ppc -d ppc -v ON_ERROR_STOP=1 -q
+PSQL = docker compose exec -T -e PGOPTIONS=--client-min-messages=warning ppc-db psql -U ppc -d ppc -v ON_ERROR_STOP=1 -q
 # Runs `python -m <pkg>` if the module has added its entry point (CONTRACTS: make targets).
 run_pkg = @if [ -f $(1)/__main__.py ]; then uv run $(2) python -m $(1); \
 	else echo "$(1): entry point $(1)/__main__.py not implemented yet"; fi
 
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
+
 db:
-	docker compose up -d --wait db
+	docker compose up -d --wait ppc-db
 	$(MAKE) migrate
 
 migrate:

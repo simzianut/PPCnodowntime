@@ -10,7 +10,6 @@ dependencies = [
     "geopandas>=1.0",
     "shapely>=2.0",
     "holidays>=0.60",
-    "lightgbm>=4.5",
     "gymnasium>=1.0",
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",

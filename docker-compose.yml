@@ -1,12 +1,23 @@
+# Whole stack (decision 0066). Local: http://localhost:${HTTP_PORT:-8080}.
+# Server: add docker-compose.server.yml (Traefik network + labels).
+x-api: &api
+  build:
+    context: .
+    dockerfile: docker/api.Dockerfile
+  image: ppc-api:latest
+  environment: &api-env
+    DATABASE_URL: postgresql+psycopg://ppc:${POSTGRES_PASSWORD:-ppc}@ppc-db:5432/ppc
+    DATA_DIR: /app/data
+
 services:
-  db:
+  ppc-db:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_USER: ppc
-      POSTGRES_PASSWORD: ppc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ppc}
       POSTGRES_DB: ppc
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -14,6 +25,89 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+    restart: unless-stopped
+
+  ppc-migrate:
+    image: postgis/postgis:16-3.4
+    entrypoint: ["/bin/sh", "/migrate.sh"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ppc}
+    volumes:
+      - ./docker/migrate.sh:/migrate.sh:ro
+      - ./db/migrations:/migrations:ro
+    depends_on:
+      ppc-db:
+        condition: service_healthy
+    restart: "no"
+
+  # Rewrites data/processed and data/raw/stations/location_id_map.csv (idempotent), so data/ is
+  # writable here. A failed seed must not block the API, which has its own fallbacks.
+  ppc-seed:
+    <<: *api
+    user: "0:0"
+    command: ["sh", "-c", "python -m stations || echo 'seed failed (non-fatal)'"]
+    volumes:
+      - ${DATA_HOST_DIR:-./data}:/app/data
+    depends_on:
+      ppc-migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  ppc-api:
+    <<: *api
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    environment:
+      <<: *api-env
+      API_FIXTURES: ${API_FIXTURES:-0}
+      RL_AGENT: ${RL_AGENT:-auto}
+      # live mode (decisions 0070, 0072); empty LIVE_CLOCK_START = real time
+      LIVE_CLOCK_START: ${LIVE_CLOCK_START:-}
+      LIVE_CLOCK_SPEED: ${LIVE_CLOCK_SPEED:-1}
+      LIVE_LAG_S: ${LIVE_LAG_S:-60}
+    volumes:
+      - ${DATA_HOST_DIR:-./data}:/app/data:ro
+      - ./artifacts:/app/artifacts:ro
+    depends_on:
+      ppc-db:
+        condition: service_healthy
+      ppc-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+    restart: unless-stopped
+
+  ppc-web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: ppc-web:latest
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      ppc-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ppc-collector:
+    <<: *api
+    profiles: ["live"]
+    user: "0:0"
+    command: ["python", "-m", "dataset.live_collector"]
+    environment:
+      <<: *api-env
+      AMPWHERE_ENABLED: ${AMPWHERE_ENABLED:-0}
+      LIVE_POLL_S: ${LIVE_POLL_S:-300}
+      TOMTOM_API_KEY: ${TOMTOM_API_KEY:-}
+    volumes:
+      - ${DATA_HOST_DIR:-./data}/raw/live:/app/data/raw/live
+    depends_on:
+      ppc-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 volumes:
   pgdata:

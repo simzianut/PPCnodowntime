@@ -1,0 +1,33 @@
+# Server override (decision 0066): join Traefik's external network, no published ports.
+networks:
+  default:
+    name: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK}
+    external: true
+
+services:
+  ppc-db:
+    ports: !reset []
+    labels:
+      - traefik.enable=false
+  ppc-migrate:
+    labels:
+      - traefik.enable=false
+  ppc-seed:
+    labels:
+      - traefik.enable=false
+  ppc-api:
+    labels:
+      - traefik.enable=false
+  ppc-collector:
+    labels:
+      - traefik.enable=false
+  ppc-web:
+    ports: !reset []
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.ppcnodowntime.rule=Host(`${PPC_HOST:?set PPC_HOST}`)
+      - traefik.http.routers.ppcnodowntime.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.ppcnodowntime.tls=true
+      # - traefik.http.routers.ppcnodowntime.tls.certresolver=letsencrypt
+      - traefik.http.services.ppcnodowntime.loadbalancer.server.port=80

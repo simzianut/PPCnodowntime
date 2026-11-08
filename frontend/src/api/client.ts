@@ -1,6 +1,6 @@
 import type { Autonomy, CpTimeline, EvalData, Location, PolicyName, Recommendation, Run, RunRequest, StationRunSummary } from './types'
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -27,7 +27,7 @@ export const api = {
 }
 
 export function runSocketUrl(runId: string) {
-  const url = new URL(API_BASE)
+  const url = new URL(API_BASE || window.location.origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   url.pathname = `/ws/runs/${runId}`
   return url.toString()

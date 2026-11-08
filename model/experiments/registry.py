@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 MODULES: dict[str, str] = {
     "smoke": "model.experiments.smoke:train",
     "f0_seasonal": "model.experiments.f0_seasonal:train",
-    "f1_lgbm": "model.experiments.f1_lgbm:train",
     "f2_gru": "model.experiments.f2_gru:train",
     "rl_maskppo": "model.experiments.rl_maskppo:train",
     "rl_ddqn": "model.experiments.rl_ddqn:train",

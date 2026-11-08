@@ -19,6 +19,13 @@ make lint    # ruff
 
 Repo layout and conventions: `docs/specs/00-foundation.md`. Interfaces: `docs/CONTRACTS.md`.
 
+## Run everything in Docker
+Local: `docker compose up -d --build` (or `make up`), then open http://localhost:8080 (`HTTP_PORT` changes it). nginx (`ppc-web`) is the single entry point and proxies `/api` and `/ws` to `ppc-api`. Needs `data/` and `artifacts/` next to the compose file for real mode; without them set `API_FIXTURES=1`.
+
+Server (behind Traefik, decision 0066): `cp .env.example .env`, fill the server block (`COMPOSE_FILE`, `TRAEFIK_NETWORK`, `PPC_HOST`) and a strong `POSTGRES_PASSWORD`, make sure `data/` and `artifacts/` are present, then `docker compose up -d --build`. Nothing is published on the host; Traefik routes to `ppc-web`.
+
+The live collector is off by default: `docker compose --profile live up -d ppc-collector` (or `COMPOSE_PROFILES=live`). AmpWhere stays off unless `AMPWHERE_ENABLED=1`.
+
 ## Training on the GPU server
 Reproducible runs in Docker (decision 0051). Needs Docker with the NVIDIA container toolkit.
 
