@@ -8,6 +8,7 @@ Format:
 Add notes as indented sub-bullets.
 
 ## In progress
+- [T42] M5 agent actions appear live within each 5-min slot (staggered), with their own minute in the ticker | owner: tudor-claude | branch: tudor-claude/T42-live-actions | depends: T41
 - [T41] F2 GRU improvements: 'cp_level' feature group (arrivals at the CP over 7d/28d, minutes since last arrival; batch + online parity), calibration choice isotonic | temp_bias | auto (picked on a val half), suite f2_improve (baseline vs +cp_level, step-2 honest and full, 3 seeds); promote only if it wins both | owner: vlad-claude | branch: vlad-claude/T41-gru-improve | depends: T26, T36
   - Note: T38 (vlad-claude) also edits model/; T41 stays in f2_gru.py, forecast_data.py, features.py, gru_forecaster.py, configs and their tests.
 - [T38] M5 map legend and compact station summary: clarify cluster asleep-share gradient and six status colours; show dominant station state and energy saved percent | owner: teodora-codex | branch: teodora-codex/T38-map-legend-station-summary | depends: T16, T17, T18
