@@ -149,8 +149,10 @@ def test_replay_days_restricted_to_forecast_coverage(small_data, tmp_path):
     for c in ("p_arrival_15", "p_arrival_30", "p_arrival_60", "expected_arrivals_60"):
         fc[c] = 0.1
     data = dataclasses.replace(small_data, forecasts=fc)
+    (tmp_path / "e.json").write_text('{"test_days": ["2025-03-10"], "results": []}')
     mgr = EngineManager(data=data, eval_path=tmp_path / "e.json")
     with TestClient(create_app(fixtures=False, manager=mgr)) as c:
+        assert c.get("/api/eval").json()["test_days"] == [d0.isoformat()]
         assert c.post("/api/runs", json=body(date=d0.isoformat())).status_code == 201
         r = c.post("/api/runs", json=body(date=days[1].isoformat()))
         assert r.status_code == 400 and d0.isoformat() in r.json()["detail"]
