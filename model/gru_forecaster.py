@@ -46,6 +46,7 @@ class GRUModel:
     dyn_names: list[str]
     norm: dict
     calibrators: dict[str, IsotonicCalibrator]
+    calibration: dict | None = None  # {"kind", "a", "b"}; None in old checkpoints (isotonic)
 
     @property
     def window(self) -> int:
@@ -58,10 +59,13 @@ class GRUModel:
 
     def finish(self, raw: dict) -> dict:
         """Saved calibration, then the cumulative max across horizons (as in training)."""
-        cal = {
-            k: self.calibrators[f"y{k[1:]}"].predict(raw[k]) if self.calibrators else raw[k]
-            for k in ("p15", "p30", "p60")
-        }
+        if (self.calibration or {}).get("kind") == "temp_bias":
+            cal = f2_gru.affine_probs(raw["logits"], self.calibration["a"], self.calibration["b"])
+        else:
+            cal = {
+                k: self.calibrators[f"y{k[1:]}"].predict(raw[k]) if self.calibrators else raw[k]
+                for k in ("p15", "p30", "p60")
+            }
         (p15, p30, p60), _ = fe.enforce_monotone(cal["p15"], cal["p30"], cal["p60"])
         return {"p15": p15, "p30": p30, "p60": p60, "n60": raw["n60"]}
 
@@ -70,9 +74,11 @@ class GRUModel:
         """Windows x (n, W, n_dyn), valid (n, W), stat (n, 4) -> calibrated p15/p30/p60/n60."""
         t = [torch.from_numpy(np.ascontiguousarray(a, np.float32)) for a in (x, valid, stat)]
         self.net.eval()
-        res = f2_gru.probs_from(*self.net(*t))
+        logits, lograte = self.net(*t)
         keys = ("p15", "p30", "p60", "n60")
-        return self.finish({k: r.double().numpy() for k, r in zip(keys, res, strict=True)})
+        res = f2_gru.probs_from(logits, lograte)
+        raw = {k: r.double().numpy() for k, r in zip(keys, res, strict=True)}
+        return self.finish({**raw, "logits": logits.double().numpy()})
 
 
 def load_gru(path: str | Path) -> GRUModel:
@@ -81,7 +87,15 @@ def load_gru(path: str | Path) -> GRUModel:
     net.load_state_dict(ck["state_dict"])
     net.eval()
     cals = {k: IsotonicCalibrator.from_dict(v) for k, v in (ck.get("calibrators") or {}).items()}
-    return GRUModel(net, ck["config"], ck["features"], ck["dynamic_features"], ck["norm"], cals)
+    return GRUModel(
+        net,
+        ck["config"],
+        ck["features"],
+        ck["dynamic_features"],
+        ck["norm"],
+        cals,
+        ck.get("calibration"),
+    )
 
 
 def model_path(run_dir_or_pt: str | Path) -> Path:
@@ -157,6 +171,7 @@ def _predict_days(mpath, dates, out_path, chunk_days, config, batch_size):
         fd._data_file(cfg, "sessions"),
         columns=["cp_id", "location_id", "arrival_ts", "departure_ts"],
     )
+    hist_start = fd.history_start(sess)
     by_cp = fd._sessions_by(sess, "cp_id", True)
     by_loc = {k: v[0] for k, v in fd._sessions_by(sess, "location_id", False).items()}
     del sess
@@ -174,7 +189,7 @@ def _predict_days(mpath, dates, out_path, chunk_days, config, batch_size):
         chunk = act[act["date"].isin(dates[a : a + step])].sort_values(["cp_id", "date"])
         if chunk.empty:
             continue
-        args = (cps, loc_index, by_cp, by_loc, empty, sig, ctx)
+        args = (cps, loc_index, by_cp, by_loc, empty, sig, ctx, hist_start)
         df = _predict_chunk(model, chunk, *args, batch_size)
         rows += len(df)
         log.info("chunk %d: %d rows (%.0f s)", a // step, len(df), time.monotonic() - t0)
@@ -200,7 +215,9 @@ def _empty_frame() -> pd.DataFrame:
     return df
 
 
-def _predict_chunk(model, chunk, cps, loc_index, by_cp, by_loc, empty, sig, ctx, batch_size):
+def _predict_chunk(
+    model, chunk, cps, loc_index, by_cp, by_loc, empty, sig, ctx, hist_start, batch_size
+):
     X = np.empty((len(chunk) * SLOTS, len(FEATURE_COLUMNS)), np.float32)
     ts = np.empty(len(chunk) * SLOTS, np.int64)
     cp_ids = np.repeat(chunk["cp_id"].to_numpy(), SLOTS)
@@ -211,7 +228,14 @@ def _predict_chunk(model, chunk, cps, loc_index, by_cp, by_loc, empty, sig, ctx,
         t = (day[:, None] + np.arange(SLOTS) * SLOT_NS).reshape(-1)
         loc = cp["location_id"]
         feats = fd._cp_features(
-            t, cp, loc_index[loc], by_cp.get(cp_id, empty), by_loc.get(loc, empty[0]), ctx, sig
+            t,
+            cp,
+            loc_index[loc],
+            by_cp.get(cp_id, empty),
+            by_loc.get(loc, empty[0]),
+            ctx,
+            sig,
+            hist_start,
         )
         X[pos : pos + len(t)] = feats[0]
         ts[pos : pos + len(t)] = t
@@ -269,7 +293,9 @@ class GRUForecaster:
         self.infer = infer_arrivals
         self.slot_s = slot_s
         self._arr: dict[str, np.ndarray] = {}
+        self._hist_start: int | None = None  # set from sessions, else at the first predict()
         if sessions is not None and len(sessions):
+            self._hist_start = fd.history_start(sessions)
             by = fd._sessions_by(sessions, "cp_id", False)
             self._arr = {k: v[0] for k, v in by.items()}
         self._cols = [_F[c] for c in self.model.features]
@@ -347,6 +373,9 @@ class GRUForecaster:
     def _arrival_features(self, x: np.ndarray, cp_id: str, t: int) -> None:
         arr = self._arr.get(cp_id)
         if arr is None or not len(arr):
+            r7, r28, mins = fd.cp_level_features(np.zeros(0, np.int64), np.array([t]), t)
+            x[_F["arrivals_cp_7d"]], x[_F["arrivals_cp_28d"]] = r7[0], r28[0]
+            x[_F["mins_since_last_arrival"]] = mins[0]
             return
         idx_t = np.searchsorted(arr, t, side="right")
         x[_F["arrivals_cp_1h"]] = idx_t - np.searchsorted(arr, t - 3600 * NS, side="right")
@@ -357,6 +386,9 @@ class GRUForecaster:
             s4 += np.searchsorted(arr, c + 1800 * NS, side="right")
             s4 -= np.searchsorted(arr, c - 1800 * NS, side="right")
         x[_F["arrivals_same_slot_4w"]] = s4 / 4.0
+        r7, r28, mins = fd.cp_level_features(arr, np.array([t]), self._hist_start)
+        x[_F["arrivals_cp_7d"]], x[_F["arrivals_cp_28d"]] = r7[0], r28[0]
+        x[_F["mins_since_last_arrival"]] = mins[0]
 
     def _signal_features(self, X: np.ndarray, locs: list[str], sig: pd.DataFrame, t: int) -> None:
         if sig is not None and len(sig):
@@ -426,6 +458,8 @@ class GRUForecaster:
         if ids != self._ids:
             self._bind(ids)
         t = ts_key(state.t)
+        if self._hist_start is None:
+            self._hist_start = t
         slot = t // SLOT_NS
         w = self.model.window
         if slot != self._cur_slot:  # new slot: the previous one joins the history

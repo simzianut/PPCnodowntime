@@ -24,12 +24,13 @@ import pyarrow.parquet as pq
 from model import repro
 from model.features import CONTEXT_TYPE_MAP, FEATURE_COLUMNS, POWER_CLASS_MAP
 
-FEATURE_VERSION = 1
+FEATURE_VERSION = 2
 SLOTS = 288
 SLOT_NS = 300 * 10**9
 NS = 10**9
 SPLITS = ("train", "val", "test")
 POWER_CLASSES = ("AC_22", "DC_50", "DC_HPC")
+MINS_CAP = 28 * 24 * 60
 N_BUCKETS = 12  # first-arrival buckets of 5 min; bucket index 12 = censored (none within 60 min)
 
 FEATURE_GROUPS: dict[str, list[str]] = {
@@ -41,11 +42,13 @@ FEATURE_GROUPS: dict[str, list[str]] = {
     "traffic": ["traffic_index"],
     "ev_flow": ["maps_ev_count_15m", "weighted_flow_15m"],
     "intents": ["intent_eta_15", "intent_eta_30", "intent_eta_60"],
+    "cp_level": ["arrivals_cp_7d", "arrivals_cp_28d", "mins_since_last_arrival"],
 }  # fmt: skip
 STATIC_COLUMNS = ["power_class_code", "context_type_code", "county_ev_per_1000", "cps_at_location"]
 COUNT_COLUMNS = [
     "arrivals_cp_1h", "arrivals_cp_3h", "arrivals_same_slot_4w", "maps_ev_count_15m",
     "weighted_flow_15m", "intent_eta_15", "intent_eta_30", "intent_eta_60",
+    "arrivals_cp_7d", "arrivals_cp_28d", "mins_since_last_arrival",
 ]  # fmt: skip
 
 DEFAULT_PARAMS: dict[str, Any] = {
@@ -58,7 +61,7 @@ DEFAULT_PARAMS: dict[str, Any] = {
     "val_start": "2023-10-01",
     "val_end": "2023-12-31",
     "test_start": "2024-01-01",
-    "feature_groups": list(FEATURE_GROUPS),
+    "feature_groups": ["calendar_history", "traffic", "ev_flow", "intents"],
 }
 DEFAULT_DATA = {
     "sessions": "sessions.parquet",
@@ -171,6 +174,11 @@ def _ts_ns(col: pd.Series) -> np.ndarray:
     return pd.to_datetime(col, utc=True).astype("datetime64[ns, UTC]").astype("int64").to_numpy()
 
 
+def history_start(sessions: pd.DataFrame) -> int | None:
+    """Earliest arrival (ns) in a sessions table, or None when empty."""
+    return int(_ts_ns(sessions["arrival_ts"]).min()) if len(sessions) else None
+
+
 def _sessions_by(sessions: pd.DataFrame, key: str, with_dep: bool) -> dict[str, tuple]:
     out: dict[str, tuple] = {}
     arr = _ts_ns(sessions["arrival_ts"])
@@ -184,6 +192,27 @@ def _sessions_by(sessions: pd.DataFrame, key: str, with_dep: bool) -> dict[str, 
         a, b = bounds[i], bounds[i + 1]
         out[k] = (arr[a:b], dep[a:b] if dep is not None else None)
     return out
+
+
+def cp_level_features(arr: np.ndarray, t: np.ndarray, history_start: int | None):
+    """(rate_7d, rate_28d, mins_since_last) at times t (ns) from sorted arrivals arr (<= t only)."""
+    t = np.asarray(t, np.int64)
+    idx_t = np.searchsorted(arr, t, side="right")
+    hs = history_start
+    if hs is None:
+        hs = arr[0] if len(arr) else (t.min() if len(t) else 0)
+    days = (t - hs) / (86400.0 * NS)
+    out = []
+    for d in (7, 28):
+        cnt = idx_t - np.searchsorted(arr, t - d * 86400 * NS, side="right")
+        out.append(cnt / np.clip(days, 1.0, float(d)))
+    cap = float(MINS_CAP)
+    if len(arr):
+        last = (t - arr[(idx_t - 1).clip(0)]) / (60.0 * NS)
+        mins = np.where(idx_t > 0, np.minimum(last, cap), cap)
+    else:
+        mins = np.full(len(t), cap)
+    return out[0], out[1], mins
 
 
 # ---------------------------------------------------------------- signals (streamed)
@@ -369,8 +398,9 @@ def _cp_features(
     loc_arr: np.ndarray,
     ctx: ContextGrid,
     sig: SignalTables,
+    history_start: int | None = None,
 ):
-    """Features (len(t), 22) and targets for one CP over its slot timestamps t (ns)."""
+    """Features (len(t), 25) and targets for one CP over its slot timestamps t (ns)."""
     n = len(t)
     X = np.zeros((n, len(FEATURE_COLUMNS)), np.float32)
     col = {c: i for i, c in enumerate(FEATURE_COLUMNS)}
@@ -398,6 +428,9 @@ def _cp_features(
         s4 += np.searchsorted(arr, c + 1800 * NS, side="right")
         s4 -= np.searchsorted(arr, c - 1800 * NS, side="right")
     X[:, col["arrivals_same_slot_4w"]] = s4 / 4.0
+    r7, r28, mins = cp_level_features(arr, t, history_start)
+    X[:, col["arrivals_cp_7d"]], X[:, col["arrivals_cp_28d"]] = r7, r28
+    X[:, col["mins_since_last_arrival"]] = mins
     if len(arr):
         j = idx_t - 1
         X[:, col["is_charging"]] = (j >= 0) & (dep[j.clip(0)] > t)
@@ -507,7 +540,7 @@ def feature_key(cfg: dict) -> str:
 
 
 def get_dataset(cfg: dict, log: logging.Logger | None = None, features: bool = True):
-    """Build (or load from cache) the sample, targets and, if features=True, all 22 features."""
+    """Build (or load from cache) the sample, targets and, if features=True, all features."""
     log = log or logging.getLogger("forecast_data")
     p = data_params(cfg)
     root = _cache_root() / sample_key(cfg)
@@ -536,6 +569,7 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
     )
     by_cp = _sessions_by(sess, "cp_id", True)
     by_loc = {k: v[0] for k, v in _sessions_by(sess, "location_id", False).items()}
+    hist_start = history_start(sess)
     del sess
     cps_i = cps.set_index("cp_id")
     empty = (np.zeros(0, np.int64), np.zeros(0, np.int64))
@@ -581,6 +615,7 @@ def _build(cfg, p, cps, root: Path, feat_dir: Path | None, do_targets: bool, log
                 loc_arr,
                 ctx if ctx is not None else ContextGrid(_empty_ctx()),
                 sig if sig is not None else _empty_sig(),
+                hist_start,
             )
             a = (int(g["_row"].iloc[0]) - split_first[s]) * SLOTS
             e = a + len(t)

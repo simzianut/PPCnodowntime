@@ -35,7 +35,7 @@ DEFAULTS = {
     "num_workers": 0,
     "num_threads": 8,
     "amp": False,
-    "calibrate": True,
+    "calibration": "isotonic",  # isotonic | temp_bias | auto | none; old calibrate: bool works
 }
 
 
@@ -141,12 +141,94 @@ def _loss(net, batch, dev, w_pois):
 def predict(net, ds: Windows, dev: str, bs: int = 8192) -> dict:
     net.eval()
     outs: list[list] = [[], [], [], []]
+    lg: list = []
     for a in range(0, len(ds), bs):
         x, valid, stat, _, _ = ds[np.arange(a, min(a + bs, len(ds)))]
-        res = probs_from(*net(x.to(dev), valid.to(dev), stat.to(dev)))
-        for o, r in zip(outs, res, strict=True):
+        logits, lograte = net(x.to(dev), valid.to(dev), stat.to(dev))
+        for o, r in zip(outs, probs_from(logits, lograte), strict=True):
             o.append(r.double().cpu().numpy())
-    return {k: np.concatenate(o) for k, o in zip(("p15", "p30", "p60", "n60"), outs, strict=True)}
+        lg.append(logits.float().cpu().numpy())
+    res = {k: np.concatenate(o) for k, o in zip(("p15", "p30", "p60", "n60"), outs, strict=True)}
+    res["logits"] = np.concatenate(lg)
+    return res
+
+
+def affine_probs(logits: np.ndarray, a: float, b: float) -> dict:
+    """p15/p30/p60 from hazards sigmoid(a*l + b); monotone across horizons by construction."""
+    z = a * np.asarray(logits, np.float64) + b
+    cum = np.cumsum(-np.logaddexp(0.0, z), axis=1)  # log survival
+    return {f"p{h}": -np.expm1(cum[:, k - 1]) for h, k in ((15, 3), (30, 6), (60, 12))}
+
+
+def fit_temp_bias(logits: np.ndarray, bucket: np.ndarray) -> tuple[float, float]:
+    """(a, b) minimising the survival NLL of l' = a*l + b on the given rows (LBFGS)."""
+    lg = torch.from_numpy(np.ascontiguousarray(logits, np.float32))
+    bk = torch.from_numpy(np.asarray(bucket).astype(np.int64))
+    ab = torch.tensor([1.0, 0.0], requires_grad=True)
+    opt = torch.optim.LBFGS([ab], lr=1.0, max_iter=100, line_search_fn="strong_wolfe")
+
+    def closure():
+        opt.zero_grad()
+        loss = survival_nll(ab[0] * lg + ab[1], bk).mean()
+        loss.backward()
+        return loss
+
+    opt.step(closure)
+    a, b = ab.detach().tolist()
+    return float(a), float(b)
+
+
+def fit_calibration(kind: str, raw: dict, y: np.ndarray, bucket: np.ndarray) -> dict:
+    """Calibration spec {kind, a, b, calibrators} fitted on raw predictions of one split."""
+    cal: dict = {"kind": kind, "a": 1.0, "b": 0.0, "calibrators": {}}
+    if kind == "isotonic":
+        cal["calibrators"] = {
+            f"y{h}": fe.fit_isotonic(raw[f"p{h}"], y[:, i]) for i, h in enumerate((15, 30, 60))
+        }
+    elif kind == "temp_bias":
+        cal["a"], cal["b"] = fit_temp_bias(raw["logits"], bucket)
+    elif kind != "none":
+        raise ValueError(f"unknown calibration {kind!r}")
+    return cal
+
+
+def apply_calibration(cal: dict, raw: dict) -> dict:
+    """Calibrated p15/p30/p60 (+ n60) from a raw prediction dict."""
+    if cal["kind"] == "temp_bias":
+        return {**affine_probs(raw["logits"], cal["a"], cal["b"]), "n60": raw["n60"]}
+    if cal["kind"] == "isotonic":
+        p = {f"p{h}": cal["calibrators"][f"y{h}"].predict(raw[f"p{h}"]) for h in (15, 30, 60)}
+        return {**p, "n60": raw["n60"]}
+    return {k: raw[k] for k in ("p15", "p30", "p60", "n60")}
+
+
+def _calibration_kind(params: dict) -> str:
+    if "calibration" in params:
+        return str(params["calibration"])
+    if "calibrate" in params:
+        return "isotonic" if params["calibrate"] else "none"
+    return str(DEFAULTS["calibration"])
+
+
+def _mean_log_loss(pred: dict, y: np.ndarray) -> float:
+    fixed, _ = fc.fix_monotone(pred)
+    losses = [fe.log_loss(y[:, i], fixed[f"p{h}"]) for i, h in enumerate((15, 30, 60))]
+    return float(np.mean(losses))
+
+
+def choose_calibration(raw: dict, y: np.ndarray, bucket: np.ndarray, n_cpdays: int, seed: int):
+    """Fit on half the val CP-days, score on the other half; returns (kind, {kind: score})."""
+    perm = np.random.default_rng([seed, 4242]).permutation(n_cpdays)
+    in_a = np.zeros(n_cpdays, bool)
+    in_a[perm[: n_cpdays // 2]] = True
+    a = np.repeat(in_a, fd.SLOTS)
+    ra = {k: v[a] for k, v in raw.items()}
+    rb = {k: v[~a] for k, v in raw.items()}
+    scores = {}
+    for kind in ("isotonic", "temp_bias"):
+        cal = fit_calibration(kind, ra, y[a], bucket[a])
+        scores[kind] = _mean_log_loss(apply_calibration(cal, rb), y[~a])
+    return min(scores, key=lambda k: scores[k]), scores
 
 
 @torch.no_grad()
@@ -225,23 +307,34 @@ def train(ctx: RunContext) -> dict:
                 break
     net.load_state_dict(best_state)
     raw = {s: predict(net, ds[s], dev) for s in ("val", "test")}
-    yva = data.y("val")
-    cals = {}
-    if c["calibrate"]:
-        for i, h in enumerate((15, 30, 60)):
-            cals[f"y{h}"] = fe.fit_isotonic(raw["val"][f"p{h}"], yva[:, i])
-    final = {
-        s: {**r, **{f"p{h}": cals[f"y{h}"].predict(r[f"p{h}"]) for h in (15, 30, 60)}}
-        if cals
-        else r
-        for s, r in raw.items()
-    }
+    yva, bva = data.y("val"), data.bucket("val")
+    kind = _calibration_kind(ctx.config.get("params") or {})
+    selection = None
+    if kind == "auto":
+        n_cd = int((data.cpdays["split"] == "val").sum())
+        seed = int(fd.data_params(ctx.config)["sample_seed"])
+        kind, selection = choose_calibration(raw["val"], yva, bva, n_cd, seed)
+    fits = {k: fit_calibration(k, raw["val"], yva, bva) for k in ("none", "isotonic", "temp_bias")}
+    cal = fits[kind]
+    cals = cal["calibrators"]
+    final = {s: apply_calibration(cal, r) for s, r in raw.items()}
     metrics = fc.finish(
         ctx, data, "f2_gru", names, final, time.monotonic() - t0,
-        {"best_val_loss": round(best, 6), "calibrated": bool(cals), "dynamic_features": dyn_names},
+        {
+            "best_val_loss": round(best, 6),
+            "calibrated": kind != "none",
+            "calibration_chosen": kind,
+            "calibration_selection": selection,
+            "dynamic_features": dyn_names,
+        },
     )  # fmt: skip
     unc, _ = fc.fix_monotone(raw["test"])
-    metrics["test_uncalibrated"] = fe.evaluate(unc, fc.targets_of(data, "test"), data.meta("test"))
+    tgt, meta = fc.targets_of(data, "test"), data.meta("test")
+    metrics["test_uncalibrated"] = fe.evaluate(unc, tgt, meta)
+    metrics["test_by_calibration"] = {
+        k: fe.evaluate(fc.fix_monotone(apply_calibration(f, raw["test"]))[0], tgt, meta)
+        for k, f in fits.items()
+    }
     ctx.path("model").mkdir(exist_ok=True)
     torch.save(
         {
@@ -251,6 +344,7 @@ def train(ctx: RunContext) -> dict:
             "dynamic_features": dyn_names,
             "norm": norm,
             "calibrators": {k: v.to_dict() for k, v in cals.items()},
+            "calibration": {"kind": kind, "a": cal["a"], "b": cal["b"]},
         },
         ctx.path("model", "f2_gru.pt"),
     )
