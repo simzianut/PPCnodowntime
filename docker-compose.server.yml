@@ -1,4 +1,5 @@
 # Server override (decision 0066): join Traefik's external network, no published ports.
+# PPC_TRAEFIK_LABELS=false: route via Traefik's file provider instead of these labels (decision 0088).
 networks:
   default:
     name: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK}
@@ -24,7 +25,7 @@ services:
   ppc-web:
     ports: !reset []
     labels:
-      - traefik.enable=true
+      - traefik.enable=${PPC_TRAEFIK_LABELS:-true}
       - traefik.docker.network=${TRAEFIK_NETWORK}
       - traefik.http.routers.ppcnodowntime.rule=Host(`${PPC_HOST:?set PPC_HOST}`)
       - traefik.http.routers.ppcnodowntime.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
