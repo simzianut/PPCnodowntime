@@ -39,7 +39,17 @@ FEATURE_COLUMNS = [
     "maps_ev_count_15m",
     "weighted_flow_15m",
     "traffic_index",
+    "arrivals_cp_7d",
+    "arrivals_cp_28d",
+    "mins_since_last_arrival",
 ]
+
+# Legacy (LightGBM) builders do not track long history: neutral values for the cp_level columns.
+CP_LEVEL_NEUTRAL = {
+    "arrivals_cp_7d": 0.0,
+    "arrivals_cp_28d": 0.0,
+    "mins_since_last_arrival": 40320.0,
+}
 
 POWER_CLASS_MAP = {
     PowerClass.AC_22.value: 0,
@@ -224,6 +234,7 @@ def extract_features_from_simstate(
             "context_type_code": ctx_code,
             "county_ev_per_1000": float(meta.get("county_ev_per_1000", 1.5)),
             "cps_at_location": float(meta.get("cps_at_location", 2)),
+            **CP_LEVEL_NEUTRAL,
             **sig_feats,
         }
         rows.append(row)
@@ -421,6 +432,7 @@ def build_training_dataset(
                 "context_type_code": ctx_code,
                 "county_ev_per_1000": float(meta["county_ev_per_1000"]),
                 "cps_at_location": float(meta["cps_at_location"]),
+                **CP_LEVEL_NEUTRAL,
                 **sig_feats,
             }
             rows.append(row)
