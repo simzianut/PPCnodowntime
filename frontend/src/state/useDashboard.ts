@@ -9,6 +9,22 @@ function initialStates(locations: Location[]) {
   return Object.fromEntries(locations.flatMap((location) => location.charge_points.map((cp) => [cp.cp_id, cp.state ?? 'IDLE']))) as Record<string, State>
 }
 
+const SLOT_MIN = 5
+const STAGGER_BUCKETS = 40
+const pad = (n: number) => String(n).padStart(2, '0')
+/** Stable [0, 1) per key, so a CP's action lands at the same moment on every replay. */
+function frac(key: string) {
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619)
+  return (h >>> 0) / 4294967296
+}
+function shiftClock(iso: string, minutes: number) {
+  const m = iso.match(/T(\d{2}):(\d{2})/)
+  if (!m) return iso
+  const t = (Number(m[1]) * 60 + Number(m[2]) + minutes + 1440) % 1440
+  return `${iso.slice(0, 11)}${pad(Math.floor(t / 60))}:${pad(t % 60)}${iso.slice(16)}`
+}
+
 const emptyEval: EvalData = { generated_at: '', test_days: [], results: [] }
 
 function defaultFocus(policies: PolicyName[]): PolicyName {
@@ -34,6 +50,20 @@ export function useDashboard() {
   const autonomyRef = useRef(autonomy)
   const pendingStatesRef = useRef<Record<string, State>>({})
   const policiesRef = useRef<PolicyName[]>(POLICIES)
+  const [actionClock, setActionClock] = useState<string | null>(null)
+  const staggerRef = useRef<{ timers: number[]; pending: Record<string, State> }>({ timers: [], pending: {} })
+  const cpCountRef = useRef(0)
+  cpCountRef.current = locations.reduce((sum, location) => sum + location.charge_points.length, 0)
+
+  const flushStagger = useCallback((apply: boolean) => {
+    const stagger = staggerRef.current
+    stagger.timers.forEach((timer) => window.clearTimeout(timer))
+    stagger.timers = []
+    const pending = stagger.pending
+    stagger.pending = {}
+    if (apply && Object.keys(pending).length) setCpState((current) => ({ ...current, ...pending }))
+  }, [])
+  useEffect(() => () => flushStagger(false), [flushStagger])
 
   useEffect(() => { runRef.current = run }, [run])
   useEffect(() => { autonomyRef.current = autonomy }, [autonomy])
@@ -51,13 +81,29 @@ export function useDashboard() {
       } : current)
       return
     }
-    setCpState((current) => {
-      const next = { ...current }
-      for (const change of tick.changes ?? []) next[change.cp_id] = change.state
-      Object.assign(next, pendingStatesRef.current)
-      pendingStatesRef.current = {}
-      return next
-    })
+    flushStagger(true)
+    const changes = tick.changes ?? []
+    const speed = Math.max(1, runRef.current?.speed ?? 60)
+    const spreadMs = (SLOT_MIN * 60_000 / speed) * 0.9
+    const wholesale = changes.length > cpCountRef.current * 0.5
+    const groups = new Map<number, Record<string, State>>()
+    for (const change of changes) {
+      const bucket = wholesale ? 0 : Math.floor(frac(`${change.cp_id}:${tick.slot ?? 0}`) * STAGGER_BUCKETS)
+      groups.set(bucket, { ...groups.get(bucket), [change.cp_id]: change.state })
+    }
+    const approved = pendingStatesRef.current
+    pendingStatesRef.current = {}
+    setCpState((current) => ({ ...current, ...(groups.get(0) ?? {}), ...approved }))
+    if (tick.sim_time) setActionClock(shiftClock(tick.sim_time, -SLOT_MIN + 1))
+    groups.delete(0)
+    for (const [bucket, group] of groups) {
+      Object.assign(staggerRef.current.pending, group)
+      staggerRef.current.timers.push(window.setTimeout(() => {
+        for (const cpId of Object.keys(group)) delete staggerRef.current.pending[cpId]
+        setCpState((current) => ({ ...current, ...group }))
+        if (tick.sim_time) setActionClock(shiftClock(tick.sim_time, -SLOT_MIN + 1 + Math.floor((bucket / STAGGER_BUCKETS) * SLOT_MIN)))
+      }, (bucket / STAGGER_BUCKETS) * spreadMs))
+    }
     if (tick.recommendations?.length) {
       const incoming = tick.recommendations
       setRecommendations((current) => {
@@ -76,12 +122,13 @@ export function useDashboard() {
       for (const policy of POLICIES) point[policy] = tick.kpis?.[policy]?.saved_kwh ?? runRef.current?.kpis[policy]?.saved_kwh ?? 0
       return [...current.slice(-287), point]
     })
-  }, [])
+  }, [flushStagger])
 
   const startRun = useCallback(async (mode: 'replay' | 'live', date: string | null, speed = runRef.current?.speed ?? 60) => {
     const policies = policiesRef.current
     const payload = { mode, date, policies, focus_policy: defaultFocus(policies), lambda: 0.1, speed }
     setError(null)
+    flushStagger(false)
     setTrend([])
     setSelectedLocation(null)
     setTimelineByCp({})
@@ -216,6 +263,7 @@ export function useDashboard() {
         runRef.current = next
         return next
       })
+      if (action === 'seek' && typeof value === 'number') flushStagger(false)
       if (action === 'seek' && typeof value === 'number') setCpState(demoStatesAt(Math.max(0, Math.min(288, value))))
       return
     }
@@ -277,7 +325,7 @@ export function useDashboard() {
   const history = useMemo(() => trend, [trend])
 
   return {
-    locations, evaluation, run, cpState, recommendations, autonomy, connectionMode, connected, activity,
+    locations, evaluation, run, cpState, actionClock, recommendations, autonomy, connectionMode, connected, activity,
     selectedLocation, timelineByCp, theme, history, error, setError, startRun, control, changeAutonomy,
     decideRecommendation, openStation, toggleTheme,
   }

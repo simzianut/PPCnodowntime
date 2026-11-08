@@ -14,6 +14,8 @@ interface NetworkMapProps {
   selectedLocationId?: string
   onSelect: (location: Location | null) => void
   run: Run | null
+  /** Sim time of the latest applied change, finer than the run's 5-min slot. */
+  actionClock?: string | null
 }
 
 const BASE_MAP_URL = '/map/romania.svg'
@@ -129,7 +131,9 @@ function useAnimatedView() {
 }
 
 /** Diffs cpState against the previous update and turns transitions into pulses, ticker rows and counters. */
-function useAgentActions(locations: Location[], cpState: Record<string, State>, run: Run | null) {
+function useAgentActions(locations: Location[], cpState: Record<string, State>, run: Run | null, clockIso?: string | null) {
+  const clockRef = useRef(clockIso)
+  clockRef.current = clockIso
   const [pulses, setPulses] = useState<Pulse[]>([])
   const [actions, setActions] = useState<Action[]>([])
   const [counts, setCounts] = useState({ sleeps: 0, wakes: 0 })
@@ -186,7 +190,7 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
     // A wholesale swap (seek or policy switch) is not a burst of agent actions.
     if (changed === 0 || changed > cpIndex.size * 0.5) return
     const now = performance.now()
-    const time = clock(runRef.current?.sim_time)
+    const time = clock(clockRef.current ?? runRef.current?.sim_time)
     const newPulses: Pulse[] = []
     const newActions: Action[] = []
     let sleeps = 0, wakes = 0
@@ -218,7 +222,7 @@ function useAgentActions(locations: Location[], cpState: Record<string, State>, 
   return { pulses, actions, counts }
 }
 
-export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, run }: NetworkMapProps) {
+export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, run, actionClock }: NetworkMapProps) {
   const [base, setBase] = useState<BaseMap | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -231,7 +235,7 @@ export function NetworkMap({ locations, cpState, selectedLocationId, onSelect, r
   const { view, viewRef, setView, animateTo } = useAnimatedView()
   const splitRef = useRef(split)
   splitRef.current = split
-  const { pulses, actions, counts } = useAgentActions(locations, cpState, run)
+  const { pulses, actions, counts } = useAgentActions(locations, cpState, run, actionClock)
   const [tickerOpen, setTickerOpen] = useState(false)
   const shownActions = tickerOpen ? actions : actions.slice(0, TICKER_COLLAPSED)
   const uid = useId().replace(/:/g, '')

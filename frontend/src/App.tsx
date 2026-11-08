@@ -133,7 +133,7 @@ function App() {
         <ReplayBar dashboard={dashboard} />
       </div>
       <div className="map-column">
-        <NetworkMap locations={locations} cpState={cpState} run={run} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
+        <NetworkMap locations={locations} cpState={cpState} run={run} actionClock={dashboard.actionClock} selectedLocationId={selectedLocation?.location_id} onSelect={(location) => void openStation(location)} />
       </div>
     </main>
   </div>
