@@ -1,4 +1,4 @@
-"""CLI entry point for Module 2: python -m model (CONTRACTS: make train). Trains the F2 GRU agent model."""
+"""CLI entry point for Module 2: python -m model (make train). Trains the F2 GRU model."""
 
 import sys
 

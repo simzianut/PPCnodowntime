@@ -79,7 +79,7 @@ def live_forecaster(art_dir: Path | None = None):
             # live: no session history; arrivals are inferred from CHARGING transitions (0070)
             return GRUForecaster.from_data(f2, sessions=None), "f2_gru"
     except Exception as e:
-        log.warning("live: F2 GRU forecaster unavailable (%s); using a constant stub", _short_error(e))
+        log.warning("live: F2 GRU unavailable (%s); using a constant stub", _short_error(e))
     from model.stubs import ConstantForecaster
 
     return ConstantForecaster(), "constant_stub"
