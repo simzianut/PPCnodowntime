@@ -14,7 +14,8 @@ Open **http://localhost:8080** and enter the **access key** (decision 0087): `PP
 nginx (`ppc-web`) is the single entry point and proxies `/api` and `/ws` to `ppc-api`; `ppc-db` is Postgres + PostGIS; `ppc-seed`/`ppc-migrate` run once.
 - Real mode needs the private data (`data/processed/`, incl. `forecasts.parquet`) and `artifacts/` (committed). Without data set `API_FIXTURES=1`.
 - The agent is F2 GRU + cost rule (`RL_AGENT=auto`, decision 0069). Check: `docker compose logs ppc-api | grep "served by"`.
-- Live demo on collected statuses: `LIVE_CLOCK_START=2026-11-07T19:30:00+02:00` and `LIVE_CLOCK_SPEED=30` in `.env`. Real-time live needs the collector: `docker compose --profile live up -d ppc-collector` with `AMPWHERE_ENABLED=1` (a human enables it, decision 0003).
+- Replay on collected statuses (decision 0090): every local day with AmpWhere statuses in `data/raw/live/statuses-*.jsonl` is offered first in the replay day picker at `/`, with play, pause, speed and seek. It needs `source_refs.parquet` built from the same snapshot (`python -m stations`). File format and rules: `docs/LIVE_DATA.md`.
+- Live demo clock (optional): `LIVE_CLOCK_START=2026-11-07T19:30:00+02:00` and `LIVE_CLOCK_SPEED=30` in `.env` replay collected statuses in live mode. Real-time live needs the collector: `docker compose --profile live up -d ppc-collector` with `AMPWHERE_ENABLED=1` (a human enables it, decision 0003).
 - Open **http://localhost:8080/?mode=live** to start on the live network (decision 0080). Live needs `data/processed/source_refs.parquet` (`uv run python -m stations` builds it from the collected AmpWhere snapshot). After changing `.env`, recreate the API (`docker compose up -d ppc-api`) so it picks up `LIVE_CLOCK_*`.
 - After changing code: `docker compose up -d --build`, then reload the page (an API restart drops in-memory runs; a stale page falls back to demo data).
 - Stop: `docker compose down`. Logs: `docker compose logs -f ppc-api`.

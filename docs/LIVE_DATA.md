@@ -2,7 +2,7 @@
 
 How we collect live charger statuses from AmpWhere, and the exact format every part of the app must read and write. If you build anything on live data (live view, simulations on collected data, evaluation, charts), follow this document. Don't write a new parser or a new file layout.
 
-Background decisions: [0003](decisions/0003-live-status-collection.md) (permission and limits), [0016](decisions/0016-live-collector-design.md) (collector design), [0070](decisions/0070-live-mode-shadow-agent.md) and [0072](decisions/0072-live-mode-implementation.md) (live mode), [0082](decisions/0082-impute-live-collection-sleep-gap.md) (gaps and imputation). The interface itself is in [CONTRACTS](CONTRACTS.md).
+Background decisions: [0003](decisions/0003-live-status-collection.md) (permission and limits), [0016](decisions/0016-live-collector-design.md) (collector design), [0070](decisions/0070-live-mode-shadow-agent.md) and [0072](decisions/0072-live-mode-implementation.md) (live mode), [0082](decisions/0082-impute-live-collection-sleep-gap.md) (gaps and imputation), [0090](decisions/0090-replay-collected-days.md) (replaying collected days). The interface itself is in [CONTRACTS](CONTRACTS.md).
 
 ---
 
@@ -136,7 +136,8 @@ Use the existing code: `sim/live.py` (`LiveStatusReader`, `cp_status`, `obs_code
 7. **Day and slots:** Europe/Bucharest local day, 5-minute slots. A slot is stepped 60 s after it ends (`LIVE_LAG_S`). A live run is refused when the newest row is more than 30 minutes old.
 
 **Simulating on collected data:**
-- Use live mode's demo clock rather than a new pipeline: `LIVE_CLOCK_START=<ISO local time>` and `LIVE_CLOCK_SPEED=<x>` replay a collected window with the agent acting in shadow (0072).
+- Use the replay view rather than a new pipeline. Every local day with statuses in `LIVE_DIR` is offered first in the replay day picker (`POST /api/runs` with `mode: "replay"` and that `date`). The run is the live engine and reader on a replay clock, so play, pause, speed and seek work over the collected window (0090).
+- Live mode's demo clock also replays a collected window, with the agent acting in shadow (0072): `LIVE_CLOCK_START=<ISO local time>` and `LIVE_CLOCK_SPEED=<x>`. It runs in wall time, so there is no pause or seek.
 - Observed arrivals drive the engine. The agent's sleep decisions add wake-up waits and save energy against always-on.
 - Report these numbers as **shadow estimates** on real statuses.
 

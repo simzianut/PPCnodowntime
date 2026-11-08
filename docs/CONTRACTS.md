@@ -265,7 +265,7 @@ Run history (decision 0049): when the DB is reachable, each engine run writes it
 Request: `{"mode": "replay"|"live", "date": "2024-03-12"|null, "policies": PolicyName[], "focus_policy": PolicyName, "lambda": 0.1, "speed": 60}`
 Response 201: `{"run_id": "uuid"}`. Errors: 400 (unknown or unavailable policy, date not a replayable day, `oracle` in a live run or on a collected day, live without a running collector feed).
 `date: null` in a replay means the first day of `GET /api/eval` `test_days`.
-Replay `date` must be a test day covered by `data/processed/forecasts.parquet` when that file exists (the 60-day F2 window, decision 0069), or a **collected day** (decision 0085).
+Replay `date` must be a test day covered by `data/processed/forecasts.parquet` when that file exists (the 60-day F2 window, decision 0069), or a **collected day** (decision 0090).
 A collected day is a Europe/Bucharest local day with at least one whole 5-minute slot between the first and last poll in `LIVE_DIR/statuses-*.jsonl`. Its replay runs the live engine and reader on those statuses: the window is slot `ceil(first poll)` to slot `floor(last poll)`, the run starts at the window's first slot and is `done` at its last. `play`, `pause`, `speed` and `seek` work as in any replay, and `seek` is clamped to the window. Signals are mocked from the F0 rates as in live mode. `oracle` returns 400 on a collected day (it needs sessions), and so does a day with no status matched through `source_refs`. Live runs (decision 0070) step once per wall-clock 5-minute slot on real statuses; KPIs and WS ticks have the replay shapes and are shadow estimates. Defaults: `policies` = all four, `focus_policy` = `rl_ppo` if requested else the last listed policy (it must be one of `policies`, else 400), `lambda` = `default_lambda`, `speed` = 60. A live run uses today's date and ignores `date`; `speed` and `seek` return 400 in live mode.
 
 ### GET /api/runs/{run_id}
@@ -314,4 +314,4 @@ Request: `{"decision": "approve"|"reject"}`. Response 200: `Recommendation`. Err
 ### GET /api/eval
 Response 200: the contents of `artifacts/eval_results.json`. Errors: 404 if the file doesn't exist yet.
 In real mode `test_days` is replaced by the days the engine can replay (loaded test days covered by `forecasts.parquet`), so the frontend never offers a day `POST /api/runs` rejects (decision 0083).
-Collected days come first, oldest first, followed by the loaded test days only when they are real sessions. Synthetic test days are listed only when there is no collected day and no real data (decision 0085).
+Collected days come first, oldest first, followed by the loaded test days only when they are real sessions. Synthetic test days are listed only when there is no collected day and no real data (decision 0090).
