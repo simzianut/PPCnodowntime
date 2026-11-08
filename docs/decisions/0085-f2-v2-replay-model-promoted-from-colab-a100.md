@@ -31,7 +31,16 @@ Training time on the A100: 36 s per epoch for one seed alone, about 45 s per epo
 
 Evaluator (eight demo days, 3,679 sessions, cost rule served as `rl_ppo`, 0069), before and after:
 
-EVAL_TABLE
+| Policy | saved % | waited sessions | mean wait (min) |
+|---|---|---|---|
+| naive quiet hours | 9.62 | 165 | 0.126 |
+| cost rule on deployed `f2_gru-c75aafc1-s2`, main's `eval_results.json` (0069, original forecasts), λ 0.1 | 55.25 | 83 | 0.029 |
+| cost rule on the deployed model, forecasts regenerated on the rebuilt data (same data as below), λ 0.1 | 54.44 | 102 | 0.032 |
+| **cost rule on the v2 ensemble, λ 0.1 (new `eval_results.json`)** | **56.46** | **96** | **0.035** |
+| v2 ensemble, λ 0.01 / 0.03 / 0.3 / 1.0 | 56.65 / 56.61 / 55.87 / 54.09 | 95 / 94 / 95 / 92 | 0.037 / 0.038 / 0.028 / 0.017 |
+| oracle | 78.84 | 0 | 0 |
+
+On the same data the v2 ensemble saves 2.0 points more energy than the deployed model and makes 6 fewer sessions wait. Against the numbers main carried (older forecasts file) it saves 1.2 points more with 13 more waits out of 3,679 sessions.
 
 ## Alternatives considered
 - Keep `f2_gru-c75aafc1-s2` (0071). Rejected: the v2 ensemble beats the regenerated baseline on all nine test metrics, which is the rule of 0084 §6.
