@@ -29,7 +29,7 @@ params:
   poisson_weight: 0.2
   lr: 0.002
   lr_schedule: onecycle
-  history_dropout: 0.1
+  history_dropout: 0.0
   weight_decay: 0.0001
   epochs: 12
   batch_size: 2048
@@ -41,3 +41,4 @@ params:
   num_threads: 8
   amp: false
   calibration: auto
+  cold_day_share: 0.5
