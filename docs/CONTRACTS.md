@@ -34,6 +34,7 @@ Frontend → backend: only via `API_BASE` (`frontend/src/api/client.ts`) with `/
 | `LIVE_LAG_S` | M4 API | `60` | Seconds after a slot ends before a live run steps it |
 | `LIVE_CLOCK_START`, `LIVE_CLOCK_SPEED` | M4 API | `2026-11-07T21:00:00+02:00`, `60` | Demo only: live runs replay collected statuses from that time at that speed. Unset = real time |
 | `LIVE_F2_MODEL`, `LIVE_F0_RATES` | M4 API | `artifacts/f2_gru_live.pt` if present else `artifacts/f2_gru.pt`, `artifacts/f0_rates.parquet` | Override the live forecaster and live-signal rate files. `f2_gru_live.pt` is the honest live model (no mock-signal features, decision 0084) |
+| `LIVE_SIGNALS` | M4 API | `mock` | Live runs: `mock` samples PPC Blue intents and Maps counts from the F0 rates (decision 0070); `off` feeds no signals, so the policy's intent override never fires on mocked data (decision 0084). Reported as `signals` in the run info |
 | `LIVE_F2_CALIBRATION` | M4 API | `artifacts/f2_live_calibration.json` | Affine hazard calibration fitted on real AmpWhere arrivals (`python -m model.live_calibration`, decision 0084). Applied only when its `model` field equals the live model's file name |
 | `RUNS_DIR` | M2 training | `./runs` | Where training runs are written. Gitignored |
 | `POSTGRES_PASSWORD` | compose | `ppc` | Password for `ppc-db`; the compose `DATABASE_URL` is built from it. Must be a real secret on the server (decision 0066). Never commit |
