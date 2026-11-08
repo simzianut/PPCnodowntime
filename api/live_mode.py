@@ -76,7 +76,8 @@ def live_forecaster(art_dir: Path | None = None):
         from model.gru_forecaster import GRUForecaster
 
         if f2.exists():
-            return GRUForecaster(f2), "f2_gru"
+            # live: no session history; arrivals are inferred from CHARGING transitions (0070)
+            return GRUForecaster.from_data(f2, sessions=None), "f2_gru"
     except Exception as e:
         log.info("live: F2 GRU forecaster unavailable (%s)", _short_error(e))
     try:
